@@ -2,17 +2,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, X
+  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical
 } from 'lucide-react';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,6 +19,7 @@ interface TaskRow {
   id: string;
   client_id: string;
   title: string;
+  description: string;
   responsible: string;
   due_date: string;
   scheduled_time: string | null;
@@ -36,6 +36,7 @@ interface ClientOption {
 const emptyForm = {
   client_id: '',
   title: '',
+  description: '',
   responsible: '',
   due_date: new Date().toISOString().split('T')[0],
   scheduled_time: '',
@@ -53,6 +54,7 @@ export default function TaskCenter() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -63,7 +65,11 @@ export default function TaskCenter() {
     if (clientsRes.data) setClients(clientsRes.data);
     if (tasksRes.data && clientsRes.data) {
       const clientMap = Object.fromEntries(clientsRes.data.map(c => [c.id, c.name]));
-      setTasks(tasksRes.data.map(t => ({ ...t, client_name: clientMap[t.client_id] || 'Cliente desconhecido' })));
+      setTasks(tasksRes.data.map(t => ({
+        ...t,
+        description: (t as any).description || '',
+        client_name: clientMap[t.client_id] || 'Cliente desconhecido',
+      })));
     }
     setLoading(false);
   };
@@ -83,19 +89,20 @@ export default function TaskCenter() {
     });
   }, [tasks, search, filterResponsible]);
 
-  const pendingTasks = filtered.filter(t => t.status === 'pending');
-  const completedTasks = filtered.filter(t => t.status === 'completed');
-
   const today = new Date().toISOString().split('T')[0];
-  const overdueTasks = pendingTasks.filter(t => t.due_date < today);
-  const todayTasks = pendingTasks.filter(t => t.due_date === today);
-  const upcomingTasks = pendingTasks.filter(t => t.due_date > today);
+
+  // Kanban columns
+  const overdueTasks = filtered.filter(t => t.status === 'pending' && t.due_date < today);
+  const todayTasks = filtered.filter(t => t.status === 'pending' && t.due_date === today);
+  const upcomingTasks = filtered.filter(t => t.status === 'pending' && t.due_date > today);
+  const completedTasks = filtered.filter(t => t.status === 'completed');
 
   const openNew = () => { setForm(emptyForm); setEditId(null); setDialogOpen(true); };
   const openEdit = (task: TaskRow) => {
     setForm({
       client_id: task.client_id,
       title: task.title,
+      description: task.description,
       responsible: task.responsible,
       due_date: task.due_date,
       scheduled_time: task.scheduled_time || '',
@@ -113,6 +120,7 @@ export default function TaskCenter() {
     const payload = {
       client_id: form.client_id,
       title: form.title,
+      description: form.description,
       responsible: form.responsible,
       due_date: form.due_date,
       scheduled_time: form.scheduled_time || null,
@@ -131,9 +139,8 @@ export default function TaskCenter() {
     fetchData();
   };
 
-  const toggleStatus = async (task: TaskRow) => {
-    const newStatus = task.status === 'pending' ? 'completed' : 'pending';
-    await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
+  const moveToStatus = async (taskId: string, newStatus: string) => {
+    await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
     fetchData();
   };
 
@@ -143,31 +150,53 @@ export default function TaskCenter() {
     fetchData();
   };
 
-  const TaskCard = ({ task }: { task: TaskRow }) => {
+  // Drag & drop handlers
+  const handleDragStart = (taskId: string) => {
+    setDraggedTaskId(taskId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
+    e.preventDefault();
+    if (!draggedTaskId) return;
+    const task = tasks.find(t => t.id === draggedTaskId);
+    if (task && task.status !== targetStatus) {
+      await moveToStatus(draggedTaskId, targetStatus);
+    }
+    setDraggedTaskId(null);
+  };
+
+  const KanbanCard = ({ task }: { task: TaskRow }) => {
     const isOverdue = task.status === 'pending' && task.due_date < today;
     return (
       <motion.div
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`flex items-start gap-3 rounded-lg border p-4 bg-card shadow-card transition-colors hover:bg-accent/5 ${isOverdue ? 'border-destructive/40' : ''}`}
+        draggable
+        onDragStart={() => handleDragStart(task.id)}
+        className={`rounded-lg border p-3 bg-card shadow-card cursor-grab active:cursor-grabbing transition-all hover:shadow-md ${isOverdue ? 'border-destructive/40' : ''} ${draggedTaskId === task.id ? 'opacity-50' : ''}`}
       >
-        <Checkbox
-          checked={task.status === 'completed'}
-          onCheckedChange={() => toggleStatus(task)}
-          className="mt-0.5"
-        />
-        <div className="flex-1 min-w-0">
-          <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+        <div className="flex items-start gap-2 mb-2">
+          <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+          <p className={`text-sm font-medium flex-1 ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
             {task.title}
           </p>
-          <div className="flex items-center gap-3 mt-1 flex-wrap">
-            <button
-              onClick={() => navigate(`/client/${task.client_id}`)}
-              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-            >
-              <Building2 className="h-3 w-3" />
-              {task.client_name}
-            </button>
+        </div>
+        {task.description && (
+          <p className="text-xs text-muted-foreground mb-2 ml-6 line-clamp-2">{task.description}</p>
+        )}
+        <div className="flex flex-col gap-1 ml-6">
+          <button
+            onClick={() => navigate(`/client/${task.client_id}`)}
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline w-fit"
+          >
+            <Building2 className="h-3 w-3" />
+            {task.client_name}
+          </button>
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <User className="h-3 w-3" />
               {task.responsible}
@@ -179,26 +208,47 @@ export default function TaskCenter() {
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <Button variant="ghost" size="sm" onClick={() => openEdit(task)} className="h-7 px-2 text-xs">Editar</Button>
-          <Button variant="ghost" size="sm" onClick={() => deleteTask(task.id)} className="h-7 px-2 text-xs text-destructive hover:text-destructive">×</Button>
+        <div className="flex items-center gap-1 mt-2 ml-6">
+          <Button variant="ghost" size="sm" onClick={() => openEdit(task)} className="h-6 px-2 text-xs">Editar</Button>
+          <Button variant="ghost" size="sm" onClick={() => deleteTask(task.id)} className="h-6 px-2 text-xs text-destructive hover:text-destructive">Remover</Button>
         </div>
       </motion.div>
     );
   };
 
-  const TaskSection = ({ title, icon, tasks: sectionTasks, variant }: { title: string; icon: React.ReactNode; tasks: TaskRow[]; variant?: 'danger' | 'warning' | 'default' }) => {
-    if (sectionTasks.length === 0) return null;
-    const headerColor = variant === 'danger' ? 'text-destructive' : variant === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground';
+  const KanbanColumn = ({ title, icon, tasks: colTasks, variant, dropStatus }: {
+    title: string; icon: React.ReactNode; tasks: TaskRow[];
+    variant?: 'danger' | 'warning' | 'success' | 'default'; dropStatus: string;
+  }) => {
+    const headerColors: Record<string, string> = {
+      danger: 'text-destructive border-destructive/30',
+      warning: 'text-amber-700 dark:text-amber-400 border-amber-500/30',
+      success: 'text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
+      default: 'text-foreground border-border',
+    };
+    const bgColors: Record<string, string> = {
+      danger: 'bg-destructive/5',
+      warning: 'bg-amber-500/5',
+      success: 'bg-emerald-500/5',
+      default: 'bg-muted/30',
+    };
+    const v = variant || 'default';
     return (
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <span className={headerColor}>{icon}</span>
-          <h3 className={`text-sm font-semibold ${headerColor}`}>{title}</h3>
-          <Badge variant="secondary" className="text-xs">{sectionTasks.length}</Badge>
+      <div
+        className={`flex flex-col rounded-xl border ${headerColors[v].split(' ').slice(1).join(' ')} ${bgColors[v]} min-h-[300px]`}
+        onDragOver={handleDragOver}
+        onDrop={(e) => handleDrop(e, dropStatus)}
+      >
+        <div className={`flex items-center gap-2 p-3 border-b ${headerColors[v].split(' ').slice(1).join(' ')}`}>
+          <span className={headerColors[v].split(' ')[0]}>{icon}</span>
+          <h3 className={`text-sm font-semibold ${headerColors[v].split(' ')[0]}`}>{title}</h3>
+          <Badge variant="secondary" className="text-xs ml-auto">{colTasks.length}</Badge>
         </div>
-        <div className="space-y-2">
-          {sectionTasks.map(t => <TaskCard key={t.id} task={t} />)}
+        <div className="flex-1 p-3 space-y-2 overflow-y-auto max-h-[calc(100vh-320px)]">
+          {colTasks.map(t => <KanbanCard key={t.id} task={t} />)}
+          {colTasks.length === 0 && (
+            <div className="text-center py-8 text-xs text-muted-foreground">Nenhuma tarefa</div>
+          )}
         </div>
       </div>
     );
@@ -210,20 +260,12 @@ export default function TaskCenter() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Central de Tarefas</h1>
-            <p className="text-sm text-muted-foreground">Acompanhamento de retornos e follow-ups com clientes</p>
+            <p className="text-sm text-muted-foreground">Arraste as tarefas entre as colunas para atualizar o status</p>
           </div>
           <Button onClick={openNew} className="gap-2 shadow-md">
             <Plus className="h-4 w-4" />
             Nova Tarefa
           </Button>
-        </div>
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <SummaryCard label="Atrasadas" value={overdueTasks.length} icon={<AlertTriangle className="h-4 w-4" />} variant="danger" />
-          <SummaryCard label="Para Hoje" value={todayTasks.length} icon={<Clock className="h-4 w-4" />} variant="warning" />
-          <SummaryCard label="Próximas" value={upcomingTasks.length} icon={<CalendarClock className="h-4 w-4" />} />
-          <SummaryCard label="Concluídas" value={completedTasks.length} icon={<CheckSquare className="h-4 w-4" />} variant="success" />
         </div>
 
         {/* Filters */}
@@ -247,34 +289,35 @@ export default function TaskCenter() {
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
         ) : (
-          <Tabs defaultValue="pending">
-            <TabsList>
-              <TabsTrigger value="pending" className="gap-2">
-                <Clock className="h-4 w-4" />
-                Pendentes ({pendingTasks.length})
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="gap-2">
-                <CheckSquare className="h-4 w-4" />
-                Concluídas ({completedTasks.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="pending" className="mt-4">
-              <TaskSection title="Atrasadas" icon={<AlertTriangle className="h-4 w-4" />} tasks={overdueTasks} variant="danger" />
-              <TaskSection title="Hoje" icon={<Clock className="h-4 w-4" />} tasks={todayTasks} variant="warning" />
-              <TaskSection title="Próximas" icon={<CalendarClock className="h-4 w-4" />} tasks={upcomingTasks} />
-              {pendingTasks.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">Nenhuma tarefa pendente.</div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="completed" className="mt-4 space-y-2">
-              {completedTasks.map(t => <TaskCard key={t.id} task={t} />)}
-              {completedTasks.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">Nenhuma tarefa concluída.</div>
-              )}
-            </TabsContent>
-          </Tabs>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KanbanColumn
+              title="Atrasadas"
+              icon={<AlertTriangle className="h-4 w-4" />}
+              tasks={overdueTasks}
+              variant="danger"
+              dropStatus="pending"
+            />
+            <KanbanColumn
+              title="Hoje"
+              icon={<Clock className="h-4 w-4" />}
+              tasks={todayTasks}
+              variant="warning"
+              dropStatus="pending"
+            />
+            <KanbanColumn
+              title="Próximas"
+              icon={<CalendarClock className="h-4 w-4" />}
+              tasks={upcomingTasks}
+              dropStatus="pending"
+            />
+            <KanbanColumn
+              title="Concluídas"
+              icon={<CheckSquare className="h-4 w-4" />}
+              tasks={completedTasks}
+              variant="success"
+              dropStatus="completed"
+            />
+          </div>
         )}
       </div>
 
@@ -297,7 +340,16 @@ export default function TaskCenter() {
             </div>
             <div>
               <Label>Título *</Label>
-              <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Descrição da tarefa" />
+              <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Resumo da tarefa" />
+            </div>
+            <div>
+              <Label>Detalhamento da Demanda</Label>
+              <Textarea
+                value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Descreva em detalhes o que precisa ser feito, contexto, informações relevantes..."
+                rows={3}
+              />
             </div>
             <div>
               <Label>Responsável</Label>
@@ -321,24 +373,5 @@ export default function TaskCenter() {
         </DialogContent>
       </Dialog>
     </AppLayout>
-  );
-}
-
-function SummaryCard({ label, value, icon, variant }: { label: string; value: number; icon: React.ReactNode; variant?: 'danger' | 'warning' | 'success' }) {
-  const colors = variant === 'danger'
-    ? 'border-destructive/30 bg-destructive/5 text-destructive'
-    : variant === 'warning'
-    ? 'border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-400'
-    : variant === 'success'
-    ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400'
-    : 'border-border bg-card text-foreground';
-  return (
-    <div className={`rounded-lg border p-4 ${colors}`}>
-      <div className="flex items-center gap-2 mb-1">
-        {icon}
-        <span className="text-xs font-medium uppercase tracking-wider">{label}</span>
-      </div>
-      <p className="text-2xl font-bold">{value}</p>
-    </div>
   );
 }
