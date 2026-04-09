@@ -349,6 +349,15 @@ export default function TaskCenter() {
                 <Input type="time" value={form.scheduled_time} onChange={e => setForm(f => ({ ...f, scheduled_time: e.target.value }))} />
               </div>
             </div>
+            <div>
+              <Label>🔔 Lembrete</Label>
+              <Select value={form.reminder_minutes} onValueChange={v => setForm(f => ({ ...f, reminder_minutes: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o lembrete" /></SelectTrigger>
+                <SelectContent>
+                  {REMINDER_OPTIONS.map(o => <SelectItem key={o.value || 'none'} value={o.value || 'none'}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
