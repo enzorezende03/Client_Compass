@@ -191,6 +191,7 @@ export default function ClientDetail() {
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {task.responsible} • Prazo: {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                    {task.scheduledTime && ` às ${task.scheduledTime}`}
                   </p>
                 </div>
               </div>
