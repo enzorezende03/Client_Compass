@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { AppLayout } from '@/components/AppLayout';
 import {
   ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, Edit3, ChevronDown, ChevronUp
 } from 'lucide-react';
