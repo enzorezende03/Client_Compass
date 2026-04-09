@@ -38,12 +38,22 @@ Deno.serve(async (req) => {
     const messagesData = await messagesRes.json()
     const messages = messagesData.data || messagesData || []
 
+    // Log all messages for debugging
+    for (const msg of messages) {
+      const text = msg.text || msg.body || msg.message || ''
+      const contact = msg.contact?.name || msg.contactName || msg.from?.name || 'N/A'
+      console.log(`[DIGISAC MSG] Contact: ${contact} | Text: ${text.substring(0, 120)}`)
+    }
+
     // Filter for complaints/problems - keywords in Portuguese
     const complaintKeywords = [
       'reclamação', 'reclamacao', 'problema', 'erro', 'falha', 'insatisf',
       'urgente', 'crítico', 'critico', 'não funciona', 'nao funciona',
       'demora', 'atraso', 'péssimo', 'pessimo', 'horrível', 'horrivel',
-      'absurdo', 'inaceitável', 'inaceitavel', 'resolver', 'solução', 'solucao'
+      'absurdo', 'inaceitável', 'inaceitavel', 'resolver', 'solução', 'solucao',
+      'atendimento', 'ruim', 'chatead', 'decepcion', 'decepciona', 'frustr',
+      'descaso', 'negligên', 'negligen', 'abandono', 'desrespeito', 'falta de',
+      'insatisfeito', 'insatisfeita', 'mal atend', 'péssima', 'terrível', 'terrivel'
     ]
 
     const complaints = messages.filter((msg: any) => {
