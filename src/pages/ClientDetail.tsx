@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
 import {
-  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, Edit3, ChevronDown, ChevronUp
+  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, Edit3, ChevronDown, ChevronUp, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +16,7 @@ import { QuickInteractionModal } from '@/components/QuickInteractionModal';
 import { EditableStrategicCard } from '@/components/EditableStrategicCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AuditLog } from '@/components/AuditLog';
 import {
   COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS, TAXATION_LABELS,
   TimelineEntry, Task, ClientProfile, TaxationType
@@ -41,12 +42,27 @@ export default function ClientDetail() {
   const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [strategicOpen, setStrategicOpen] = useState(true);
   const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
+  const [auditRefreshKey, setAuditRefreshKey] = useState(0);
+
+  const getOldValue = (fieldKey: string): string => {
+    if (!client) return '';
+    const map: Record<string, string> = {
+      painPoints: client.painPoints,
+      expectations: client.expectations,
+      attentionPoints: client.attentionPoints,
+      recurringIssues: client.recurringIssues,
+      behavioralProfile: client.behavioralProfile,
+      strategicNotes: client.strategicNotes,
+    };
+    return strategicOverrides[fieldKey] ?? map[fieldKey] ?? '';
+  };
 
   const handleStrategicSave = useCallback(async (fieldKey: string, newValue: string) => {
     if (!id) return;
     const dbColumn = STRATEGIC_FIELD_MAP[fieldKey];
     if (!dbColumn) return;
 
+    const oldValue = getOldValue(fieldKey);
     setStrategicOverrides(prev => ({ ...prev, [fieldKey]: newValue }));
 
     const updateData = { [dbColumn]: newValue } as Record<string, string>;
@@ -63,9 +79,18 @@ export default function ClientDetail() {
         return next;
       });
     } else {
+      // Log audit entry
+      await supabase.from('audit_logs').insert({
+        client_id: id,
+        field_name: dbColumn,
+        old_value: oldValue,
+        new_value: newValue,
+        changed_by: 'CS',
+      } as any);
+      setAuditRefreshKey(k => k + 1);
       toast({ title: 'Salvo com sucesso' });
     }
-  }, [id, toast]);
+  }, [id, toast, client, strategicOverrides]);
 
   const clientTimeline = useMemo(() => timeline.filter(t => t.clientId === id), [timeline, id]);
   const clientTasks = useMemo(() => tasks.filter(t => t.clientId === id), [tasks, id]);
@@ -203,6 +228,10 @@ export default function ClientDetail() {
               <CheckSquare className="h-4 w-4" />
               Tarefas ({clientTasks.filter(t => t.status === 'pending').length})
             </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Auditoria
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="timeline" className="mt-4">
@@ -239,6 +268,10 @@ export default function ClientDetail() {
             {clientTasks.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">Nenhuma tarefa.</div>
             )}
+          </TabsContent>
+
+          <TabsContent value="audit" className="mt-4">
+            <AuditLog clientId={client.id} refreshKey={auditRefreshKey} />
           </TabsContent>
         </Tabs>
       </div>
