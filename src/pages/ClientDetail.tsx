@@ -212,6 +212,15 @@ export default function ClientDetail() {
   );
 }
 
+function ProfileInfoCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`rounded-lg border px-3 py-2 ${highlight ? 'bg-primary/5 border-primary/20' : 'bg-background/60'}`}>
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</p>
+      <p className={`text-sm font-semibold ${highlight ? 'text-primary' : 'text-foreground'}`}>{value}</p>
+    </div>
+  );
+}
+
 function StrategicCard({ title, content, highlight }: { title: string; content: string; highlight?: boolean }) {
   return (
     <div className={`rounded-lg border p-4 ${highlight ? 'bg-primary/5 border-primary/20' : 'bg-card'} shadow-card`}>
