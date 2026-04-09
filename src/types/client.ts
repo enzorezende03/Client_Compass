@@ -57,6 +57,7 @@ export interface Task {
   title: string;
   responsible: string;
   dueDate: string;
+  scheduledTime?: string; // HH:mm
   status: TaskStatus;
   createdAt: string;
 }
