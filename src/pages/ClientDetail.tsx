@@ -14,8 +14,8 @@ import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
 import {
-  COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS,
-  TimelineEntry, Task, ClientProfile
+  COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS, TAXATION_LABELS,
+  TimelineEntry, Task, ClientProfile, TaxationType
 } from '@/types/client';
 
 export default function ClientDetail() {
@@ -73,11 +73,12 @@ export default function ClientDetail() {
                 <HealthScoreBadge score={client.healthScore} size="lg" />
                 <FinancialStatusBadge status={client.financialStatus} />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <ProfileInfoCard label="Segmento" value={client.segment} />
                 <ProfileInfoCard label="Complexidade" value={COMPLEXITY_LABELS[client.complexity]} />
                 <ProfileInfoCard label="CS Responsável" value={client.csResponsible} highlight />
                 <ProfileInfoCard label="Cliente desde" value={new Date(client.contractStartDate).toLocaleDateString('pt-BR')} />
+                <ProfileInfoCard label="Tributação" value={client.taxation ? TAXATION_LABELS[client.taxation as TaxationType] || client.taxation : 'Não definida'} />
               </div>
             </div>
             <Button onClick={() => setInteractionOpen(true)} className="gap-2 shrink-0 shadow-md">
