@@ -269,6 +269,10 @@ export default function ClientDetail() {
               <div className="text-center py-12 text-muted-foreground">Nenhuma tarefa.</div>
             )}
           </TabsContent>
+
+          <TabsContent value="audit" className="mt-4">
+            <AuditLog clientId={client.id} refreshKey={auditRefreshKey} />
+          </TabsContent>
         </Tabs>
       </div>
 
