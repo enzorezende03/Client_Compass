@@ -1,7 +1,7 @@
 export type ClientStatus = 'active' | 'at_risk' | 'recovery' | 'cancelled';
 export type ComplexityLevel = 'A' | 'B' | 'C' | 'D';
 export type ClientProfile = 'vip' | 'premium' | 'standard' | 'basic';
-export type FinancialStatus = 'current' | 'late' | 'critical';
+export type FinancialStatus = 'active_financial' | 'suspended';
 export type HealthScore = 'healthy' | 'attention' | 'critical';
 
 export type InteractionType = 'service' | 'complaint' | 'request' | 'meeting' | 'critical_issue' | 'feedback' | 'opportunity';
