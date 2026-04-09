@@ -1,6 +1,6 @@
 export type ClientStatus = 'active' | 'at_risk' | 'recovery' | 'cancelled';
 export type ComplexityLevel = 'A' | 'B' | 'C' | 'D';
-export type ClientProfile = 'high_contact' | 'low_contact' | 'technical' | 'price_sensitive' | 'other';
+export type ClientProfile = 'vip' | 'premium' | 'standard' | 'basic';
 export type FinancialStatus = 'current' | 'late' | 'critical';
 export type HealthScore = 'healthy' | 'attention' | 'critical';
 
@@ -77,11 +77,24 @@ export const COMPLEXITY_LABELS: Record<ComplexityLevel, string> = {
 };
 
 export const PROFILE_LABELS: Record<ClientProfile, string> = {
-  high_contact: 'Alto Contato',
-  low_contact: 'Baixo Contato',
-  technical: 'Técnico',
-  price_sensitive: 'Sensível a Preço',
-  other: 'Outro',
+  vip: 'VIP',
+  premium: 'Premium',
+  standard: 'Standard',
+  basic: 'Básico',
+};
+
+export const PROFILE_COLORS: Record<ClientProfile, { bg: string; text: string; border: string }> = {
+  vip: { bg: 'bg-amber-500/15', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-500/30' },
+  premium: { bg: 'bg-violet-500/15', text: 'text-violet-700 dark:text-violet-400', border: 'border-violet-500/30' },
+  standard: { bg: 'bg-sky-500/15', text: 'text-sky-700 dark:text-sky-400', border: 'border-sky-500/30' },
+  basic: { bg: 'bg-slate-500/15', text: 'text-slate-700 dark:text-slate-400', border: 'border-slate-500/30' },
+};
+
+export const PROFILE_ICONS: Record<ClientProfile, string> = {
+  vip: '👑',
+  premium: '⭐',
+  standard: '●',
+  basic: '○',
 };
 
 export const FINANCIAL_LABELS: Record<FinancialStatus, string> = {
