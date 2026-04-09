@@ -64,7 +64,11 @@ Deno.serve(async (req) => {
         const tickets = ticketsData.data || ticketsData.rows || ticketsData || []
         const ticketArr = Array.isArray(tickets) ? tickets : []
         console.log(`[DIGISAC] Tickets endpoint returned ${ticketArr.length} items`)
-        
+        // Log first ticket raw structure
+        if (ticketArr.length > 0) {
+          console.log(`[TICKET RAW KEYS] ${JSON.stringify(Object.keys(ticketArr[0]))}`)
+          console.log(`[TICKET RAW SAMPLE] ${JSON.stringify(ticketArr[0]).substring(0, 500)}`)
+        }
         for (const ticket of ticketArr) {
           const contactId = ticket.contactId || ticket.contact_id || ''
           const contactName = ticket.contact?.name || contactMap.get(String(contactId)) || ''
