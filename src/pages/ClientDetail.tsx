@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { AppLayout } from '@/components/AppLayout';
 import {
   ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, Edit3, ChevronDown, ChevronUp
 } from 'lucide-react';
@@ -48,7 +49,7 @@ export default function ClientDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <AppLayout>
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-6 py-4">
@@ -204,7 +205,7 @@ export default function ClientDetail() {
         clientId={client.id}
         onSubmit={handleNewInteraction}
       />
-    </div>
+    </AppLayout>
   );
 }
 

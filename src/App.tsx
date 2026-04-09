@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ClientList from "./pages/ClientList";
 import ClientDetail from "./pages/ClientDetail";
+import ClientRegistration from "./pages/ClientRegistration";
+import InternalUsersRegistration from "./pages/InternalUsersRegistration";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -18,6 +20,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<ClientList />} />
           <Route path="/client/:id" element={<ClientDetail />} />
+          <Route path="/cadastro/clientes" element={<ClientRegistration />} />
+          <Route path="/cadastro/usuarios" element={<InternalUsersRegistration />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

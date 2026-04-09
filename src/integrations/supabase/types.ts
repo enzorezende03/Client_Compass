@@ -133,6 +133,42 @@ export type Database = {
           },
         ]
       }
+      internal_users: {
+        Row: {
+          access_profile: string
+          active: boolean
+          created_at: string
+          email: string
+          id: string
+          name: string
+          role: string
+          sector: string
+          updated_at: string
+        }
+        Insert: {
+          access_profile?: string
+          active?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          name: string
+          role?: string
+          sector?: string
+          updated_at?: string
+        }
+        Update: {
+          access_profile?: string
+          active?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          role?: string
+          sector?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           client_id: string
