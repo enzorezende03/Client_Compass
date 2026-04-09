@@ -14,7 +14,216 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          action_plan: string | null
+          attention_points: string
+          behavioral_profile: string
+          complexity: string
+          contract_start_date: string
+          created_at: string
+          cs_responsible: string
+          document: string
+          expectations: string
+          financial_status: string
+          health_score: string
+          id: string
+          name: string
+          pain_points: string
+          profile: string
+          recurring_issues: string
+          risk_identified_date: string | null
+          risk_reason: string | null
+          risk_type: string | null
+          segment: string
+          status: string
+          strategic_notes: string
+          updated_at: string
+        }
+        Insert: {
+          action_plan?: string | null
+          attention_points?: string
+          behavioral_profile?: string
+          complexity?: string
+          contract_start_date?: string
+          created_at?: string
+          cs_responsible?: string
+          document?: string
+          expectations?: string
+          financial_status?: string
+          health_score?: string
+          id?: string
+          name: string
+          pain_points?: string
+          profile?: string
+          recurring_issues?: string
+          risk_identified_date?: string | null
+          risk_reason?: string | null
+          risk_type?: string | null
+          segment?: string
+          status?: string
+          strategic_notes?: string
+          updated_at?: string
+        }
+        Update: {
+          action_plan?: string | null
+          attention_points?: string
+          behavioral_profile?: string
+          complexity?: string
+          contract_start_date?: string
+          created_at?: string
+          cs_responsible?: string
+          document?: string
+          expectations?: string
+          financial_status?: string
+          health_score?: string
+          id?: string
+          name?: string
+          pain_points?: string
+          profile?: string
+          recurring_issues?: string
+          risk_identified_date?: string | null
+          risk_reason?: string | null
+          risk_type?: string | null
+          segment?: string
+          status?: string
+          strategic_notes?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      digisac_complaints: {
+        Row: {
+          contact_name: string
+          created_at: string
+          external_id: string
+          id: string
+          matched_client_id: string | null
+          message: string
+          processed: boolean
+          received_at: string
+        }
+        Insert: {
+          contact_name: string
+          created_at?: string
+          external_id: string
+          id?: string
+          matched_client_id?: string | null
+          message?: string
+          processed?: boolean
+          received_at?: string
+        }
+        Update: {
+          contact_name?: string
+          created_at?: string
+          external_id?: string
+          id?: string
+          matched_client_id?: string | null
+          message?: string
+          processed?: boolean
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digisac_complaints_matched_client_id_fkey"
+            columns: ["matched_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          client_id: string
+          created_at: string
+          due_date: string
+          id: string
+          responsible: string
+          status: string
+          title: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          responsible?: string
+          status?: string
+          title: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          responsible?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timeline_entries: {
+        Row: {
+          client_id: string
+          created_at: string
+          date: string
+          demand_status: string
+          description: string
+          id: string
+          is_relevant_event: boolean
+          origin: string
+          relevant_event_type: string | null
+          responsible: string
+          sector: string
+          type: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          date?: string
+          demand_status?: string
+          description?: string
+          id?: string
+          is_relevant_event?: boolean
+          origin?: string
+          relevant_event_type?: string | null
+          responsible?: string
+          sector?: string
+          type?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          date?: string
+          demand_status?: string
+          description?: string
+          id?: string
+          is_relevant_event?: boolean
+          origin?: string
+          relevant_event_type?: string | null
+          responsible?: string
+          sector?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timeline_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
