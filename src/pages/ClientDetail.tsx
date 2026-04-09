@@ -14,8 +14,8 @@ import { ClientStatusBadge, FinancialStatusBadge } from '@/components/StatusBadg
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
 import {
-  COMPLEXITY_LABELS, PROFILE_LABELS, RISK_TYPE_LABELS,
-  TimelineEntry, Task
+  COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS,
+  TimelineEntry, Task, ClientProfile
 } from '@/types/client';
 
 export default function ClientDetail() {
@@ -69,14 +69,14 @@ export default function ClientDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap mb-4">
+                <ServiceTierBadge profile={client.profile as ClientProfile} />
                 <HealthScoreBadge score={client.healthScore} size="lg" />
                 <ClientStatusBadge status={client.status} />
                 <FinancialStatusBadge status={client.financialStatus} />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <ProfileInfoCard label="Segmento" value={client.segment} />
                 <ProfileInfoCard label="Complexidade" value={COMPLEXITY_LABELS[client.complexity]} />
-                <ProfileInfoCard label="Perfil" value={PROFILE_LABELS[client.profile]} />
                 <ProfileInfoCard label="CS Responsável" value={client.csResponsible} highlight />
                 <ProfileInfoCard label="Cliente desde" value={new Date(client.contractStartDate).toLocaleDateString('pt-BR')} />
               </div>
@@ -227,5 +227,17 @@ function StrategicCard({ title, content, highlight }: { title: string; content: 
       <p className="text-xs font-medium text-muted-foreground mb-1">{title}</p>
       <p className="text-sm text-foreground leading-relaxed">{content}</p>
     </div>
+  );
+}
+
+function ServiceTierBadge({ profile }: { profile: ClientProfile }) {
+  const colors = PROFILE_COLORS[profile] || PROFILE_COLORS.standard;
+  const icon = PROFILE_ICONS[profile] || '●';
+  const label = PROFILE_LABELS[profile] || profile;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold ${colors.bg} ${colors.text} ${colors.border}`}>
+      <span className="text-base leading-none">{icon}</span>
+      {label}
+    </span>
   );
 }
