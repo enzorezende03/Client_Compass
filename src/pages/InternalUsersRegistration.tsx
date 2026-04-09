@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
-import { SECTOR_LABELS } from '@/types/client';
+
 
 const ACCESS_PROFILE_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -23,14 +23,12 @@ const ACCESS_PROFILE_LABELS: Record<string, string> = {
 interface UserForm {
   name: string;
   email: string;
-  sector: string;
-  role: string;
   access_profile: string;
   active: boolean;
 }
 
 const emptyForm: UserForm = {
-  name: '', email: '', sector: 'fiscal', role: '', access_profile: 'cs', active: true,
+  name: '', email: '', access_profile: 'cs', active: true,
 };
 
 export default function InternalUsersRegistration() {
@@ -60,8 +58,8 @@ export default function InternalUsersRegistration() {
   const openNew = () => { setForm(emptyForm); setSelectedId(null); setDialogOpen(true); };
   const openEdit = (user: any) => {
     setForm({
-      name: user.name, email: user.email, sector: user.sector,
-      role: user.role, access_profile: user.access_profile, active: user.active,
+      name: user.name, email: user.email,
+      access_profile: user.access_profile, active: user.active,
     });
     setSelectedId(user.id);
     setDialogOpen(true);
@@ -118,8 +116,6 @@ export default function InternalUsersRegistration() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Setor</TableHead>
-                <TableHead>Cargo</TableHead>
                 <TableHead>Perfil de Acesso</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">Ações</TableHead>
@@ -127,16 +123,14 @@ export default function InternalUsersRegistration() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado.</TableCell></TableRow>
               ) : (
                 filtered.map(u => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.name}</TableCell>
                     <TableCell className="text-sm">{u.email}</TableCell>
-                    <TableCell>{SECTOR_LABELS[u.sector as keyof typeof SECTOR_LABELS] || u.sector}</TableCell>
-                    <TableCell>{u.role}</TableCell>
                     <TableCell>
                       <Badge variant={u.access_profile === 'admin' ? 'default' : 'secondary'}>
                         {ACCESS_PROFILE_LABELS[u.access_profile] || u.access_profile}
@@ -176,19 +170,6 @@ export default function InternalUsersRegistration() {
             <div className="space-y-2">
               <Label>Email</Label>
               <Input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Setor</Label>
-              <Select value={form.sector} onValueChange={v => updateField('sector', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(SECTOR_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Cargo</Label>
-              <Input value={form.role} onChange={e => updateField('role', e.target.value)} placeholder="Ex: Analista de CS" />
             </div>
             <div className="space-y-2">
               <Label>Perfil de Acesso</Label>
