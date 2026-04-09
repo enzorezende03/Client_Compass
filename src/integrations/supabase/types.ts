@@ -64,6 +64,8 @@ export type Database = {
           document: string
           expectations: string
           financial_status: string
+          gclick_carteira: string | null
+          gclick_id: string | null
           health_score: string
           id: string
           name: string
@@ -90,6 +92,8 @@ export type Database = {
           document?: string
           expectations?: string
           financial_status?: string
+          gclick_carteira?: string | null
+          gclick_id?: string | null
           health_score?: string
           id?: string
           name: string
@@ -116,6 +120,8 @@ export type Database = {
           document?: string
           expectations?: string
           financial_status?: string
+          gclick_carteira?: string | null
+          gclick_id?: string | null
           health_score?: string
           id?: string
           name?: string
@@ -173,6 +179,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gclick_sync_log: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          records_synced: number | null
+          status: string
+          sync_type: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          records_synced?: number | null
+          status?: string
+          sync_type?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          records_synced?: number | null
+          status?: string
+          sync_type?: string
+        }
+        Relationships: []
       }
       internal_users: {
         Row: {
