@@ -99,9 +99,8 @@ export const PROFILE_ICONS: Record<ClientProfile, string> = {
 };
 
 export const FINANCIAL_LABELS: Record<FinancialStatus, string> = {
-  current: 'Adimplente',
-  late: 'Em Atraso',
-  critical: 'Crítico (+60 dias)',
+  active_financial: 'Ativo',
+  suspended: 'Suspenso',
 };
 
 export const HEALTH_LABELS: Record<HealthScore, string> = {

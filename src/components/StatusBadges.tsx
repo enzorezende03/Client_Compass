@@ -17,9 +17,8 @@ export function ClientStatusBadge({ status }: { status: ClientStatus }) {
 }
 
 const financialColors: Record<FinancialStatus, string> = {
-  current: 'bg-financial-ok/10 text-financial-ok border-financial-ok/20',
-  late: 'bg-financial-late/10 text-financial-late border-financial-late/20',
-  critical: 'bg-financial-critical/10 text-financial-critical border-financial-critical/20',
+  active_financial: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+  suspended: 'bg-destructive/10 text-destructive border-destructive/20',
 };
 
 export function FinancialStatusBadge({ status }: { status: FinancialStatus }) {
