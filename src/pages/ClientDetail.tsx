@@ -149,7 +149,7 @@ export default function ClientDetail() {
               <EditableStrategicCard title="Principais Dores" content={strategicOverrides.painPoints ?? client.painPoints} onSave={(v) => handleStrategicSave('painPoints', v)} />
               <EditableStrategicCard title="Expectativas" content={strategicOverrides.expectations ?? client.expectations} onSave={(v) => handleStrategicSave('expectations', v)} />
               <EditableStrategicCard title="Pontos de Atenção" content={strategicOverrides.attentionPoints ?? client.attentionPoints} onSave={(v) => handleStrategicSave('attentionPoints', v)} />
-              <EditableStrategicCard title="Problemas Recorrentes" content={strategicOverrides.recurringIssues ?? client.recurringIssues || 'Nenhum identificado'} onSave={(v) => handleStrategicSave('recurringIssues', v)} />
+              <EditableStrategicCard title="Problemas Recorrentes" content={(strategicOverrides.recurringIssues ?? client.recurringIssues) || 'Nenhum identificado'} onSave={(v) => handleStrategicSave('recurringIssues', v)} />
               <EditableStrategicCard title="Perfil Comportamental" content={strategicOverrides.behavioralProfile ?? client.behavioralProfile} onSave={(v) => handleStrategicSave('behavioralProfile', v)} />
               <EditableStrategicCard title="Notas Estratégicas" content={strategicOverrides.strategicNotes ?? client.strategicNotes} onSave={(v) => handleStrategicSave('strategicNotes', v)} highlight />
             </div>
