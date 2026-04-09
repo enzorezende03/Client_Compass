@@ -23,25 +23,29 @@ Deno.serve(async (req) => {
       'Content-Type': 'application/json',
     }
 
-    // Helper to fetch paginated (DIGISAC uses $top/$skip OData style)
+    // Helper to fetch paginated (try multiple pagination styles)
     async function fetchAll(endpoint: string, maxPages = 20): Promise<any[]> {
       const results: any[] = []
       for (let page = 0; page < maxPages; page++) {
-        const skip = page * 100
         const separator = endpoint.includes('?') ? '&' : '?'
-        // Try both param styles
-        const url = `${baseUrl}${endpoint}${separator}$top=100&$skip=${skip}&limit=100&skip=${skip}`
+        // DIGISAC API: try page/pageSize style
+        const url = `${baseUrl}${endpoint}${separator}page=${page + 1}&pageSize=100&limit=100&offset=${page * 100}`
         const res = await fetch(url, { headers: authHeaders })
         if (!res.ok) {
-          const err = await res.text()
-          console.error(`[FETCH] ${endpoint} page ${page} failed: ${res.status} - ${err.substring(0, 200)}`)
+          console.error(`[FETCH] page ${page} failed: ${res.status}`)
           break
         }
         const data = await res.json()
-        const items = data.data || data.rows || (Array.isArray(data) ? data : [])
-        if (!Array.isArray(items) || items.length === 0) break
-        console.log(`[FETCH] ${endpoint} page ${page}: ${items.length} items`)
+        // Handle { data: [...], total: N } or plain array
+        const items = data.data || data.rows || data.results || (Array.isArray(data) ? data : [])
+        if (!Array.isArray(items) || items.length === 0) {
+          console.log(`[FETCH] ${endpoint} page ${page}: empty, stopping. Keys: ${Object.keys(data).join(',')}`)
+          break
+        }
+        console.log(`[FETCH] ${endpoint} page ${page}: ${items.length} items (total: ${data.total || 'N/A'})`)
         results.push(...items)
+        // Stop if we got all
+        if (data.total && results.length >= data.total) break
         if (items.length < 100) break
       }
       return results
