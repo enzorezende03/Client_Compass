@@ -32,6 +32,15 @@ interface TaskRow {
 interface ClientOption { id: string; name: string; }
 interface InternalUser { id: string; name: string; email: string; active: boolean; }
 
+const REMINDER_OPTIONS = [
+  { value: '', label: 'Sem lembrete' },
+  { value: '15', label: '15 minutos antes' },
+  { value: '30', label: '30 minutos antes' },
+  { value: '60', label: '1 hora antes' },
+  { value: '120', label: '2 horas antes' },
+  { value: '1440', label: '1 dia antes' },
+];
+
 const emptyForm = {
   client_id: '',
   title: '',
@@ -40,6 +49,7 @@ const emptyForm = {
   due_date: new Date().toISOString().split('T')[0],
   scheduled_time: '',
   status: 'pending',
+  reminder_minutes: '60',
 };
 
 export default function TaskCenter() {
