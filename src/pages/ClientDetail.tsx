@@ -146,12 +146,12 @@ export default function ClientDetail() {
           </button>
           {strategicOpen && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <StrategicCard title="Principais Dores" content={client.painPoints} />
-              <StrategicCard title="Expectativas" content={client.expectations} />
-              <StrategicCard title="Pontos de Atenção" content={client.attentionPoints} />
-              <StrategicCard title="Problemas Recorrentes" content={client.recurringIssues || 'Nenhum identificado'} />
-              <StrategicCard title="Perfil Comportamental" content={client.behavioralProfile} />
-              <StrategicCard title="Notas Estratégicas" content={client.strategicNotes} highlight />
+              <EditableStrategicCard title="Principais Dores" content={strategicOverrides.painPoints ?? client.painPoints} onSave={(v) => handleStrategicSave('painPoints', v)} />
+              <EditableStrategicCard title="Expectativas" content={strategicOverrides.expectations ?? client.expectations} onSave={(v) => handleStrategicSave('expectations', v)} />
+              <EditableStrategicCard title="Pontos de Atenção" content={strategicOverrides.attentionPoints ?? client.attentionPoints} onSave={(v) => handleStrategicSave('attentionPoints', v)} />
+              <EditableStrategicCard title="Problemas Recorrentes" content={strategicOverrides.recurringIssues ?? client.recurringIssues || 'Nenhum identificado'} onSave={(v) => handleStrategicSave('recurringIssues', v)} />
+              <EditableStrategicCard title="Perfil Comportamental" content={strategicOverrides.behavioralProfile ?? client.behavioralProfile} onSave={(v) => handleStrategicSave('behavioralProfile', v)} />
+              <EditableStrategicCard title="Notas Estratégicas" content={strategicOverrides.strategicNotes ?? client.strategicNotes} onSave={(v) => handleStrategicSave('strategicNotes', v)} highlight />
             </div>
           )}
         </motion.div>
