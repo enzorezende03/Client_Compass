@@ -47,8 +47,8 @@ Deno.serve(async (req) => {
       return results
     }
 
-    // 1. Fetch contacts (enough to find Ana Braga among 1492 total)
-    const contacts = await fetchAll('/api/v1/contacts', 1500)
+    // 1. Fetch contacts (limit to avoid timeout - 150 most recent)
+    const contacts = await fetchAll('/api/v1/contacts', 150)
     
     const contactMap = new Map<string, string>()
     for (const c of contacts) {
@@ -60,12 +60,12 @@ Deno.serve(async (req) => {
     // Log contacts with "braga" in the name
     for (const [id, name] of contactMap) {
       if (name.toLowerCase().includes('braga')) {
-        console.log(`[DIGISAC] Found Braga contact: ${name} (id: ${id})`)
+        console.log(`[DIGISAC] FOUND Braga contact: ${name} (id: ${id})`)
       }
     }
 
-    // 2. Fetch recent tickets
-    const tickets = await fetchAll('/api/v1/tickets?sort=-updatedAt', 300)
+    // 2. Fetch recent tickets (150 most recent)
+    const tickets = await fetchAll('/api/v1/tickets?sort=-updatedAt', 150)
     console.log(`[DIGISAC] Loaded ${tickets.length} tickets`)
 
     // 3. Collect messages from tickets
