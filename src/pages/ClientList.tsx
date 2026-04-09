@@ -8,6 +8,7 @@ import { mockClients } from '@/data/mockClients';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { ClientStatusBadge, FinancialStatusBadge } from '@/components/StatusBadges';
 import { Client, STATUS_LABELS, COMPLEXITY_LABELS, HEALTH_LABELS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
+import { AppLayout } from '@/components/AppLayout';
 
 export default function ClientList() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function ClientList() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <AppLayout>
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-6 py-6">
