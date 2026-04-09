@@ -176,6 +176,7 @@ export type Database = {
           due_date: string
           id: string
           responsible: string
+          scheduled_time: string | null
           status: string
           title: string
         }
@@ -185,6 +186,7 @@ export type Database = {
           due_date?: string
           id?: string
           responsible?: string
+          scheduled_time?: string | null
           status?: string
           title: string
         }
@@ -194,6 +196,7 @@ export type Database = {
           due_date?: string
           id?: string
           responsible?: string
+          scheduled_time?: string | null
           status?: string
           title?: string
         }
