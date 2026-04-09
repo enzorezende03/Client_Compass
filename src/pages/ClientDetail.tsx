@@ -49,9 +49,10 @@ export default function ClientDetail() {
 
     setStrategicOverrides(prev => ({ ...prev, [fieldKey]: newValue }));
 
+    const updateData = { [dbColumn]: newValue } as Record<string, string>;
     const { error } = await supabase
       .from('clients')
-      .update({ [dbColumn]: newValue })
+      .update(updateData as any)
       .eq('id', id);
 
     if (error) {
