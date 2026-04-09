@@ -22,14 +22,15 @@ Deno.serve(async (req) => {
     // Format dates for comparison
     const todayStr = now.toISOString().split("T")[0];
 
-    // Fetch pending tasks with a responsible_id, due today, that have a scheduled_time
+    // Fetch pending tasks with a responsible_id, due today, that have a scheduled_time and reminder
     const { data: tasks, error: tasksError } = await supabase
       .from("tasks")
-      .select("id, title, client_id, responsible_id, responsible, due_date, scheduled_time, status")
+      .select("id, title, client_id, responsible_id, responsible, due_date, scheduled_time, status, reminder_minutes")
       .eq("status", "pending")
       .eq("due_date", todayStr)
       .not("scheduled_time", "is", null)
-      .not("responsible_id", "is", null);
+      .not("responsible_id", "is", null)
+      .not("reminder_minutes", "is", null);
 
     if (tasksError) {
       console.error("Error fetching tasks:", tasksError);
