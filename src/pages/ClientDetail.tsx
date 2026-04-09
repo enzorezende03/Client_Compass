@@ -229,3 +229,15 @@ function StrategicCard({ title, content, highlight }: { title: string; content: 
     </div>
   );
 }
+
+function ServiceTierBadge({ profile }: { profile: ClientProfile }) {
+  const colors = PROFILE_COLORS[profile] || PROFILE_COLORS.standard;
+  const icon = PROFILE_ICONS[profile] || '●';
+  const label = PROFILE_LABELS[profile] || profile;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold ${colors.bg} ${colors.text} ${colors.border}`}>
+      <span className="text-base leading-none">{icon}</span>
+      {label}
+    </span>
+  );
+}
