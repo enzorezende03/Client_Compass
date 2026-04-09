@@ -14,8 +14,8 @@ import { ClientStatusBadge, FinancialStatusBadge } from '@/components/StatusBadg
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
 import {
-  COMPLEXITY_LABELS, PROFILE_LABELS, RISK_TYPE_LABELS,
-  TimelineEntry, Task
+  COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS,
+  TimelineEntry, Task, ClientProfile
 } from '@/types/client';
 
 export default function ClientDetail() {
@@ -69,14 +69,14 @@ export default function ClientDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap mb-4">
+                <ServiceTierBadge profile={client.profile as ClientProfile} />
                 <HealthScoreBadge score={client.healthScore} size="lg" />
                 <ClientStatusBadge status={client.status} />
                 <FinancialStatusBadge status={client.financialStatus} />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <ProfileInfoCard label="Segmento" value={client.segment} />
                 <ProfileInfoCard label="Complexidade" value={COMPLEXITY_LABELS[client.complexity]} />
-                <ProfileInfoCard label="Perfil" value={PROFILE_LABELS[client.profile]} />
                 <ProfileInfoCard label="CS Responsável" value={client.csResponsible} highlight />
                 <ProfileInfoCard label="Cliente desde" value={new Date(client.contractStartDate).toLocaleDateString('pt-BR')} />
               </div>
