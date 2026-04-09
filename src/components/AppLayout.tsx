@@ -1,5 +1,5 @@
 import { NavLink } from '@/components/NavLink';
-import { Users, Building2, LayoutDashboard } from 'lucide-react';
+import { Users, Building2, LayoutDashboard, CalendarClock } from 'lucide-react';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +22,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <Building2 className="h-4 w-4" />
             Clientes
+          </NavLink>
+          <NavLink
+            to="/tarefas"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            activeClassName="text-foreground bg-accent"
+          >
+            <CalendarClock className="h-4 w-4" />
+            Tarefas
           </NavLink>
           <NavLink
             to="/cadastro/usuarios"
