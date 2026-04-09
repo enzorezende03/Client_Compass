@@ -188,6 +188,9 @@ Deno.serve(async (req) => {
 
     const complaints = unique.filter(m => {
       const text = (m.text || '').toLowerCase()
+      if (text.length < 10) return false // skip very short/empty messages
+      const hasExclude = excludePhrases.some(ex => text.includes(ex))
+      if (hasExclude) return false
       return complaintKeywords.some(kw => text.includes(kw))
     })
 
