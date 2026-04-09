@@ -137,7 +137,7 @@ export default function TaskCenter() {
       due_date: form.due_date,
       scheduled_time: form.scheduled_time || null,
       status: form.status,
-      reminder_minutes: form.reminder_minutes ? parseInt(form.reminder_minutes) : null,
+      reminder_minutes: form.reminder_minutes && form.reminder_minutes !== 'none' ? parseInt(form.reminder_minutes) : null,
     };
     if (editId) {
       const { error } = await supabase.from('tasks').update(payload).eq('id', editId);
