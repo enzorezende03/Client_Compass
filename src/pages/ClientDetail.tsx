@@ -51,34 +51,37 @@ export default function ClientDetail() {
   return (
     <AppLayout>
       {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+      <header className="relative border-b bg-gradient-to-br from-primary/10 via-card to-accent/10 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.08),transparent_60%)]" />
+        <div className="container mx-auto px-6 py-6 relative z-10">
+          <div className="flex items-start gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="mt-1 shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl font-bold text-foreground">{client.name}</h1>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 flex-wrap mb-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-lg shadow-md shrink-0">
+                  {client.complexity}
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-foreground tracking-tight">{client.name}</h1>
+                  <p className="text-sm text-muted-foreground font-mono">{client.document}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap mb-4">
                 <HealthScoreBadge score={client.healthScore} size="lg" />
                 <ClientStatusBadge status={client.status} />
                 <FinancialStatusBadge status={client.financialStatus} />
               </div>
-              <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                <span className="font-mono">{client.document}</span>
-                <span>•</span>
-                <span>{client.segment}</span>
-                <span>•</span>
-                <span>Complexidade: {COMPLEXITY_LABELS[client.complexity]}</span>
-                <span>•</span>
-                <span>Perfil: {PROFILE_LABELS[client.profile]}</span>
-                <span>•</span>
-                <span>CS: <strong>{client.csResponsible}</strong></span>
-                <span>•</span>
-                <span>Desde: {new Date(client.contractStartDate).toLocaleDateString('pt-BR')}</span>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <ProfileInfoCard label="Segmento" value={client.segment} />
+                <ProfileInfoCard label="Complexidade" value={COMPLEXITY_LABELS[client.complexity]} />
+                <ProfileInfoCard label="Perfil" value={PROFILE_LABELS[client.profile]} />
+                <ProfileInfoCard label="CS Responsável" value={client.csResponsible} highlight />
+                <ProfileInfoCard label="Cliente desde" value={new Date(client.contractStartDate).toLocaleDateString('pt-BR')} />
               </div>
             </div>
-            <Button onClick={() => setInteractionOpen(true)} className="gap-2">
+            <Button onClick={() => setInteractionOpen(true)} className="gap-2 shrink-0 shadow-md">
               <Plus className="h-4 w-4" />
               Nova Interação
             </Button>
@@ -206,6 +209,15 @@ export default function ClientDetail() {
         onSubmit={handleNewInteraction}
       />
     </AppLayout>
+  );
+}
+
+function ProfileInfoCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`rounded-lg border px-3 py-2 ${highlight ? 'bg-primary/5 border-primary/20' : 'bg-background/60'}`}>
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</p>
+      <p className={`text-sm font-semibold ${highlight ? 'text-primary' : 'text-foreground'}`}>{value}</p>
+    </div>
   );
 }
 
