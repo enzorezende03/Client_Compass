@@ -265,6 +265,7 @@ export type Database = {
           description: string
           due_date: string
           id: string
+          reminder_minutes: number | null
           responsible: string
           responsible_id: string | null
           scheduled_time: string | null
@@ -277,6 +278,7 @@ export type Database = {
           description?: string
           due_date?: string
           id?: string
+          reminder_minutes?: number | null
           responsible?: string
           responsible_id?: string | null
           scheduled_time?: string | null
@@ -289,6 +291,7 @@ export type Database = {
           description?: string
           due_date?: string
           id?: string
+          reminder_minutes?: number | null
           responsible?: string
           responsible_id?: string | null
           scheduled_time?: string | null

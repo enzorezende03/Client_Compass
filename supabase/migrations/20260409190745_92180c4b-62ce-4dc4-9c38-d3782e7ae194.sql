@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks ADD COLUMN reminder_minutes INTEGER DEFAULT NULL;

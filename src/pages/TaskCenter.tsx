@@ -32,6 +32,15 @@ interface TaskRow {
 interface ClientOption { id: string; name: string; }
 interface InternalUser { id: string; name: string; email: string; active: boolean; }
 
+const REMINDER_OPTIONS = [
+  { value: '', label: 'Sem lembrete' },
+  { value: '15', label: '15 minutos antes' },
+  { value: '30', label: '30 minutos antes' },
+  { value: '60', label: '1 hora antes' },
+  { value: '120', label: '2 horas antes' },
+  { value: '1440', label: '1 dia antes' },
+];
+
 const emptyForm = {
   client_id: '',
   title: '',
@@ -40,6 +49,7 @@ const emptyForm = {
   due_date: new Date().toISOString().split('T')[0],
   scheduled_time: '',
   status: 'pending',
+  reminder_minutes: '60',
 };
 
 export default function TaskCenter() {
@@ -106,6 +116,7 @@ export default function TaskCenter() {
       due_date: task.due_date,
       scheduled_time: task.scheduled_time || '',
       status: task.status,
+      reminder_minutes: (task as any).reminder_minutes?.toString() || '',
     });
     setEditId(task.id);
     setDialogOpen(true);
@@ -126,6 +137,7 @@ export default function TaskCenter() {
       due_date: form.due_date,
       scheduled_time: form.scheduled_time || null,
       status: form.status,
+      reminder_minutes: form.reminder_minutes && form.reminder_minutes !== 'none' ? parseInt(form.reminder_minutes) : null,
     };
     if (editId) {
       const { error } = await supabase.from('tasks').update(payload).eq('id', editId);
@@ -336,6 +348,15 @@ export default function TaskCenter() {
                 <Label>Horário</Label>
                 <Input type="time" value={form.scheduled_time} onChange={e => setForm(f => ({ ...f, scheduled_time: e.target.value }))} />
               </div>
+            </div>
+            <div>
+              <Label>🔔 Lembrete</Label>
+              <Select value={form.reminder_minutes} onValueChange={v => setForm(f => ({ ...f, reminder_minutes: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o lembrete" /></SelectTrigger>
+                <SelectContent>
+                  {REMINDER_OPTIONS.map(o => <SelectItem key={o.value || 'none'} value={o.value || 'none'}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

@@ -22,14 +22,15 @@ Deno.serve(async (req) => {
     // Format dates for comparison
     const todayStr = now.toISOString().split("T")[0];
 
-    // Fetch pending tasks with a responsible_id, due today, that have a scheduled_time
+    // Fetch pending tasks with a responsible_id, due today, that have a scheduled_time and reminder
     const { data: tasks, error: tasksError } = await supabase
       .from("tasks")
-      .select("id, title, client_id, responsible_id, responsible, due_date, scheduled_time, status")
+      .select("id, title, client_id, responsible_id, responsible, due_date, scheduled_time, status, reminder_minutes")
       .eq("status", "pending")
       .eq("due_date", todayStr)
       .not("scheduled_time", "is", null)
-      .not("responsible_id", "is", null);
+      .not("responsible_id", "is", null)
+      .not("reminder_minutes", "is", null);
 
     if (tasksError) {
       console.error("Error fetching tasks:", tasksError);
@@ -48,13 +49,14 @@ Deno.serve(async (req) => {
     let notifiedCount = 0;
 
     for (const task of tasks) {
-      // Parse scheduled datetime
+      // Use task-specific reminder_minutes
+      const reminderMinutes = task.reminder_minutes || 60;
       const taskDateTime = new Date(`${task.due_date}T${task.scheduled_time}`);
       const diffMs = taskDateTime.getTime() - now.getTime();
       const diffMinutes = diffMs / 60000;
 
-      // Check if task is between 0 and 65 minutes away (window to catch ~1 hour before)
-      if (diffMinutes <= 65 && diffMinutes > -5) {
+      // Check if we're within the reminder window (±5 min tolerance)
+      if (diffMinutes <= reminderMinutes + 5 && diffMinutes > -5) {
         // Check if notification already exists for this task (avoid duplicates)
         const { data: existing } = await supabase
           .from("notifications")
