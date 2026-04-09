@@ -21,11 +21,13 @@ interface TaskRow {
   title: string;
   description: string;
   responsible: string;
+  responsible_id: string | null;
   due_date: string;
   scheduled_time: string | null;
   status: string;
   created_at: string;
   client_name?: string;
+  responsible_name?: string;
 }
 
 interface ClientOption {
@@ -33,11 +35,19 @@ interface ClientOption {
   name: string;
 }
 
+interface InternalUser {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
 const emptyForm = {
   client_id: '',
   title: '',
   description: '',
   responsible: '',
+  responsible_id: '',
   due_date: new Date().toISOString().split('T')[0],
   scheduled_time: '',
   status: 'pending',
