@@ -39,6 +39,11 @@ Deno.serve(async (req) => {
       if (contactsRes.ok) {
         const contactsData = await contactsRes.json()
         const contacts = contactsData.data || contactsData.rows || contactsData || []
+        // Log first contact raw structure
+        if (Array.isArray(contacts) && contacts.length > 0) {
+          console.log(`[CONTACT RAW KEYS] ${JSON.stringify(Object.keys(contacts[0]))}`)
+          console.log(`[CONTACT RAW SAMPLE] ${JSON.stringify(contacts[0]).substring(0, 500)}`)
+        }
         for (const c of (Array.isArray(contacts) ? contacts : [])) {
           const name = c.name || c.pushName || c.displayName || ''
           const id = c.id || c._id || ''
