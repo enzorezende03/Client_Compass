@@ -49,7 +49,7 @@ export default function ClientDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <AppLayout>
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-6 py-4">
