@@ -205,7 +205,7 @@ export default function ClientDetail() {
         clientId={client.id}
         onSubmit={handleNewInteraction}
       />
-    </div>
+    </AppLayout>
   );
 }
 
