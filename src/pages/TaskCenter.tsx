@@ -64,6 +64,7 @@ export default function TaskCenter() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
+  const [internalUsers, setInternalUsers] = useState<InternalUser[]>([]);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
   const fetchData = async () => {
