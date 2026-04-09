@@ -19,6 +19,7 @@ export const mockClients: Client[] = [
     recurringIssues: 'Atraso no envio de NFs de serviço.',
     behavioralProfile: 'Exigente, mas leal quando bem atendido.',
     strategicNotes: 'Potencial para upgrade de plano. Considerar reunião trimestral.',
+    taxation: 'lucro_presumido_equiparacao_hospitalar',
   },
   {
     id: '2',
@@ -38,6 +39,7 @@ export const mockClients: Client[] = [
     recurringIssues: 'Demora para responder solicitações do time.',
     behavioralProfile: 'Ansioso, compara preços frequentemente.',
     strategicNotes: 'Priorizar contato comercial. Mostrar valor agregado.',
+    taxation: 'simples_nacional',
     riskReason: 'Cliente mencionou insatisfação com preço e está cotando concorrentes.',
     riskType: 'relationship',
     riskIdentifiedDate: '2024-01-10',
@@ -61,6 +63,7 @@ export const mockClients: Client[] = [
     recurringIssues: 'Nenhum recorrente no momento.',
     behavioralProfile: 'Técnico, gosta de dados e relatórios.',
     strategicNotes: 'Excelente cliente para case de sucesso. Boa relação com o time.',
+    taxation: 'lucro_presumido',
   },
   {
     id: '4',
@@ -80,6 +83,7 @@ export const mockClients: Client[] = [
     recurringIssues: '',
     behavioralProfile: 'Tranquila, pouco contato.',
     strategicNotes: 'Manter acompanhamento trimestral para medir satisfação.',
+    taxation: 'simples_nacional_fator_r',
   },
   {
     id: '5',
@@ -99,6 +103,7 @@ export const mockClients: Client[] = [
     recurringIssues: 'Erros em folha de pagamento, atrasos em guias.',
     behavioralProfile: 'Muito insatisfeito, mas disposto a dar outra chance.',
     strategicNotes: 'Plano de recuperação em andamento. Reuniões semanais com coordenação.',
+    taxation: 'lucro_presumido_equiparacao_hospitalar',
     riskReason: 'Erros operacionais graves no DP causaram multas ao cliente.',
     riskType: 'operational',
     riskIdentifiedDate: '2023-12-01',
@@ -122,6 +127,7 @@ export const mockClients: Client[] = [
     recurringIssues: 'Dúvidas frequentes sobre ISSQN.',
     behavioralProfile: 'Detalhista, quer entender tudo.',
     strategicNotes: 'Considerar reunião técnica mensal sobre questões fiscais.',
+    taxation: 'simples_nacional',
   },
 ];
 
