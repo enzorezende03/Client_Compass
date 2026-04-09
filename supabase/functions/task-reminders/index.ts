@@ -49,13 +49,14 @@ Deno.serve(async (req) => {
     let notifiedCount = 0;
 
     for (const task of tasks) {
-      // Parse scheduled datetime
+      // Use task-specific reminder_minutes
+      const reminderMinutes = task.reminder_minutes || 60;
       const taskDateTime = new Date(`${task.due_date}T${task.scheduled_time}`);
       const diffMs = taskDateTime.getTime() - now.getTime();
       const diffMinutes = diffMs / 60000;
 
-      // Check if task is between 0 and 65 minutes away (window to catch ~1 hour before)
-      if (diffMinutes <= 65 && diffMinutes > -5) {
+      // Check if we're within the reminder window (±5 min tolerance)
+      if (diffMinutes <= reminderMinutes + 5 && diffMinutes > -5) {
         // Check if notification already exists for this task (avoid duplicates)
         const { data: existing } = await supabase
           .from("notifications")
