@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
@@ -13,19 +13,58 @@ import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
+import { EditableStrategicCard } from '@/components/EditableStrategicCard';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import {
   COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS, TAXATION_LABELS,
   TimelineEntry, Task, ClientProfile, TaxationType
 } from '@/types/client';
 
+// Map strategic field keys to DB column names
+const STRATEGIC_FIELD_MAP: Record<string, string> = {
+  painPoints: 'pain_points',
+  expectations: 'expectations',
+  attentionPoints: 'attention_points',
+  recurringIssues: 'recurring_issues',
+  behavioralProfile: 'behavioral_profile',
+  strategicNotes: 'strategic_notes',
+};
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const client = mockClients.find(c => c.id === id);
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [timeline, setTimeline] = useState<TimelineEntry[]>(mockTimeline);
   const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [strategicOpen, setStrategicOpen] = useState(true);
+  const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
+
+  const handleStrategicSave = useCallback(async (fieldKey: string, newValue: string) => {
+    if (!id) return;
+    const dbColumn = STRATEGIC_FIELD_MAP[fieldKey];
+    if (!dbColumn) return;
+
+    setStrategicOverrides(prev => ({ ...prev, [fieldKey]: newValue }));
+
+    const { error } = await supabase
+      .from('clients')
+      .update({ [dbColumn]: newValue })
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+      setStrategicOverrides(prev => {
+        const next = { ...prev };
+        delete next[fieldKey];
+        return next;
+      });
+    } else {
+      toast({ title: 'Salvo com sucesso' });
+    }
+  }, [id, toast]);
 
   const clientTimeline = useMemo(() => timeline.filter(t => t.clientId === id), [timeline, id]);
   const clientTasks = useMemo(() => tasks.filter(t => t.clientId === id), [tasks, id]);
