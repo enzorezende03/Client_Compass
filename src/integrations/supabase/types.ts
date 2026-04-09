@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          changed_by: string
+          client_id: string
+          created_at: string
+          field_name: string
+          id: string
+          new_value: string
+          old_value: string
+        }
+        Insert: {
+          changed_by?: string
+          client_id: string
+          created_at?: string
+          field_name: string
+          id?: string
+          new_value?: string
+          old_value?: string
+        }
+        Update: {
+          changed_by?: string
+          client_id?: string
+          created_at?: string
+          field_name?: string
+          id?: string
+          new_value?: string
+          old_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           action_plan: string | null
