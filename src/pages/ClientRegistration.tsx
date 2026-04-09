@@ -43,7 +43,7 @@ interface ClientForm {
 const emptyForm: ClientForm = {
   name: '', document: '', segment: '', contract_start_date: new Date().toISOString().split('T')[0],
   cs_responsible: '', complexity: 'C', status: 'active', profile: 'standard',
-  financial_status: 'current', health_score: 'healthy',
+  financial_status: 'active_financial', health_score: 'healthy',
   pain_points: '', expectations: '', attention_points: '', recurring_issues: '',
   behavioral_profile: '', strategic_notes: '',
   risk_reason: '', risk_type: '', risk_identified_date: '', action_plan: '',
