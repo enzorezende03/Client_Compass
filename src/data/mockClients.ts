@@ -177,9 +177,9 @@ export const mockTimeline: TimelineEntry[] = [
 ];
 
 export const mockTasks: Task[] = [
-  { id: 'tk1', clientId: '2', title: 'Agendar reunião com comercial sobre retenção', responsible: 'Bruno Costa', dueDate: '2024-03-20', status: 'pending', createdAt: '2024-03-01' },
-  { id: 'tk2', clientId: '5', title: 'Enviar relatório semanal de acompanhamento', responsible: 'Ana Silva', dueDate: '2024-03-17', status: 'pending', createdAt: '2024-03-10' },
-  { id: 'tk3', clientId: '1', title: 'Preparar proposta de planejamento tributário', responsible: 'Ana Silva', dueDate: '2024-04-01', status: 'pending', createdAt: '2024-03-15' },
-  { id: 'tk4', clientId: '3', title: 'Enviar proposta de serviço de DP', responsible: 'Ana Silva', dueDate: '2024-03-25', status: 'completed', createdAt: '2024-03-05' },
-  { id: 'tk5', clientId: '6', title: 'Agendar reunião técnica sobre ISSQN', responsible: 'Ana Silva', dueDate: '2024-03-22', status: 'pending', createdAt: '2024-03-12' },
+  { id: 'tk1', clientId: '2', title: 'Agendar reunião com comercial sobre retenção', responsible: 'Bruno Costa', dueDate: '2024-03-20', scheduledTime: '14:00', status: 'pending', createdAt: '2024-03-01' },
+  { id: 'tk2', clientId: '5', title: 'Enviar relatório semanal de acompanhamento', responsible: 'Ana Silva', dueDate: '2024-03-17', scheduledTime: '09:00', status: 'pending', createdAt: '2024-03-10' },
+  { id: 'tk3', clientId: '1', title: 'Preparar proposta de planejamento tributário', responsible: 'Ana Silva', dueDate: '2024-04-01', scheduledTime: '10:30', status: 'pending', createdAt: '2024-03-15' },
+  { id: 'tk4', clientId: '3', title: 'Enviar proposta de serviço de DP', responsible: 'Ana Silva', dueDate: '2024-03-25', scheduledTime: '15:00', status: 'completed', createdAt: '2024-03-05' },
+  { id: 'tk5', clientId: '6', title: 'Agendar reunião técnica sobre ISSQN', responsible: 'Ana Silva', dueDate: '2024-03-22', scheduledTime: '11:00', status: 'pending', createdAt: '2024-03-12' },
 ];
