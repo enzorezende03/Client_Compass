@@ -1,0 +1,168 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { mockClients } from '@/data/mockClients';
+import { HealthScoreBadge } from '@/components/HealthScoreBadge';
+import { ClientStatusBadge, FinancialStatusBadge } from '@/components/StatusBadges';
+import { Client, STATUS_LABELS, COMPLEXITY_LABELS, HEALTH_LABELS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
+
+export default function ClientList() {
+  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [complexityFilter, setComplexityFilter] = useState<string>('all');
+  const [healthFilter, setHealthFilter] = useState<string>('all');
+  const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
+
+  const responsibles = [...new Set(mockClients.map(c => c.csResponsible))];
+
+  const filtered = mockClients.filter(c => {
+    const matchSearch = search === '' ||
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.document.includes(search);
+    const matchStatus = statusFilter === 'all' || c.status === statusFilter;
+    const matchComplexity = complexityFilter === 'all' || c.complexity === complexityFilter;
+    const matchHealth = healthFilter === 'all' || c.healthScore === healthFilter;
+    const matchResp = responsibleFilter === 'all' || c.csResponsible === responsibleFilter;
+    return matchSearch && matchStatus && matchComplexity && matchHealth && matchResp;
+  });
+
+  const stats = {
+    total: mockClients.length,
+    atRisk: mockClients.filter(c => c.status === 'at_risk' || c.status === 'recovery').length,
+    critical: mockClients.filter(c => c.healthScore === 'critical').length,
+    healthy: mockClients.filter(c => c.healthScore === 'healthy').length,
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card">
+        <div className="container mx-auto px-6 py-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">Customer Success</h1>
+              <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard icon={Building2} label="Total de Clientes" value={stats.total} />
+            <StatCard icon={AlertTriangle} label="Em Risco / Recuperação" value={stats.atRisk} variant="warning" />
+            <StatCard icon={TrendingUp} label="Health Crítico" value={stats.critical} variant="danger" />
+            <StatCard icon={Users} label="Saudáveis" value={stats.healthy} variant="success" />
+          </div>
+        </div>
+      </header>
+
+      {/* Filters */}
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou CPF/CNPJ..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Status</SelectItem>
+                {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={complexityFilter} onValueChange={setComplexityFilter}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Complexidade" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {Object.entries(COMPLEXITY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={healthFilter} onValueChange={setHealthFilter}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Health Score" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {Object.entries(HEALTH_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {responsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Client cards */}
+        <div className="space-y-2">
+          {filtered.map((client, i) => (
+            <motion.div
+              key={client.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.03 }}
+              onClick={() => navigate(`/client/${client.id}`)}
+              className="group flex items-center gap-4 rounded-lg border bg-card p-4 shadow-card cursor-pointer transition-all hover:shadow-card-hover hover:border-primary/20"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm shrink-0">
+                {client.complexity}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="font-mono">{client.document}</span>
+                  <span>•</span>
+                  <span>{client.segment}</span>
+                  <span>•</span>
+                  <span>CS: {client.csResponsible}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <HealthScoreBadge score={client.healthScore} />
+                <ClientStatusBadge status={client.status} />
+                <FinancialStatusBadge status={client.financialStatus} />
+              </div>
+            </motion.div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              Nenhum cliente encontrado com os filtros selecionados.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, variant }: {
+  icon: typeof Building2; label: string; value: number; variant?: 'warning' | 'danger' | 'success';
+}) {
+  const colors = {
+    warning: 'text-health-attention',
+    danger: 'text-health-critical',
+    success: 'text-health-healthy',
+  };
+  return (
+    <div className="rounded-lg border bg-card p-4 shadow-card">
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className={`h-4 w-4 ${variant ? colors[variant] : 'text-muted-foreground'}`} />
+        <span className="text-xs text-muted-foreground">{label}</span>
+      </div>
+      <p className={`text-2xl font-bold ${variant ? colors[variant] : 'text-foreground'}`}>{value}</p>
+    </div>
+  );
+}
