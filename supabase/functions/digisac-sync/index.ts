@@ -23,31 +23,27 @@ Deno.serve(async (req) => {
       'Content-Type': 'application/json',
     }
 
-    // Helper to fetch paginated (try multiple pagination styles)
-    async function fetchAll(endpoint: string, maxPages = 20): Promise<any[]> {
+    // Helper to fetch paginated - DIGISAC API uses page/pageSize, default pageSize=15
+    const PAGE_SIZE = 15 // API ignores larger values
+    async function fetchAll(endpoint: string, maxItems = 500): Promise<any[]> {
       const results: any[] = []
-      for (let page = 0; page < maxPages; page++) {
+      const maxPages = Math.ceil(maxItems / PAGE_SIZE)
+      for (let page = 1; page <= maxPages; page++) {
         const separator = endpoint.includes('?') ? '&' : '?'
-        // DIGISAC API: try page/pageSize style
-        const url = `${baseUrl}${endpoint}${separator}page=${page + 1}&pageSize=100&limit=100&offset=${page * 100}`
+        const url = `${baseUrl}${endpoint}${separator}page=${page}&pageSize=${PAGE_SIZE}`
         const res = await fetch(url, { headers: authHeaders })
         if (!res.ok) {
           console.error(`[FETCH] page ${page} failed: ${res.status}`)
           break
         }
         const data = await res.json()
-        // Handle { data: [...], total: N } or plain array
         const items = data.data || data.rows || data.results || (Array.isArray(data) ? data : [])
-        if (!Array.isArray(items) || items.length === 0) {
-          console.log(`[FETCH] ${endpoint} page ${page}: empty, stopping. Keys: ${Object.keys(data).join(',')}`)
-          break
-        }
-        console.log(`[FETCH] ${endpoint} page ${page}: ${items.length} items (total: ${data.total || 'N/A'})`)
+        if (!Array.isArray(items) || items.length === 0) break
         results.push(...items)
-        // Stop if we got all
-        if (data.total && results.length >= data.total) break
-        if (items.length < 100) break
+        if (data.total && results.length >= Math.min(data.total, maxItems)) break
+        if (items.length < PAGE_SIZE) break
       }
+      console.log(`[FETCH] ${endpoint}: fetched ${results.length} items total`)
       return results
     }
 
