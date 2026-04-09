@@ -23,13 +23,14 @@ Deno.serve(async (req) => {
       'Content-Type': 'application/json',
     }
 
-    // Helper to fetch paginated
-    async function fetchAll(endpoint: string, maxPages = 10): Promise<any[]> {
+    // Helper to fetch paginated (DIGISAC uses $top/$skip OData style)
+    async function fetchAll(endpoint: string, maxPages = 20): Promise<any[]> {
       const results: any[] = []
       for (let page = 0; page < maxPages; page++) {
         const skip = page * 100
         const separator = endpoint.includes('?') ? '&' : '?'
-        const url = `${baseUrl}${endpoint}${separator}limit=100&skip=${skip}`
+        // Try both param styles
+        const url = `${baseUrl}${endpoint}${separator}$top=100&$skip=${skip}&limit=100&skip=${skip}`
         const res = await fetch(url, { headers: authHeaders })
         if (!res.ok) {
           const err = await res.text()
@@ -39,20 +40,34 @@ Deno.serve(async (req) => {
         const data = await res.json()
         const items = data.data || data.rows || (Array.isArray(data) ? data : [])
         if (!Array.isArray(items) || items.length === 0) break
+        console.log(`[FETCH] ${endpoint} page ${page}: ${items.length} items`)
         results.push(...items)
         if (items.length < 100) break
       }
       return results
     }
 
-    // 1. Fetch all contacts
+    // 1. Fetch all contacts (multiple strategies)
     const contacts = await fetchAll('/api/v1/contacts')
+    
+    // Also try searching specifically for Ana Braga
+    const anaSearchUrl = `${baseUrl}/api/v1/contacts?search=ana%20braga`
+    try {
+      const anaRes = await fetch(anaSearchUrl, { headers: authHeaders })
+      if (anaRes.ok) {
+        const anaData = await anaRes.json()
+        const anaItems = anaData.data || anaData.rows || (Array.isArray(anaData) ? anaData : [])
+        console.log(`[DIGISAC] Ana Braga search returned ${anaItems.length} results`)
+        if (Array.isArray(anaItems)) contacts.push(...anaItems)
+      }
+    } catch (e) { console.error('[DIGISAC] Ana search failed:', e) }
+
     const contactMap = new Map<string, string>()
     for (const c of contacts) {
       const name = c.name || c.internalName || c.alternativeName || c.pushName || ''
       if (c.id && name) contactMap.set(String(c.id), name)
     }
-    console.log(`[DIGISAC] Loaded ${contactMap.size} contacts`)
+    console.log(`[DIGISAC] Loaded ${contactMap.size} unique contacts`)
 
     // Log contacts with "ana" in the name
     for (const [id, name] of contactMap) {
