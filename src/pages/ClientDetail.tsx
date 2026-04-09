@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
 import {
-  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, Edit3, ChevronDown, ChevronUp
+  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, Edit3, ChevronDown, ChevronUp, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
