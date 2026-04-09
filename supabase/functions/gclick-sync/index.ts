@@ -120,7 +120,9 @@ Deno.serve(async (req) => {
     // ── SYNC CLIENTS ──
     if (action === "sync-clients") {
       const token = await getAccessToken();
-      const gclickClients = await gclickGetAllPages(token, "/clientes");
+      const allGclickClients = await gclickGetAllPages(token, "/clientes");
+      // Filter only active clients
+      const gclickClients = allGclickClients.filter((c: any) => c.status === "ATIVO");
 
       const logId = await createLog(supabase, "clients");
 
