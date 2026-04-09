@@ -18,129 +18,192 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     const baseUrl = DIGISAC_BASE_URL.replace(/\/$/, '')
-    const headers = {
+    const authHeaders = {
       'Authorization': `Bearer ${DIGISAC_API_TOKEN}`,
       'Content-Type': 'application/json',
     }
 
-    // Step 1: Fetch contacts
-    const contactsRes = await fetch(`${baseUrl}/api/v1/contacts?limit=100`, { headers })
-    if (!contactsRes.ok) {
-      const err = await contactsRes.text()
-      throw new Error(`DIGISAC contacts API error [${contactsRes.status}]: ${err}`)
+    // Helper to fetch paginated
+    async function fetchAll(endpoint: string, maxPages = 10): Promise<any[]> {
+      const results: any[] = []
+      for (let page = 0; page < maxPages; page++) {
+        const skip = page * 100
+        const separator = endpoint.includes('?') ? '&' : '?'
+        const url = `${baseUrl}${endpoint}${separator}limit=100&skip=${skip}`
+        const res = await fetch(url, { headers: authHeaders })
+        if (!res.ok) {
+          const err = await res.text()
+          console.error(`[FETCH] ${endpoint} page ${page} failed: ${res.status} - ${err.substring(0, 200)}`)
+          break
+        }
+        const data = await res.json()
+        const items = data.data || data.rows || (Array.isArray(data) ? data : [])
+        if (!Array.isArray(items) || items.length === 0) break
+        results.push(...items)
+        if (items.length < 100) break
+      }
+      return results
     }
-    const contactsData = await contactsRes.json()
-    const contacts = contactsData.data || contactsData || []
-    console.log(`[DIGISAC] Found ${contacts.length} contacts`)
 
-    // Step 2: Fetch recent messages
-    const messagesRes = await fetch(`${baseUrl}/api/v1/messages?limit=100&sort=-createdAt`, { headers })
-    if (!messagesRes.ok) {
-      const err = await messagesRes.text()
-      throw new Error(`DIGISAC messages API error [${messagesRes.status}]: ${err}`)
-    }
-    const messagesData = await messagesRes.json()
-    const messages = messagesData.data || messagesData || []
-
-    // Build contact lookup by ID
+    // 1. Fetch all contacts
+    const contacts = await fetchAll('/api/v1/contacts')
     const contactMap = new Map<string, string>()
     for (const c of contacts) {
-      const name = c.name || c.pushName || c.displayName || ''
-      const id = c.id || c._id || ''
-      if (id && name) contactMap.set(String(id), name)
+      const name = c.name || c.internalName || c.alternativeName || c.pushName || ''
+      if (c.id && name) contactMap.set(String(c.id), name)
+    }
+    console.log(`[DIGISAC] Loaded ${contactMap.size} contacts`)
+
+    // Log contacts with "ana" in the name
+    for (const [id, name] of contactMap) {
+      if (name.toLowerCase().includes('ana')) {
+        console.log(`[DIGISAC] Found Ana contact: ${name} (id: ${id})`)
+      }
     }
 
-    // Log all messages with resolved contact names
+    // 2. Fetch all tickets with lastMessage
+    const tickets = await fetchAll('/api/v1/tickets?sort=-updatedAt')
+    console.log(`[DIGISAC] Loaded ${tickets.length} tickets`)
+
+    // 3. Collect messages from tickets
+    const allMessages: Array<{
+      id: string; contactName: string; text: string; createdAt: string;
+    }> = []
+
+    for (const ticket of tickets) {
+      const contactId = ticket.contactId || ''
+      const contactName = contactMap.get(String(contactId)) || ''
+      
+      // Extract lastMessage
+      const lm = ticket.lastMessage
+      let text = ''
+      if (lm && typeof lm === 'object') {
+        text = lm.text || lm.body || lm.message || ''
+      } else if (typeof lm === 'string') {
+        text = lm
+      }
+
+      // Also check firstMessage
+      const fm = ticket.firstMessage
+      let firstText = ''
+      if (fm && typeof fm === 'object') {
+        firstText = fm.text || fm.body || fm.message || ''
+      }
+
+      if (text || firstText) {
+        if (text) {
+          allMessages.push({
+            id: `${ticket.id}-last`,
+            contactName,
+            text,
+            createdAt: ticket.updatedAt || ticket.createdAt || new Date().toISOString(),
+          })
+        }
+        if (firstText && firstText !== text) {
+          allMessages.push({
+            id: `${ticket.id}-first`,
+            contactName,
+            text: firstText,
+            createdAt: ticket.createdAt || new Date().toISOString(),
+          })
+        }
+      }
+
+      // Log if contact is Ana
+      if (contactName.toLowerCase().includes('ana')) {
+        console.log(`[ANA TICKET] ${contactName} | last: ${text.substring(0, 150)} | first: ${firstText.substring(0, 150)}`)
+      }
+    }
+
+    // 4. Also fetch standalone messages
+    const messages = await fetchAll('/api/v1/messages?sort=-createdAt')
+    console.log(`[DIGISAC] Loaded ${messages.length} standalone messages`)
+
     for (const msg of messages) {
       const contactId = msg.contactId || msg.contact_id || ''
-      const contactName = contactMap.get(String(contactId)) || msg.contact?.name || msg.contactName || msg.from?.name || 'N/A'
+      const contactName = contactMap.get(String(contactId)) || ''
       const text = msg.text || msg.body || msg.message || ''
-      const fromMe = msg.fromMe || msg.from_me || false
-      console.log(`[DIGISAC MSG] Contact: ${contactName} (id:${contactId}) | fromMe: ${fromMe} | Text: ${text.substring(0, 150)}`)
+
+      if (contactName.toLowerCase().includes('ana')) {
+        console.log(`[ANA MSG] ${contactName} | ${text.substring(0, 200)}`)
+      }
+
+      allMessages.push({
+        id: String(msg.id || msg._id),
+        contactName,
+        text,
+        createdAt: msg.createdAt || msg.timestamp || new Date().toISOString(),
+      })
     }
 
-    // Complaint keywords
+    console.log(`[DIGISAC] Total messages: ${allMessages.length}`)
+
+    // 5. Filter complaints
     const complaintKeywords = [
-      'reclamação', 'reclamacao', 'problema', 'erro', 'falha', 'insatisf',
+      'reclamação', 'reclamacao', 'problema', 'falha', 'insatisf',
       'urgente', 'crítico', 'critico', 'não funciona', 'nao funciona',
       'demora', 'atraso', 'péssimo', 'pessimo', 'horrível', 'horrivel',
-      'absurdo', 'inaceitável', 'inaceitavel', 'resolver', 'solução', 'solucao',
+      'absurdo', 'inaceitável', 'inaceitavel', 'solução', 'solucao',
       'atendimento', 'ruim', 'chatead', 'decepcion', 'frustr',
-      'descaso', 'negligên', 'negligen', 'abandono', 'desrespeito', 'falta de',
-      'insatisfeito', 'insatisfeita', 'mal atend', 'péssima', 'terrível', 'terrivel',
-      'cobran', 'caro', 'valor', 'preço', 'preco'
+      'descaso', 'negligên', 'negligen', 'insatisfeito', 'insatisfeita',
+      'mal atend', 'péssima', 'terrível', 'terrivel'
     ]
 
-    const complaints = messages.filter((msg: any) => {
-      const text = (msg.text || msg.body || msg.message || '').toLowerCase()
+    const seen = new Set<string>()
+    const unique = allMessages.filter(m => {
+      if (seen.has(m.id)) return false
+      seen.add(m.id)
+      return true
+    })
+
+    const complaints = unique.filter(m => {
+      const text = (m.text || '').toLowerCase()
       return complaintKeywords.some(kw => text.includes(kw))
     })
 
-    console.log(`[DIGISAC] Complaints found: ${complaints.length}`)
+    console.log(`[DIGISAC] Complaints: ${complaints.length}`)
 
     let imported = 0
+    for (const c of complaints) {
+      console.log(`[COMPLAINT] ${c.contactName || 'N/A'}: ${c.text.substring(0, 150)}`)
 
-    for (const complaint of complaints) {
-      const externalId = String(complaint.id || complaint._id || complaint.messageId)
-      const contactId = complaint.contactId || complaint.contact_id || ''
-      const contactName = contactMap.get(String(contactId)) || complaint.contact?.name || complaint.contactName || complaint.from?.name || 'Desconhecido'
-      const message = complaint.text || complaint.body || complaint.message || ''
-      const receivedAt = complaint.createdAt || complaint.timestamp || new Date().toISOString()
-
-      // Upsert complaint
-      const { error: upsertError } = await supabase
+      const { error } = await supabase
         .from('digisac_complaints')
         .upsert(
-          { external_id: externalId, contact_name: contactName, message, received_at: receivedAt },
+          { external_id: c.id, contact_name: c.contactName || 'Desconhecido', message: c.text, received_at: c.createdAt },
           { onConflict: 'external_id' }
         )
+      if (error) { console.error('Upsert error:', error); continue }
 
-      if (upsertError) {
-        console.error('Error upserting complaint:', upsertError)
-        continue
-      }
+      if (c.contactName) {
+        const { data: matched } = await supabase
+          .from('clients').select('id').ilike('name', `%${c.contactName}%`).limit(1)
 
-      // Try to match with existing client
-      const { data: matchedClients } = await supabase
-        .from('clients')
-        .select('id')
-        .ilike('name', `%${contactName}%`)
-        .limit(1)
+        if (matched?.length) {
+          await supabase.from('digisac_complaints')
+            .update({ matched_client_id: matched[0].id, processed: true })
+            .eq('external_id', c.id)
 
-      if (matchedClients && matchedClients.length > 0) {
-        await supabase
-          .from('digisac_complaints')
-          .update({ matched_client_id: matchedClients[0].id, processed: true })
-          .eq('external_id', externalId)
-
-        await supabase
-          .from('timeline_entries')
-          .insert({
-            client_id: matchedClients[0].id,
-            date: receivedAt,
-            type: 'complaint',
-            description: `[DIGISAC] ${message}`,
-            responsible: 'Sistema DIGISAC',
-            sector: 'commercial',
-            origin: 'client',
-            demand_status: 'open',
-            is_relevant_event: true,
-            relevant_event_type: 'Reclamação DIGISAC',
+          await supabase.from('timeline_entries').insert({
+            client_id: matched[0].id, date: c.createdAt, type: 'complaint',
+            description: `[DIGISAC] ${c.text}`, responsible: 'Sistema DIGISAC',
+            sector: 'commercial', origin: 'client', demand_status: 'open',
+            is_relevant_event: true, relevant_event_type: 'Reclamação DIGISAC',
           })
+        }
       }
-
       imported++
     }
 
     return new Response(
-      JSON.stringify({ success: true, total_contacts: contacts.length, total_messages: messages.length, complaints_found: complaints.length, imported }),
+      JSON.stringify({ success: true, total_contacts: contactMap.size, total_messages: unique.length, complaints_found: complaints.length, imported }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   } catch (error: unknown) {
     console.error('DIGISAC sync error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const msg = error instanceof Error ? error.message : 'Unknown error'
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: msg }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
