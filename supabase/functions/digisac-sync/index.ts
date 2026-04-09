@@ -68,6 +68,26 @@ Deno.serve(async (req) => {
     const tickets = await fetchAll('/api/v1/tickets?sort=-updatedAt', 150)
     console.log(`[DIGISAC] Loaded ${tickets.length} tickets`)
 
+    // Search for Ana Braga tickets specifically
+    const anaBragaId = '3e5b1971-9be6-489c-ba70-e30091b6e274'
+    const anaBragaTicketsUrl = `${baseUrl}/api/v1/tickets?contactId=${anaBragaId}`
+    try {
+      const abRes = await fetch(anaBragaTicketsUrl, { headers: authHeaders })
+      if (abRes.ok) {
+        const abData = await abRes.json()
+        const abItems = abData.data || abData.rows || (Array.isArray(abData) ? abData : [])
+        console.log(`[DIGISAC] Ana Braga tickets: ${abItems.length}`)
+        if (Array.isArray(abItems) && abItems.length > 0) {
+          for (const t of abItems) {
+            console.log(`[ANA BRAGA TICKET] id:${t.id} open:${t.isOpen} updated:${t.updatedAt} lastMsg:${JSON.stringify(t.lastMessage)?.substring(0, 200)}`)
+          }
+          tickets.push(...abItems)
+        }
+      } else {
+        console.log(`[DIGISAC] Ana Braga ticket search failed: ${abRes.status}`)
+      }
+    } catch (e) { console.error('[DIGISAC] Ana Braga ticket search error:', e) }
+
     // 3. Collect messages from tickets
     const allMessages: Array<{
       id: string; contactName: string; text: string; createdAt: string;
