@@ -9,6 +9,7 @@ export type Sector = 'fiscal' | 'accounting' | 'hr' | 'corporate' | 'commercial'
 export type DemandOrigin = 'client' | 'internal' | 'error' | 'preventive';
 export type DemandStatus = 'open' | 'in_progress' | 'waiting_client' | 'resolved';
 export type RiskType = 'operational' | 'financial' | 'relationship';
+export type TaxationType = 'simples_nacional' | 'simples_nacional_fator_r' | 'lucro_presumido' | 'lucro_presumido_equiparacao_hospitalar';
 export type TaskStatus = 'pending' | 'completed';
 
 export interface Client {
@@ -35,6 +36,7 @@ export interface Client {
   riskType?: RiskType;
   riskIdentifiedDate?: string;
   actionPlan?: string;
+  taxation?: TaxationType;
 }
 
 export interface TimelineEntry {
@@ -145,4 +147,11 @@ export const RISK_TYPE_LABELS: Record<RiskType, string> = {
   operational: 'Operacional',
   financial: 'Financeiro',
   relationship: 'Relacionamento',
+};
+
+export const TAXATION_LABELS: Record<TaxationType, string> = {
+  simples_nacional: 'Simples Nacional',
+  simples_nacional_fator_r: 'Simples Nacional Fator R',
+  lucro_presumido: 'Lucro Presumido',
+  lucro_presumido_equiparacao_hospitalar: 'Lucro Presumido Equiparação Hospitalar',
 };

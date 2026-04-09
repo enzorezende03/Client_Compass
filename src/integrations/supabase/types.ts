@@ -38,6 +38,7 @@ export type Database = {
           segment: string
           status: string
           strategic_notes: string
+          taxation: string
           updated_at: string
         }
         Insert: {
@@ -63,6 +64,7 @@ export type Database = {
           segment?: string
           status?: string
           strategic_notes?: string
+          taxation?: string
           updated_at?: string
         }
         Update: {
@@ -88,6 +90,7 @@ export type Database = {
           segment?: string
           status?: string
           strategic_notes?: string
+          taxation?: string
           updated_at?: string
         }
         Relationships: []

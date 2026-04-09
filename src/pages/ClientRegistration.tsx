@@ -12,8 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
 import {
-  STATUS_LABELS, COMPLEXITY_LABELS, PROFILE_LABELS, FINANCIAL_LABELS, HEALTH_LABELS, RISK_TYPE_LABELS,
-  ClientStatus, ComplexityLevel, ClientProfile, FinancialStatus, HealthScore, RiskType
+  STATUS_LABELS, COMPLEXITY_LABELS, PROFILE_LABELS, FINANCIAL_LABELS, HEALTH_LABELS, RISK_TYPE_LABELS, TAXATION_LABELS,
+  ClientStatus, ComplexityLevel, ClientProfile, FinancialStatus, HealthScore, RiskType, TaxationType
 } from '@/types/client';
 
 interface ClientForm {
@@ -38,6 +38,7 @@ interface ClientForm {
   risk_type: string;
   risk_identified_date: string;
   action_plan: string;
+  taxation: string;
 }
 
 const emptyForm: ClientForm = {
@@ -47,6 +48,7 @@ const emptyForm: ClientForm = {
   pain_points: '', expectations: '', attention_points: '', recurring_issues: '',
   behavioral_profile: '', strategic_notes: '',
   risk_reason: '', risk_type: '', risk_identified_date: '', action_plan: '',
+  taxation: '',
 };
 
 export default function ClientRegistration() {
@@ -85,6 +87,7 @@ export default function ClientRegistration() {
       behavioral_profile: client.behavioral_profile, strategic_notes: client.strategic_notes,
       risk_reason: client.risk_reason || '', risk_type: client.risk_type || '',
       risk_identified_date: client.risk_identified_date || '', action_plan: client.action_plan || '',
+      taxation: client.taxation || '',
     });
     setSelectedId(client.id);
     setDialogOpen(true);
@@ -101,6 +104,7 @@ export default function ClientRegistration() {
       risk_type: form.risk_type || null,
       risk_identified_date: form.risk_identified_date || null,
       action_plan: form.action_plan || null,
+      taxation: form.taxation || '',
     };
 
     if (selectedId) {
@@ -255,6 +259,16 @@ export default function ClientRegistration() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(HEALTH_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tributação</Label>
+              <Select value={form.taxation || 'none'} onValueChange={v => updateField('taxation', v === 'none' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não definida</SelectItem>
+                  {Object.entries(TAXATION_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
