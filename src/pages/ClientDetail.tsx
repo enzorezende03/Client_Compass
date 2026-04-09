@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
@@ -13,19 +13,59 @@ import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
+import { EditableStrategicCard } from '@/components/EditableStrategicCard';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import {
   COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS, TAXATION_LABELS,
   TimelineEntry, Task, ClientProfile, TaxationType
 } from '@/types/client';
 
+// Map strategic field keys to DB column names
+const STRATEGIC_FIELD_MAP: Record<string, string> = {
+  painPoints: 'pain_points',
+  expectations: 'expectations',
+  attentionPoints: 'attention_points',
+  recurringIssues: 'recurring_issues',
+  behavioralProfile: 'behavioral_profile',
+  strategicNotes: 'strategic_notes',
+};
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const client = mockClients.find(c => c.id === id);
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [timeline, setTimeline] = useState<TimelineEntry[]>(mockTimeline);
   const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [strategicOpen, setStrategicOpen] = useState(true);
+  const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
+
+  const handleStrategicSave = useCallback(async (fieldKey: string, newValue: string) => {
+    if (!id) return;
+    const dbColumn = STRATEGIC_FIELD_MAP[fieldKey];
+    if (!dbColumn) return;
+
+    setStrategicOverrides(prev => ({ ...prev, [fieldKey]: newValue }));
+
+    const updateData = { [dbColumn]: newValue } as Record<string, string>;
+    const { error } = await supabase
+      .from('clients')
+      .update(updateData as any)
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+      setStrategicOverrides(prev => {
+        const next = { ...prev };
+        delete next[fieldKey];
+        return next;
+      });
+    } else {
+      toast({ title: 'Salvo com sucesso' });
+    }
+  }, [id, toast]);
 
   const clientTimeline = useMemo(() => timeline.filter(t => t.clientId === id), [timeline, id]);
   const clientTasks = useMemo(() => tasks.filter(t => t.clientId === id), [tasks, id]);
@@ -106,12 +146,12 @@ export default function ClientDetail() {
           </button>
           {strategicOpen && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <StrategicCard title="Principais Dores" content={client.painPoints} />
-              <StrategicCard title="Expectativas" content={client.expectations} />
-              <StrategicCard title="Pontos de Atenção" content={client.attentionPoints} />
-              <StrategicCard title="Problemas Recorrentes" content={client.recurringIssues || 'Nenhum identificado'} />
-              <StrategicCard title="Perfil Comportamental" content={client.behavioralProfile} />
-              <StrategicCard title="Notas Estratégicas" content={client.strategicNotes} highlight />
+              <EditableStrategicCard title="Principais Dores" content={strategicOverrides.painPoints ?? client.painPoints} onSave={(v) => handleStrategicSave('painPoints', v)} />
+              <EditableStrategicCard title="Expectativas" content={strategicOverrides.expectations ?? client.expectations} onSave={(v) => handleStrategicSave('expectations', v)} />
+              <EditableStrategicCard title="Pontos de Atenção" content={strategicOverrides.attentionPoints ?? client.attentionPoints} onSave={(v) => handleStrategicSave('attentionPoints', v)} />
+              <EditableStrategicCard title="Problemas Recorrentes" content={(strategicOverrides.recurringIssues ?? client.recurringIssues) || 'Nenhum identificado'} onSave={(v) => handleStrategicSave('recurringIssues', v)} />
+              <EditableStrategicCard title="Perfil Comportamental" content={strategicOverrides.behavioralProfile ?? client.behavioralProfile} onSave={(v) => handleStrategicSave('behavioralProfile', v)} />
+              <EditableStrategicCard title="Notas Estratégicas" content={strategicOverrides.strategicNotes ?? client.strategicNotes} onSave={(v) => handleStrategicSave('strategicNotes', v)} highlight />
             </div>
           )}
         </motion.div>
@@ -222,14 +262,6 @@ function ProfileInfoCard({ label, value, highlight }: { label: string; value: st
   );
 }
 
-function StrategicCard({ title, content, highlight }: { title: string; content: string; highlight?: boolean }) {
-  return (
-    <div className={`rounded-lg border p-4 ${highlight ? 'bg-primary/5 border-primary/20' : 'bg-card'} shadow-card`}>
-      <p className="text-xs font-medium text-muted-foreground mb-1">{title}</p>
-      <p className="text-sm text-foreground leading-relaxed">{content}</p>
-    </div>
-  );
-}
 
 function ServiceTierBadge({ profile }: { profile: ClientProfile }) {
   const colors = PROFILE_COLORS[profile] || PROFILE_COLORS.standard;
