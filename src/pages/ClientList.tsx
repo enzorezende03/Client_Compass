@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { mockClients } from '@/data/mockClients';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
-import { ClientStatusBadge, FinancialStatusBadge } from '@/components/StatusBadges';
+import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Client, STATUS_LABELS, COMPLEXITY_LABELS, HEALTH_LABELS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
 import { AppLayout } from '@/components/AppLayout';
 
@@ -133,7 +133,6 @@ export default function ClientList() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <HealthScoreBadge score={client.healthScore} />
-                <ClientStatusBadge status={client.status} />
                 <FinancialStatusBadge status={client.financialStatus} />
               </div>
             </motion.div>

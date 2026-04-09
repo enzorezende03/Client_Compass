@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { mockClients, mockTimeline, mockTasks } from '@/data/mockClients';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
-import { ClientStatusBadge, FinancialStatusBadge } from '@/components/StatusBadges';
+import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
 import {
@@ -71,7 +71,6 @@ export default function ClientDetail() {
               <div className="flex items-center gap-2 flex-wrap mb-4">
                 <ServiceTierBadge profile={client.profile as ClientProfile} />
                 <HealthScoreBadge score={client.healthScore} size="lg" />
-                <ClientStatusBadge status={client.status} />
                 <FinancialStatusBadge status={client.financialStatus} />
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
