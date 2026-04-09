@@ -47,39 +47,9 @@ Deno.serve(async (req) => {
       return results
     }
 
-    // 1. Fetch all contacts (multiple strategies)
-    const contacts = await fetchAll('/api/v1/contacts')
+    // 1. Fetch contacts (enough to find Ana Braga among 1492 total)
+    const contacts = await fetchAll('/api/v1/contacts', 1500)
     
-    // Also try different search/filter approaches for Ana Braga
-    const searchUrls = [
-      `${baseUrl}/api/v1/contacts?search=ana+braga`,
-      `${baseUrl}/api/v1/contacts?name=ana+braga`,
-      `${baseUrl}/api/v1/contacts?$filter=contains(name,'Ana')`,
-      `${baseUrl}/api/v1/contacts?q=ana+braga`,
-    ]
-    for (const url of searchUrls) {
-      try {
-        const res = await fetch(url, { headers: authHeaders })
-        if (res.ok) {
-          const data = await res.json()
-          const items = data.data || data.rows || (Array.isArray(data) ? data : [])
-          if (Array.isArray(items)) {
-            for (const c of items) {
-              const n = c.name || c.internalName || c.alternativeName || c.pushName || ''
-              if (n.toLowerCase().includes('braga')) {
-                console.log(`[DIGISAC] FOUND Ana Braga via search: ${n} (id: ${c.id})`)
-              }
-            }
-            contacts.push(...items)
-          }
-          console.log(`[DIGISAC] Search ${url.split('?')[1]} returned ${items.length} items`)
-        } else {
-          const err = await res.text()
-          console.log(`[DIGISAC] Search ${url.split('?')[1]} failed: ${res.status}`)
-        }
-      } catch (e) { /* skip */ }
-    }
-
     const contactMap = new Map<string, string>()
     for (const c of contacts) {
       const name = c.name || c.internalName || c.alternativeName || c.pushName || ''
@@ -87,15 +57,15 @@ Deno.serve(async (req) => {
     }
     console.log(`[DIGISAC] Loaded ${contactMap.size} unique contacts`)
 
-    // Log contacts with "ana" in the name
+    // Log contacts with "braga" in the name
     for (const [id, name] of contactMap) {
-      if (name.toLowerCase().includes('ana')) {
-        console.log(`[DIGISAC] Found Ana contact: ${name} (id: ${id})`)
+      if (name.toLowerCase().includes('braga')) {
+        console.log(`[DIGISAC] Found Braga contact: ${name} (id: ${id})`)
       }
     }
 
-    // 2. Fetch all tickets with lastMessage
-    const tickets = await fetchAll('/api/v1/tickets?sort=-updatedAt')
+    // 2. Fetch recent tickets
+    const tickets = await fetchAll('/api/v1/tickets?sort=-updatedAt', 300)
     console.log(`[DIGISAC] Loaded ${tickets.length} tickets`)
 
     // 3. Collect messages from tickets
