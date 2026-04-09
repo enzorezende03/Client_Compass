@@ -50,17 +50,35 @@ Deno.serve(async (req) => {
     // 1. Fetch all contacts (multiple strategies)
     const contacts = await fetchAll('/api/v1/contacts')
     
-    // Also try searching specifically for Ana Braga
-    const anaSearchUrl = `${baseUrl}/api/v1/contacts?search=ana%20braga`
-    try {
-      const anaRes = await fetch(anaSearchUrl, { headers: authHeaders })
-      if (anaRes.ok) {
-        const anaData = await anaRes.json()
-        const anaItems = anaData.data || anaData.rows || (Array.isArray(anaData) ? anaData : [])
-        console.log(`[DIGISAC] Ana Braga search returned ${anaItems.length} results`)
-        if (Array.isArray(anaItems)) contacts.push(...anaItems)
-      }
-    } catch (e) { console.error('[DIGISAC] Ana search failed:', e) }
+    // Also try different search/filter approaches for Ana Braga
+    const searchUrls = [
+      `${baseUrl}/api/v1/contacts?search=ana+braga`,
+      `${baseUrl}/api/v1/contacts?name=ana+braga`,
+      `${baseUrl}/api/v1/contacts?$filter=contains(name,'Ana')`,
+      `${baseUrl}/api/v1/contacts?q=ana+braga`,
+    ]
+    for (const url of searchUrls) {
+      try {
+        const res = await fetch(url, { headers: authHeaders })
+        if (res.ok) {
+          const data = await res.json()
+          const items = data.data || data.rows || (Array.isArray(data) ? data : [])
+          if (Array.isArray(items)) {
+            for (const c of items) {
+              const n = c.name || c.internalName || c.alternativeName || c.pushName || ''
+              if (n.toLowerCase().includes('braga')) {
+                console.log(`[DIGISAC] FOUND Ana Braga via search: ${n} (id: ${c.id})`)
+              }
+            }
+            contacts.push(...items)
+          }
+          console.log(`[DIGISAC] Search ${url.split('?')[1]} returned ${items.length} items`)
+        } else {
+          const err = await res.text()
+          console.log(`[DIGISAC] Search ${url.split('?')[1]} failed: ${res.status}`)
+        }
+      } catch (e) { /* skip */ }
+    }
 
     const contactMap = new Map<string, string>()
     for (const c of contacts) {
