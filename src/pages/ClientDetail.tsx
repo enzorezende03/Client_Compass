@@ -42,12 +42,27 @@ export default function ClientDetail() {
   const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [strategicOpen, setStrategicOpen] = useState(true);
   const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
+  const [auditRefreshKey, setAuditRefreshKey] = useState(0);
+
+  const getOldValue = (fieldKey: string): string => {
+    if (!client) return '';
+    const map: Record<string, string> = {
+      painPoints: client.painPoints,
+      expectations: client.expectations,
+      attentionPoints: client.attentionPoints,
+      recurringIssues: client.recurringIssues,
+      behavioralProfile: client.behavioralProfile,
+      strategicNotes: client.strategicNotes,
+    };
+    return strategicOverrides[fieldKey] ?? map[fieldKey] ?? '';
+  };
 
   const handleStrategicSave = useCallback(async (fieldKey: string, newValue: string) => {
     if (!id) return;
     const dbColumn = STRATEGIC_FIELD_MAP[fieldKey];
     if (!dbColumn) return;
 
+    const oldValue = getOldValue(fieldKey);
     setStrategicOverrides(prev => ({ ...prev, [fieldKey]: newValue }));
 
     const updateData = { [dbColumn]: newValue } as Record<string, string>;
@@ -64,9 +79,18 @@ export default function ClientDetail() {
         return next;
       });
     } else {
+      // Log audit entry
+      await supabase.from('audit_logs').insert({
+        client_id: id,
+        field_name: dbColumn,
+        old_value: oldValue,
+        new_value: newValue,
+        changed_by: 'CS',
+      } as any);
+      setAuditRefreshKey(k => k + 1);
       toast({ title: 'Salvo com sucesso' });
     }
-  }, [id, toast]);
+  }, [id, toast, client, strategicOverrides]);
 
   const clientTimeline = useMemo(() => timeline.filter(t => t.clientId === id), [timeline, id]);
   const clientTasks = useMemo(() => tasks.filter(t => t.clientId === id), [tasks, id]);
