@@ -23,47 +23,69 @@ Deno.serve(async (req) => {
       'Content-Type': 'application/json',
     }
 
-    // Helper to fetch paginated
-    async function fetchAll(endpoint: string, maxPages = 10): Promise<any[]> {
+    // Helper to fetch paginated - DIGISAC API uses page/pageSize, default pageSize=15
+    const PAGE_SIZE = 15 // API ignores larger values
+    async function fetchAll(endpoint: string, maxItems = 500): Promise<any[]> {
       const results: any[] = []
-      for (let page = 0; page < maxPages; page++) {
-        const skip = page * 100
+      const maxPages = Math.ceil(maxItems / PAGE_SIZE)
+      for (let page = 1; page <= maxPages; page++) {
         const separator = endpoint.includes('?') ? '&' : '?'
-        const url = `${baseUrl}${endpoint}${separator}limit=100&skip=${skip}`
+        const url = `${baseUrl}${endpoint}${separator}page=${page}&pageSize=${PAGE_SIZE}`
         const res = await fetch(url, { headers: authHeaders })
         if (!res.ok) {
-          const err = await res.text()
-          console.error(`[FETCH] ${endpoint} page ${page} failed: ${res.status} - ${err.substring(0, 200)}`)
+          console.error(`[FETCH] page ${page} failed: ${res.status}`)
           break
         }
         const data = await res.json()
-        const items = data.data || data.rows || (Array.isArray(data) ? data : [])
+        const items = data.data || data.rows || data.results || (Array.isArray(data) ? data : [])
         if (!Array.isArray(items) || items.length === 0) break
         results.push(...items)
-        if (items.length < 100) break
+        if (data.total && results.length >= Math.min(data.total, maxItems)) break
+        if (items.length < PAGE_SIZE) break
       }
+      console.log(`[FETCH] ${endpoint}: fetched ${results.length} items total`)
       return results
     }
 
-    // 1. Fetch all contacts
-    const contacts = await fetchAll('/api/v1/contacts')
+    // 1. Fetch contacts (limit to avoid timeout - 150 most recent)
+    const contacts = await fetchAll('/api/v1/contacts', 150)
+    
     const contactMap = new Map<string, string>()
     for (const c of contacts) {
       const name = c.name || c.internalName || c.alternativeName || c.pushName || ''
       if (c.id && name) contactMap.set(String(c.id), name)
     }
-    console.log(`[DIGISAC] Loaded ${contactMap.size} contacts`)
+    console.log(`[DIGISAC] Loaded ${contactMap.size} unique contacts`)
 
-    // Log contacts with "ana" in the name
+    // Log contacts with "braga" in the name
     for (const [id, name] of contactMap) {
-      if (name.toLowerCase().includes('ana')) {
-        console.log(`[DIGISAC] Found Ana contact: ${name} (id: ${id})`)
+      if (name.toLowerCase().includes('braga')) {
+        console.log(`[DIGISAC] FOUND Braga contact: ${name} (id: ${id})`)
       }
     }
 
-    // 2. Fetch all tickets with lastMessage
-    const tickets = await fetchAll('/api/v1/tickets?sort=-updatedAt')
+    // 2. Fetch recent tickets (150 most recent)
+    const tickets = await fetchAll('/api/v1/tickets?sort=-updatedAt', 150)
     console.log(`[DIGISAC] Loaded ${tickets.length} tickets`)
+
+    // Search for Ana Braga tickets and messages specifically
+    const anaBragaId = '3e5b1971-9be6-489c-ba70-e30091b6e274'
+    // Fetch messages directly for Ana Braga
+    const anaMsgUrl = `${baseUrl}/api/v1/messages?contactId=${anaBragaId}&sort=-createdAt`
+    try {
+      const amRes = await fetch(anaMsgUrl, { headers: authHeaders })
+      if (amRes.ok) {
+        const amData = await amRes.json()
+        const amItems = amData.data || amData.rows || (Array.isArray(amData) ? amData : [])
+        console.log(`[DIGISAC] Ana Braga messages: ${amItems.length}`)
+        for (const m of amItems) {
+          const text = m.text || m.body || m.message || ''
+          console.log(`[ANA BRAGA MSG] ${text.substring(0, 200)} | date: ${m.createdAt}`)
+        }
+      } else {
+        console.log(`[DIGISAC] Ana Braga message search failed: ${amRes.status}`)
+      }
+    } catch (e) { console.error('[DIGISAC] Ana Braga msg error:', e) }
 
     // 3. Collect messages from tickets
     const allMessages: Array<{
