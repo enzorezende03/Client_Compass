@@ -116,6 +116,7 @@ export default function TaskCenter() {
       due_date: task.due_date,
       scheduled_time: task.scheduled_time || '',
       status: task.status,
+      reminder_minutes: (task as any).reminder_minutes?.toString() || '',
     });
     setEditId(task.id);
     setDialogOpen(true);
