@@ -16,6 +16,7 @@ import { QuickInteractionModal } from '@/components/QuickInteractionModal';
 import { EditableStrategicCard } from '@/components/EditableStrategicCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AuditLog } from '@/components/AuditLog';
 import {
   COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS, TAXATION_LABELS,
   TimelineEntry, Task, ClientProfile, TaxationType
