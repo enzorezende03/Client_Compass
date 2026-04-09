@@ -21,6 +21,7 @@ interface TaskRow {
   title: string;
   description: string;
   responsible: string;
+  responsible_id: string | null;
   due_date: string;
   scheduled_time: string | null;
   status: string;
@@ -28,16 +29,14 @@ interface TaskRow {
   client_name?: string;
 }
 
-interface ClientOption {
-  id: string;
-  name: string;
-}
+interface ClientOption { id: string; name: string; }
+interface InternalUser { id: string; name: string; email: string; active: boolean; }
 
 const emptyForm = {
   client_id: '',
   title: '',
   description: '',
-  responsible: '',
+  responsible_id: '',
   due_date: new Date().toISOString().split('T')[0],
   scheduled_time: '',
   status: 'pending',
@@ -48,6 +47,7 @@ export default function TaskCenter() {
   const { toast } = useToast();
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
+  const [internalUsers, setInternalUsers] = useState<InternalUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterResponsible, setFilterResponsible] = useState('all');
@@ -58,17 +58,22 @@ export default function TaskCenter() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [tasksRes, clientsRes] = await Promise.all([
+    const [tasksRes, clientsRes, usersRes] = await Promise.all([
       supabase.from('tasks').select('*').order('due_date', { ascending: true }),
       supabase.from('clients').select('id, name'),
+      supabase.from('internal_users').select('id, name, email, active').eq('active', true).order('name'),
     ]);
+    if (usersRes.data) setInternalUsers(usersRes.data as InternalUser[]);
     if (clientsRes.data) setClients(clientsRes.data);
     if (tasksRes.data && clientsRes.data) {
       const clientMap = Object.fromEntries(clientsRes.data.map(c => [c.id, c.name]));
+      const userMap = usersRes.data ? Object.fromEntries((usersRes.data as InternalUser[]).map(u => [u.id, u.name])) : {};
       setTasks(tasksRes.data.map(t => ({
         ...t,
         description: (t as any).description || '',
+        responsible_id: (t as any).responsible_id || null,
         client_name: clientMap[t.client_id] || 'Cliente desconhecido',
+        responsible: (t as any).responsible_id ? (userMap[(t as any).responsible_id] || t.responsible) : t.responsible,
       })));
     }
     setLoading(false);
@@ -76,22 +81,16 @@ export default function TaskCenter() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const responsibles = useMemo(() => {
-    const set = new Set(tasks.map(t => t.responsible).filter(Boolean));
-    return Array.from(set).sort();
-  }, [tasks]);
-
   const filtered = useMemo(() => {
     return tasks.filter(t => {
       const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
-      const matchResp = filterResponsible === 'all' || t.responsible === filterResponsible;
+      const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
       return matchSearch && matchResp;
     });
   }, [tasks, search, filterResponsible]);
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Kanban columns
   const overdueTasks = filtered.filter(t => t.status === 'pending' && t.due_date < today);
   const todayTasks = filtered.filter(t => t.status === 'pending' && t.due_date === today);
   const upcomingTasks = filtered.filter(t => t.status === 'pending' && t.due_date > today);
@@ -103,7 +102,7 @@ export default function TaskCenter() {
       client_id: task.client_id,
       title: task.title,
       description: task.description,
-      responsible: task.responsible,
+      responsible_id: task.responsible_id || '',
       due_date: task.due_date,
       scheduled_time: task.scheduled_time || '',
       status: task.status,
@@ -117,11 +116,13 @@ export default function TaskCenter() {
       toast({ title: 'Preencha título e cliente', variant: 'destructive' });
       return;
     }
-    const payload = {
+    const selectedUser = internalUsers.find(u => u.id === form.responsible_id);
+    const payload: any = {
       client_id: form.client_id,
       title: form.title,
       description: form.description,
-      responsible: form.responsible,
+      responsible: selectedUser?.name || '',
+      responsible_id: form.responsible_id || null,
       due_date: form.due_date,
       scheduled_time: form.scheduled_time || null,
       status: form.status,
@@ -150,22 +151,13 @@ export default function TaskCenter() {
     fetchData();
   };
 
-  // Drag & drop handlers
-  const handleDragStart = (taskId: string) => {
-    setDraggedTaskId(taskId);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
+  const handleDragStart = (taskId: string) => setDraggedTaskId(taskId);
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
   const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
     e.preventDefault();
     if (!draggedTaskId) return;
     const task = tasks.find(t => t.id === draggedTaskId);
-    if (task && task.status !== targetStatus) {
-      await moveToStatus(draggedTaskId, targetStatus);
-    }
+    if (task && task.status !== targetStatus) await moveToStatus(draggedTaskId, targetStatus);
     setDraggedTaskId(null);
   };
 
@@ -199,7 +191,7 @@ export default function TaskCenter() {
           <div className="flex items-center gap-3 flex-wrap">
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <User className="h-3 w-3" />
-              {task.responsible}
+              {task.responsible || 'Sem responsável'}
             </span>
             <span className={`inline-flex items-center gap-1 text-xs ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
               <CalendarClock className="h-3 w-3" />
@@ -268,7 +260,6 @@ export default function TaskCenter() {
           </Button>
         </div>
 
-        {/* Filters */}
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -281,7 +272,7 @@ export default function TaskCenter() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {responsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              {internalUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -290,38 +281,14 @@ export default function TaskCenter() {
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KanbanColumn
-              title="Atrasadas"
-              icon={<AlertTriangle className="h-4 w-4" />}
-              tasks={overdueTasks}
-              variant="danger"
-              dropStatus="pending"
-            />
-            <KanbanColumn
-              title="Hoje"
-              icon={<Clock className="h-4 w-4" />}
-              tasks={todayTasks}
-              variant="warning"
-              dropStatus="pending"
-            />
-            <KanbanColumn
-              title="Próximas"
-              icon={<CalendarClock className="h-4 w-4" />}
-              tasks={upcomingTasks}
-              dropStatus="pending"
-            />
-            <KanbanColumn
-              title="Concluídas"
-              icon={<CheckSquare className="h-4 w-4" />}
-              tasks={completedTasks}
-              variant="success"
-              dropStatus="completed"
-            />
+            <KanbanColumn title="Atrasadas" icon={<AlertTriangle className="h-4 w-4" />} tasks={overdueTasks} variant="danger" dropStatus="pending" />
+            <KanbanColumn title="Hoje" icon={<Clock className="h-4 w-4" />} tasks={todayTasks} variant="warning" dropStatus="pending" />
+            <KanbanColumn title="Próximas" icon={<CalendarClock className="h-4 w-4" />} tasks={upcomingTasks} dropStatus="pending" />
+            <KanbanColumn title="Concluídas" icon={<CheckSquare className="h-4 w-4" />} tasks={completedTasks} variant="success" dropStatus="completed" />
           </div>
         )}
       </div>
 
-      {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -347,13 +314,18 @@ export default function TaskCenter() {
               <Textarea
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Descreva em detalhes o que precisa ser feito, contexto, informações relevantes..."
+                placeholder="Descreva em detalhes o que precisa ser feito..."
                 rows={3}
               />
             </div>
             <div>
               <Label>Responsável</Label>
-              <Input value={form.responsible} onChange={e => setForm(f => ({ ...f, responsible: e.target.value }))} placeholder="Nome do responsável" />
+              <Select value={form.responsible_id} onValueChange={v => setForm(f => ({ ...f, responsible_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o responsável" /></SelectTrigger>
+                <SelectContent>
+                  {internalUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

@@ -1,4 +1,5 @@
 import { NavLink } from '@/components/NavLink';
+import { NotificationBell } from '@/components/NotificationBell';
 import { Users, Building2, LayoutDashboard, CalendarClock } from 'lucide-react';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -39,6 +40,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <Users className="h-4 w-4" />
             Usuários Internos
           </NavLink>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </div>
       </nav>
       {children}
