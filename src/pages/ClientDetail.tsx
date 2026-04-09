@@ -228,6 +228,10 @@ export default function ClientDetail() {
               <CheckSquare className="h-4 w-4" />
               Tarefas ({clientTasks.filter(t => t.status === 'pending').length})
             </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Auditoria
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="timeline" className="mt-4">
