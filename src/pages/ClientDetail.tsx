@@ -262,14 +262,6 @@ function ProfileInfoCard({ label, value, highlight }: { label: string; value: st
   );
 }
 
-function StrategicCard({ title, content, highlight }: { title: string; content: string; highlight?: boolean }) {
-  return (
-    <div className={`rounded-lg border p-4 ${highlight ? 'bg-primary/5 border-primary/20' : 'bg-card'} shadow-card`}>
-      <p className="text-xs font-medium text-muted-foreground mb-1">{title}</p>
-      <p className="text-sm text-foreground leading-relaxed">{content}</p>
-    </div>
-  );
-}
 
 function ServiceTierBadge({ profile }: { profile: ClientProfile }) {
   const colors = PROFILE_COLORS[profile] || PROFILE_COLORS.standard;
