@@ -1,0 +1,1 @@
+DELETE FROM digisac_complaints WHERE external_id IN ('bb608b52-a06f-42d5-8c98-010e3f202b7c', 'cdd0d322-72e8-464c-bbe0-b89f2c7c69fc', 'a4692123-cda2-4a73-b098-25b14e995906', '33967ab9-688f-492d-865a-31ac4965426e', '64e3f2c8-b7e2-413f-ad4d-66126ee6c0d5', 'ee9819db-fae3-4814-bde0-f65c35bbd65f', '37b4f702-3d8e-4d70-b71b-6221edeaa146');

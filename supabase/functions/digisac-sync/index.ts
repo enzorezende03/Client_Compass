@@ -160,15 +160,23 @@ Deno.serve(async (req) => {
 
     console.log(`[DIGISAC] Total messages: ${allMessages.length}`)
 
-    // 5. Filter complaints
+    // 5. Filter complaints - use phrases/context to reduce false positives
     const complaintKeywords = [
-      'reclamação', 'reclamacao', 'problema', 'falha', 'insatisf',
-      'urgente', 'crítico', 'critico', 'não funciona', 'nao funciona',
-      'demora', 'atraso', 'péssimo', 'pessimo', 'horrível', 'horrivel',
-      'absurdo', 'inaceitável', 'inaceitavel', 'solução', 'solucao',
-      'atendimento', 'ruim', 'chatead', 'decepcion', 'frustr',
-      'descaso', 'negligên', 'negligen', 'insatisfeito', 'insatisfeita',
-      'mal atend', 'péssima', 'terrível', 'terrivel'
+      'reclamação', 'reclamacao', 'insatisfeito', 'insatisfeita', 'insatisfação',
+      'não funciona', 'nao funciona', 'péssimo', 'pessimo', 'horrível', 'horrivel',
+      'absurdo', 'inaceitável', 'inaceitavel', 'terrível', 'terrivel',
+      'péssima', 'mal atendimento', 'mal atendida', 'mal atendido',
+      'descaso', 'negligência', 'negligencia', 'decepcionad', 'frustrad',
+      'muito insatisf', 'muito chateado', 'muito chateada',
+      'quero cancelar', 'vou cancelar', 'cancelamento',
+      'não resolveram', 'nao resolveram', 'sem solução', 'sem solucao',
+      'erro grave', 'falha grave', 'problema grave', 'problema sério',
+      'cobrança indevida', 'cobranca indevida',
+    ]
+    // Exclude messages that are clearly not complaints
+    const excludePhrases = [
+      'sem problemas', 'sem problema', 'não tem problema', 'nao tem problema',
+      'tudo certo', 'obrigad', 'agradeço', 'agradeco',
     ]
 
     const seen = new Set<string>()
@@ -180,6 +188,9 @@ Deno.serve(async (req) => {
 
     const complaints = unique.filter(m => {
       const text = (m.text || '').toLowerCase()
+      if (text.length < 10) return false // skip very short/empty messages
+      const hasExclude = excludePhrases.some(ex => text.includes(ex))
+      if (hasExclude) return false
       return complaintKeywords.some(kw => text.includes(kw))
     })
 
