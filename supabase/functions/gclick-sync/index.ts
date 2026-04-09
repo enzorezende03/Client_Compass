@@ -196,36 +196,13 @@ Deno.serve(async (req) => {
       return json({ success: true, linked_clients: (linkedClients || []).length, synced });
     }
 
-    // ── SYNC TASKS (dept "6. Sucesso do Cliente" = ID 25, or custom) ──
+    // ── SYNC TASKS (dept "5. Atendimento ao Cliente" = ID 16) ──
     if (action === "sync-tasks") {
       const token = await getAccessToken();
       const deptIdParam = new URL(req.url).searchParams.get("departamentoId");
 
-      // Find department
-      let deptId: number;
-      let deptName: string;
-
-      if (deptIdParam) {
-        deptId = parseInt(deptIdParam);
-        deptName = `Dept ${deptId}`;
-      } else {
-        // Default: find "Sucesso do Cliente" or "Atendimento"
-        const depts = await gclickGet(token, "/departamentos");
-        const deptList = depts.content || depts || [];
-        const dept = deptList.find((d: any) =>
-          (d.nome || "").toLowerCase().includes("sucesso") ||
-          (d.nome || "").toLowerCase().includes("atendimento")
-        );
-        if (!dept) {
-          return json({
-            success: false,
-            error: "Departamento não encontrado automaticamente",
-            available: deptList.map((d: any) => ({ id: d.id, nome: d.nome })),
-          }, 404);
-        }
-        deptId = dept.id;
-        deptName = dept.nome;
-      }
+      const deptId = deptIdParam ? parseInt(deptIdParam) : 16;
+      const deptName = deptIdParam ? `Dept ${deptId}` : "5. Atendimento ao Cliente";
 
       // Try fetching tasks for this department
       let tasks: any[] = [];
