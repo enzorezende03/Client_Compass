@@ -61,6 +61,7 @@ export default function ClientList() {
   useEffect(() => { loadClients(); }, [loadClients]);
 
   const handleGclickSync = async () => {
+    setSyncing(true);
     const steps = ['sync-clients', 'sync-carteiras', 'sync-tasks'] as const;
     const results: string[] = [];
     const baseUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/gclick-sync`;
