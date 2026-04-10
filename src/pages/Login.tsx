@@ -5,9 +5,10 @@ import { lovable } from '@/integrations/lovable/index';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import logo from '@/assets/logo-cshub.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,8 +20,13 @@ export default function Login() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/', { replace: true });
-      setCheckingSession(false);
+      if (session) {
+        supabase.rpc('link_auth_user').then(() => {
+          navigate('/', { replace: true });
+        });
+      } else {
+        setCheckingSession(false);
+      }
     });
   }, [navigate]);
 
@@ -28,10 +34,11 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (error) {
       toast({ title: 'Erro ao entrar', description: error.message, variant: 'destructive' });
+      setLoading(false);
     } else {
+      await supabase.rpc('link_auth_user');
       navigate('/', { replace: true });
     }
   };
@@ -39,16 +46,20 @@ export default function Login() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: window.location.origin },
     });
-    setLoading(false);
     if (error) {
       toast({ title: 'Erro ao cadastrar', description: error.message, variant: 'destructive' });
+      setLoading(false);
+    } else if (data.session) {
+      await supabase.rpc('link_auth_user');
+      navigate('/', { replace: true });
     } else {
       toast({ title: 'Conta criada!', description: 'Verifique seu email para confirmar o cadastro.' });
+      setLoading(false);
     }
   };
 
@@ -63,6 +74,7 @@ export default function Login() {
       return;
     }
     if (result.redirected) return;
+    await supabase.rpc('link_auth_user');
     navigate('/', { replace: true });
   };
 
@@ -86,13 +98,13 @@ export default function Login() {
   if (checkingSession) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">CS Manager</CardTitle>
-          <CardDescription>Acesse sua conta para continuar</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 px-4">
+      <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-sm">
+        <div className="flex flex-col items-center pt-8 pb-2">
+          <img src={logo} alt="CS HUB" className="h-16 mb-3" />
+          <p className="text-sm text-muted-foreground">Acesse sua conta para continuar</p>
+        </div>
+        <CardContent className="pt-4">
           <Tabs defaultValue="login" className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Entrar</TabsTrigger>
@@ -103,7 +115,7 @@ export default function Login() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="seu@email.com" />
                 </div>
                 <div className="space-y-2">
                   <Label>Senha</Label>
@@ -112,7 +124,7 @@ export default function Login() {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Entrando...' : 'Entrar'}
                 </Button>
-                <Button type="button" variant="link" className="w-full" onClick={handleForgotPassword}>
+                <Button type="button" variant="link" className="w-full text-xs" onClick={handleForgotPassword}>
                   Esqueci minha senha
                 </Button>
               </form>
@@ -122,7 +134,7 @@ export default function Login() {
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="seu@email.com" />
                 </div>
                 <div className="space-y-2">
                   <Label>Senha</Label>
