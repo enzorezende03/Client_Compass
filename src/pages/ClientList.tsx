@@ -103,7 +103,6 @@ export default function ClientList() {
     setSyncing(false);
     loadClients();
   };
-  }, []);
 
   const responsibles = [...new Set(clients.map(c => c.csResponsible).filter(Boolean))];
 
