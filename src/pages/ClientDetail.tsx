@@ -1,14 +1,13 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
 import {
-  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, Edit3, ChevronDown, ChevronUp, FileText
+  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, ChevronDown, ChevronUp, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { mockClients, mockTimeline, mockTasks } from '@/data/mockClients';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
@@ -19,10 +18,9 @@ import { useToast } from '@/hooks/use-toast';
 import { AuditLog } from '@/components/AuditLog';
 import {
   COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS, TAXATION_LABELS,
-  TimelineEntry, Task, ClientProfile, TaxationType
+  TimelineEntry, Task, ClientProfile, TaxationType, Client
 } from '@/types/client';
 
-// Map strategic field keys to DB column names
 const STRATEGIC_FIELD_MAP: Record<string, string> = {
   painPoints: 'pain_points',
   expectations: 'expectations',
@@ -32,27 +30,71 @@ const STRATEGIC_FIELD_MAP: Record<string, string> = {
   strategicNotes: 'strategic_notes',
 };
 
+function mapClient(r: any): Client {
+  return {
+    id: r.id, name: r.name, document: r.document, segment: r.segment,
+    contractStartDate: r.contract_start_date, csResponsible: r.cs_responsible,
+    complexity: r.complexity, status: r.status, profile: r.profile,
+    financialStatus: r.financial_status, healthScore: r.health_score,
+    painPoints: r.pain_points, expectations: r.expectations,
+    attentionPoints: r.attention_points, recurringIssues: r.recurring_issues,
+    behavioralProfile: r.behavioral_profile, strategicNotes: r.strategic_notes,
+    riskReason: r.risk_reason ?? undefined, riskType: r.risk_type ?? undefined,
+    riskIdentifiedDate: r.risk_identified_date ?? undefined,
+    actionPlan: r.action_plan ?? undefined, taxation: r.taxation ?? undefined,
+  };
+}
+
+function mapTimeline(r: any): TimelineEntry {
+  return {
+    id: r.id, clientId: r.client_id, date: r.date, type: r.type,
+    description: r.description, responsible: r.responsible, sector: r.sector,
+    origin: r.origin, demandStatus: r.demand_status,
+    isRelevantEvent: r.is_relevant_event, relevantEventType: r.relevant_event_type,
+  };
+}
+
+function mapTask(r: any): Task {
+  return {
+    id: r.id, clientId: r.client_id, title: r.title, responsible: r.responsible,
+    dueDate: r.due_date, scheduledTime: r.scheduled_time, status: r.status,
+    createdAt: r.created_at,
+  };
+}
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const client = mockClients.find(c => c.id === id);
+  const [client, setClient] = useState<Client | null>(null);
+  const [loading, setLoading] = useState(true);
   const [interactionOpen, setInteractionOpen] = useState(false);
-  const [timeline, setTimeline] = useState<TimelineEntry[]>(mockTimeline);
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [strategicOpen, setStrategicOpen] = useState(true);
   const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
 
+  useEffect(() => {
+    if (!id) return;
+    Promise.all([
+      supabase.from('clients').select('*').eq('id', id).single(),
+      supabase.from('timeline_entries').select('*').eq('client_id', id).order('date', { ascending: false }),
+      supabase.from('tasks').select('*').eq('client_id', id).order('due_date'),
+    ]).then(([clientRes, timelineRes, tasksRes]) => {
+      if (clientRes.data) setClient(mapClient(clientRes.data));
+      setTimeline((timelineRes.data || []).map(mapTimeline));
+      setTasks((tasksRes.data || []).map(mapTask));
+      setLoading(false);
+    });
+  }, [id]);
+
   const getOldValue = (fieldKey: string): string => {
     if (!client) return '';
     const map: Record<string, string> = {
-      painPoints: client.painPoints,
-      expectations: client.expectations,
-      attentionPoints: client.attentionPoints,
-      recurringIssues: client.recurringIssues,
-      behavioralProfile: client.behavioralProfile,
-      strategicNotes: client.strategicNotes,
+      painPoints: client.painPoints, expectations: client.expectations,
+      attentionPoints: client.attentionPoints, recurringIssues: client.recurringIssues,
+      behavioralProfile: client.behavioralProfile, strategicNotes: client.strategicNotes,
     };
     return strategicOverrides[fieldKey] ?? map[fieldKey] ?? '';
   };
@@ -66,56 +108,44 @@ export default function ClientDetail() {
     setStrategicOverrides(prev => ({ ...prev, [fieldKey]: newValue }));
 
     const updateData = { [dbColumn]: newValue } as Record<string, string>;
-    const { error } = await supabase
-      .from('clients')
-      .update(updateData as any)
-      .eq('id', id);
+    const { error } = await supabase.from('clients').update(updateData as any).eq('id', id);
 
     if (error) {
       toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
-      setStrategicOverrides(prev => {
-        const next = { ...prev };
-        delete next[fieldKey];
-        return next;
-      });
+      setStrategicOverrides(prev => { const next = { ...prev }; delete next[fieldKey]; return next; });
     } else {
-      // Log audit entry
       await supabase.from('audit_logs').insert({
-        client_id: id,
-        field_name: dbColumn,
-        old_value: oldValue,
-        new_value: newValue,
-        changed_by: 'CS',
+        client_id: id, field_name: dbColumn, old_value: oldValue, new_value: newValue, changed_by: 'CS',
       } as any);
       setAuditRefreshKey(k => k + 1);
       toast({ title: 'Salvo com sucesso' });
     }
   }, [id, toast, client, strategicOverrides]);
 
-  const clientTimeline = useMemo(() => timeline.filter(t => t.clientId === id), [timeline, id]);
   const clientTasks = useMemo(() => tasks.filter(t => t.clientId === id), [tasks, id]);
 
+  if (loading) {
+    return <AppLayout><div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando...</div></AppLayout>;
+  }
+
   if (!client) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Cliente não encontrado.</p>
-      </div>
-    );
+    return <AppLayout><div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Cliente não encontrado.</p></div></AppLayout>;
   }
 
   const handleNewInteraction = (entry: Omit<TimelineEntry, 'id'>) => {
-    setTimeline(prev => [...prev, { ...entry, id: `t${Date.now()}` }]);
+    setTimeline(prev => [{ ...entry, id: `t${Date.now()}` }, ...prev]);
   };
 
-  const toggleTask = (taskId: string) => {
-    setTasks(prev => prev.map(t =>
-      t.id === taskId ? { ...t, status: t.status === 'pending' ? 'completed' : 'pending' } : t
-    ));
+  const toggleTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const newStatus = task.status === 'pending' ? 'completed' : 'pending';
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus as any } : t));
+    await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
   };
 
   return (
     <AppLayout>
-      {/* Header */}
       <header className="relative border-b bg-gradient-to-br from-primary/10 via-card to-accent/10 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)/0.08),transparent_60%)]" />
         <div className="container mx-auto px-6 py-6 relative z-10">
@@ -147,24 +177,15 @@ export default function ClientDetail() {
               </div>
             </div>
             <Button onClick={() => setInteractionOpen(true)} className="gap-2 shrink-0 shadow-md">
-              <Plus className="h-4 w-4" />
-              Nova Interação
+              <Plus className="h-4 w-4" /> Nova Interação
             </Button>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-6 py-6">
-        {/* Strategic Vision - Collapsible */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <button
-            onClick={() => setStrategicOpen(!strategicOpen)}
-            className="flex items-center gap-2 w-full text-left mb-3"
-          >
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <button onClick={() => setStrategicOpen(!strategicOpen)} className="flex items-center gap-2 w-full text-left mb-3">
             <Brain className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold text-foreground">Visão Estratégica</h2>
             {strategicOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
@@ -181,14 +202,8 @@ export default function ClientDetail() {
           )}
         </motion.div>
 
-        {/* Risk section */}
         {client.riskReason && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-6 rounded-lg border border-health-critical/30 bg-health-critical/5 p-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-6 rounded-lg border border-health-critical/30 bg-health-critical/5 p-4">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="h-5 w-5 text-health-critical" />
               <h3 className="font-semibold text-health-critical">Gestão de Risco</h3>
@@ -199,75 +214,37 @@ export default function ClientDetail() {
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground text-xs mb-1">Motivo do Risco</p>
-                <p className="text-foreground">{client.riskReason}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs mb-1">Plano de Ação</p>
-                <p className="text-foreground">{client.actionPlan || 'Não definido'}</p>
-              </div>
+              <div><p className="text-muted-foreground text-xs mb-1">Motivo do Risco</p><p className="text-foreground">{client.riskReason}</p></div>
+              <div><p className="text-muted-foreground text-xs mb-1">Plano de Ação</p><p className="text-foreground">{client.actionPlan || 'Não definido'}</p></div>
               {client.riskIdentifiedDate && (
-                <div>
-                  <p className="text-muted-foreground text-xs mb-1">Identificado em</p>
-                  <p className="text-foreground">{new Date(client.riskIdentifiedDate).toLocaleDateString('pt-BR')}</p>
-                </div>
+                <div><p className="text-muted-foreground text-xs mb-1">Identificado em</p><p className="text-foreground">{new Date(client.riskIdentifiedDate).toLocaleDateString('pt-BR')}</p></div>
               )}
             </div>
           </motion.div>
         )}
 
-        {/* Tabs */}
         <Tabs defaultValue="timeline" className="mt-4">
           <TabsList>
-            <TabsTrigger value="timeline" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Histórico ({clientTimeline.length})
-            </TabsTrigger>
-            <TabsTrigger value="tasks" className="gap-2">
-              <CheckSquare className="h-4 w-4" />
-              Tarefas ({clientTasks.filter(t => t.status === 'pending').length})
-            </TabsTrigger>
-            <TabsTrigger value="audit" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Auditoria
-            </TabsTrigger>
+            <TabsTrigger value="timeline" className="gap-2"><Clock className="h-4 w-4" /> Histórico ({timeline.length})</TabsTrigger>
+            <TabsTrigger value="tasks" className="gap-2"><CheckSquare className="h-4 w-4" /> Tarefas ({clientTasks.filter(t => t.status === 'pending').length})</TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2"><FileText className="h-4 w-4" /> Auditoria</TabsTrigger>
           </TabsList>
 
           <TabsContent value="timeline" className="mt-4">
-            {clientTimeline.length > 0 ? (
-              <Timeline entries={clientTimeline} />
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                Nenhuma interação registrada.
-              </div>
-            )}
+            {timeline.length > 0 ? <Timeline entries={timeline} /> : <div className="text-center py-12 text-muted-foreground">Nenhuma interação registrada.</div>}
           </TabsContent>
 
           <TabsContent value="tasks" className="mt-4 space-y-2">
             {clientTasks.map(task => (
-              <div
-                key={task.id}
-                className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-card"
-              >
-                <Checkbox
-                  checked={task.status === 'completed'}
-                  onCheckedChange={() => toggleTask(task.id)}
-                />
+              <div key={task.id} className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-card">
+                <Checkbox checked={task.status === 'completed'} onCheckedChange={() => toggleTask(task.id)} />
                 <div className="flex-1">
-                  <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                    {task.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {task.responsible} • Prazo: {new Date(task.dueDate).toLocaleDateString('pt-BR')}
-                    {task.scheduledTime && ` às ${task.scheduledTime}`}
-                  </p>
+                  <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.title}</p>
+                  <p className="text-xs text-muted-foreground">{task.responsible} • Prazo: {new Date(task.dueDate).toLocaleDateString('pt-BR')}{task.scheduledTime && ` às ${task.scheduledTime}`}</p>
                 </div>
               </div>
             ))}
-            {clientTasks.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">Nenhuma tarefa.</div>
-            )}
+            {clientTasks.length === 0 && <div className="text-center py-12 text-muted-foreground">Nenhuma tarefa.</div>}
           </TabsContent>
 
           <TabsContent value="audit" className="mt-4">
@@ -276,12 +253,7 @@ export default function ClientDetail() {
         </Tabs>
       </div>
 
-      <QuickInteractionModal
-        open={interactionOpen}
-        onOpenChange={setInteractionOpen}
-        clientId={client.id}
-        onSubmit={handleNewInteraction}
-      />
+      <QuickInteractionModal open={interactionOpen} onOpenChange={setInteractionOpen} clientId={client.id} onSubmit={handleNewInteraction} />
     </AppLayout>
   );
 }
@@ -294,7 +266,6 @@ function ProfileInfoCard({ label, value, highlight }: { label: string; value: st
     </div>
   );
 }
-
 
 function ServiceTierBadge({ profile }: { profile: ClientProfile }) {
   const colors = PROFILE_COLORS[profile] || PROFILE_COLORS.standard;
