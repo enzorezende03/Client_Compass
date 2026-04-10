@@ -411,6 +411,7 @@ export type Database = {
     Functions: {
       is_admin: { Args: never; Returns: boolean }
       is_internal_user: { Args: never; Returns: boolean }
+      link_auth_user: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
