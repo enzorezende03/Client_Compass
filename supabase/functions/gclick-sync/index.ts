@@ -63,7 +63,7 @@ async function gclickGet(token: string, path: string) {
 }
 
 // Fetch all pages from paginated endpoint
-async function gclickGetAllPages(token: string, basePath: string, pageSize = 50): Promise<any[]> {
+async function gclickGetAllPages(token: string, basePath: string, pageSize = 200): Promise<any[]> {
   const all: any[] = [];
   let page = 0;
   const separator = basePath.includes("?") ? "&" : "?";
