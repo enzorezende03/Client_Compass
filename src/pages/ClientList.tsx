@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2 } from 'lucide-react';
+import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Client, STATUS_LABELS, COMPLEXITY_LABELS, HEALTH_LABELS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
 import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 function mapRow(r: any): Client {
   return {
@@ -39,20 +41,56 @@ function mapRow(r: any): Client {
 
 export default function ClientList() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [complexityFilter, setComplexityFilter] = useState<string>('all');
   const [healthFilter, setHealthFilter] = useState<string>('all');
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
 
-  useEffect(() => {
+  const loadClients = useCallback(() => {
     supabase.from('clients').select('*').order('name').then(({ data }) => {
       setClients((data || []).map(mapRow));
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => { loadClients(); }, [loadClients]);
+
+  const handleGclickSync = async () => {
+    const steps = ['sync-clients', 'sync-carteiras', 'sync-tasks'] as const;
+    const results: string[] = [];
+    const baseUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/gclick-sync`;
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    };
+
+    for (const action of steps) {
+      try {
+        const res = await fetch(`${baseUrl}?action=${action}`, { headers });
+        const data = await res.json();
+        if (data.success) {
+          results.push(`✅ ${action}: ${data.synced ?? 0} sincronizados`);
+        } else {
+          results.push(`❌ ${action}: ${data.error || 'erro'}`);
+        }
+      } catch (err: any) {
+        results.push(`❌ ${action}: ${err.message}`);
+      }
+    }
+
+    toast({
+      title: 'Sincronização G-Click concluída',
+      description: results.join('\n'),
+    });
+    setSyncing(false);
+    loadClients();
+  };
 
   const responsibles = [...new Set(clients.map(c => c.csResponsible).filter(Boolean))];
 
@@ -84,6 +122,10 @@ export default function ClientList() {
               <h1 className="text-2xl font-bold text-foreground tracking-tight">Customer Success</h1>
               <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
             </div>
+            <Button onClick={handleGclickSync} disabled={syncing} variant="outline" className="gap-2">
+              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Sincronizando...' : 'Sincronizar G-Click'}
+            </Button>
           </div>
 
           {/* Stats */}
