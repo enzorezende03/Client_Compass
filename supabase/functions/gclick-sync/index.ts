@@ -63,7 +63,7 @@ async function gclickGet(token: string, path: string) {
 }
 
 // Fetch all pages from paginated endpoint
-async function gclickGetAllPages(token: string, basePath: string, pageSize = 50): Promise<any[]> {
+async function gclickGetAllPages(token: string, basePath: string, pageSize = 200): Promise<any[]> {
   const all: any[] = [];
   let page = 0;
   const separator = basePath.includes("?") ? "&" : "?";
@@ -127,32 +127,68 @@ Deno.serve(async (req) => {
       const logId = await createLog(supabase, "clients");
 
       // Get all our clients
-      const { data: ourClients } = await supabase.from("clients").select("id, document, name");
+      const { data: ourClients } = await supabase.from("clients").select("id, document, name, gclick_id");
       const docMap = new Map<string, string>();
       const nameMap = new Map<string, string>();
+      const gclickIdSet = new Set<string>();
       for (const c of ourClients || []) {
         if (c.document) docMap.set(c.document.replace(/\D/g, ""), c.id);
         if (c.name) nameMap.set(c.name.toLowerCase().trim(), c.id);
+        if (c.gclick_id) gclickIdSet.add(c.gclick_id);
       }
 
       let synced = 0;
+      let created = 0;
+      const toUpdate: { id: string; gclick_id: string }[] = [];
+      const toInsert: any[] = [];
+
       for (const gc of gclickClients) {
         const inscricao = (gc.inscricao || "").replace(/\D/g, "");
-        const nome = (gc.nome || "").toLowerCase().trim();
+        const nome = (gc.nome || "").trim();
+        const nomeLower = nome.toLowerCase();
+        const gclickId = String(gc.id);
+
+        if (gclickIdSet.has(gclickId)) continue;
 
         let matchId = inscricao ? docMap.get(inscricao) : undefined;
-        if (!matchId && nome) matchId = nameMap.get(nome);
+        if (!matchId && nomeLower) matchId = nameMap.get(nomeLower);
 
         if (matchId) {
-          await supabase.from("clients").update({ gclick_id: String(gc.id) }).eq("id", matchId);
-          synced++;
+          toUpdate.push({ id: matchId, gclick_id: gclickId });
+        } else {
+          toInsert.push({
+            name: nome || `Cliente G-Click ${gclickId}`,
+            document: gc.inscricao || "",
+            gclick_id: gclickId,
+            segment: gc.ramo || gc.segmento || "",
+            cs_responsible: "",
+            status: "active",
+            health_score: "healthy",
+            financial_status: "active_financial",
+            complexity: "C",
+            profile: "standard",
+          });
         }
       }
 
-      await updateLog(supabase, logId, "completed", synced,
-        `${gclickClients.length} clientes no G-Click, ${synced} vinculados`);
+      // Batch updates
+      for (const u of toUpdate) {
+        await supabase.from("clients").update({ gclick_id: u.gclick_id }).eq("id", u.id);
+        synced++;
+      }
 
-      return json({ success: true, total_gclick: gclickClients.length, synced });
+      // Batch inserts (chunks of 100)
+      for (let i = 0; i < toInsert.length; i += 100) {
+        const chunk = toInsert.slice(i, i + 100);
+        const { error } = await supabase.from("clients").insert(chunk);
+        if (!error) created += chunk.length;
+        else console.error("Insert batch error:", error.message);
+      }
+
+      await updateLog(supabase, logId, "completed", synced + created,
+        `${gclickClients.length} clientes no G-Click, ${synced} vinculados, ${created} criados`);
+
+      return json({ success: true, total_gclick: gclickClients.length, synced, created });
     }
 
     // ── SYNC CARTEIRAS (responsáveis por cliente) ──

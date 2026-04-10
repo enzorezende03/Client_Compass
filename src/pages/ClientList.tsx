@@ -62,32 +62,45 @@ export default function ClientList() {
 
   const handleGclickSync = async () => {
     setSyncing(true);
+    toast({ title: 'Sincronização iniciada', description: 'Isso pode levar alguns minutos...' });
+
     const steps = ['sync-clients', 'sync-carteiras', 'sync-tasks'] as const;
     const results: string[] = [];
     const baseUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/gclick-sync`;
     const { data: { session } } = await supabase.auth.getSession();
-    const headers: Record<string, string> = {
+    const fetchHeaders: Record<string, string> = {
       'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
     };
 
     for (const action of steps) {
       try {
-        const res = await fetch(`${baseUrl}?action=${action}`, { headers });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120000); // 2min timeout
+        const res = await fetch(`${baseUrl}?action=${action}`, {
+          headers: fetchHeaders,
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
         const data = await res.json();
         if (data.success) {
-          results.push(`✅ ${action}: ${data.synced ?? 0} sincronizados`);
+          const details = [data.synced && `${data.synced} vinculados`, data.created && `${data.created} criados`].filter(Boolean).join(', ');
+          results.push(`✅ ${action}: ${details || 'OK'}`);
         } else {
           results.push(`❌ ${action}: ${data.error || 'erro'}`);
         }
       } catch (err: any) {
-        results.push(`❌ ${action}: ${err.message}`);
+        if (err.name === 'AbortError') {
+          results.push(`⏳ ${action}: processando em background`);
+        } else {
+          results.push(`❌ ${action}: ${err.message}`);
+        }
       }
     }
 
     toast({
       title: 'Sincronização G-Click concluída',
-      description: results.join('\n'),
+      description: results.join(' | '),
     });
     setSyncing(false);
     loadClients();
