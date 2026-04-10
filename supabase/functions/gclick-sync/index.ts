@@ -139,25 +139,24 @@ Deno.serve(async (req) => {
 
       let synced = 0;
       let created = 0;
+      const toUpdate: { id: string; gclick_id: string }[] = [];
+      const toInsert: any[] = [];
+
       for (const gc of gclickClients) {
         const inscricao = (gc.inscricao || "").replace(/\D/g, "");
         const nome = (gc.nome || "").trim();
         const nomeLower = nome.toLowerCase();
         const gclickId = String(gc.id);
 
-        // Skip if already linked
         if (gclickIdSet.has(gclickId)) continue;
 
         let matchId = inscricao ? docMap.get(inscricao) : undefined;
         if (!matchId && nomeLower) matchId = nameMap.get(nomeLower);
 
         if (matchId) {
-          // Link existing client
-          await supabase.from("clients").update({ gclick_id: gclickId }).eq("id", matchId);
-          synced++;
+          toUpdate.push({ id: matchId, gclick_id: gclickId });
         } else {
-          // Create new client from G-Click data
-          const { error } = await supabase.from("clients").insert({
+          toInsert.push({
             name: nome || `Cliente G-Click ${gclickId}`,
             document: gc.inscricao || "",
             gclick_id: gclickId,
@@ -169,8 +168,21 @@ Deno.serve(async (req) => {
             complexity: "C",
             profile: "standard",
           });
-          if (!error) created++;
         }
+      }
+
+      // Batch updates
+      for (const u of toUpdate) {
+        await supabase.from("clients").update({ gclick_id: u.gclick_id }).eq("id", u.id);
+        synced++;
+      }
+
+      // Batch inserts (chunks of 100)
+      for (let i = 0; i < toInsert.length; i += 100) {
+        const chunk = toInsert.slice(i, i + 100);
+        const { error } = await supabase.from("clients").insert(chunk);
+        if (!error) created += chunk.length;
+        else console.error("Insert batch error:", error.message);
       }
 
       await updateLog(supabase, logId, "completed", synced + created,
