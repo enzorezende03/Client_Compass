@@ -127,32 +127,56 @@ Deno.serve(async (req) => {
       const logId = await createLog(supabase, "clients");
 
       // Get all our clients
-      const { data: ourClients } = await supabase.from("clients").select("id, document, name");
+      const { data: ourClients } = await supabase.from("clients").select("id, document, name, gclick_id");
       const docMap = new Map<string, string>();
       const nameMap = new Map<string, string>();
+      const gclickIdSet = new Set<string>();
       for (const c of ourClients || []) {
         if (c.document) docMap.set(c.document.replace(/\D/g, ""), c.id);
         if (c.name) nameMap.set(c.name.toLowerCase().trim(), c.id);
+        if (c.gclick_id) gclickIdSet.add(c.gclick_id);
       }
 
       let synced = 0;
+      let created = 0;
       for (const gc of gclickClients) {
         const inscricao = (gc.inscricao || "").replace(/\D/g, "");
-        const nome = (gc.nome || "").toLowerCase().trim();
+        const nome = (gc.nome || "").trim();
+        const nomeLower = nome.toLowerCase();
+        const gclickId = String(gc.id);
+
+        // Skip if already linked
+        if (gclickIdSet.has(gclickId)) continue;
 
         let matchId = inscricao ? docMap.get(inscricao) : undefined;
-        if (!matchId && nome) matchId = nameMap.get(nome);
+        if (!matchId && nomeLower) matchId = nameMap.get(nomeLower);
 
         if (matchId) {
-          await supabase.from("clients").update({ gclick_id: String(gc.id) }).eq("id", matchId);
+          // Link existing client
+          await supabase.from("clients").update({ gclick_id: gclickId }).eq("id", matchId);
           synced++;
+        } else {
+          // Create new client from G-Click data
+          const { error } = await supabase.from("clients").insert({
+            name: nome || `Cliente G-Click ${gclickId}`,
+            document: gc.inscricao || "",
+            gclick_id: gclickId,
+            segment: gc.ramo || gc.segmento || "",
+            cs_responsible: "",
+            status: "active",
+            health_score: "healthy",
+            financial_status: "active_financial",
+            complexity: "C",
+            profile: "standard",
+          });
+          if (!error) created++;
         }
       }
 
-      await updateLog(supabase, logId, "completed", synced,
-        `${gclickClients.length} clientes no G-Click, ${synced} vinculados`);
+      await updateLog(supabase, logId, "completed", synced + created,
+        `${gclickClients.length} clientes no G-Click, ${synced} vinculados, ${created} criados`);
 
-      return json({ success: true, total_gclick: gclickClients.length, synced });
+      return json({ success: true, total_gclick: gclickClients.length, synced, created });
     }
 
     // ── SYNC CARTEIRAS (responsáveis por cliente) ──
