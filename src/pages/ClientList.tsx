@@ -1,26 +1,62 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockClients } from '@/data/mockClients';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Client, STATUS_LABELS, COMPLEXITY_LABELS, HEALTH_LABELS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
 import { AppLayout } from '@/components/AppLayout';
+import { supabase } from '@/integrations/supabase/client';
+
+function mapRow(r: any): Client {
+  return {
+    id: r.id,
+    name: r.name,
+    document: r.document,
+    segment: r.segment,
+    contractStartDate: r.contract_start_date,
+    csResponsible: r.cs_responsible,
+    complexity: r.complexity as any,
+    status: r.status as any,
+    profile: r.profile as any,
+    financialStatus: r.financial_status as any,
+    healthScore: r.health_score as any,
+    painPoints: r.pain_points,
+    expectations: r.expectations,
+    attentionPoints: r.attention_points,
+    recurringIssues: r.recurring_issues,
+    behavioralProfile: r.behavioral_profile,
+    strategicNotes: r.strategic_notes,
+    riskReason: r.risk_reason ?? undefined,
+    riskType: r.risk_type ?? undefined,
+    riskIdentifiedDate: r.risk_identified_date ?? undefined,
+    actionPlan: r.action_plan ?? undefined,
+    taxation: r.taxation ?? undefined,
+  };
+}
 
 export default function ClientList() {
   const navigate = useNavigate();
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [complexityFilter, setComplexityFilter] = useState<string>('all');
   const [healthFilter, setHealthFilter] = useState<string>('all');
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
 
-  const responsibles = [...new Set(mockClients.map(c => c.csResponsible))];
+  useEffect(() => {
+    supabase.from('clients').select('*').order('name').then(({ data }) => {
+      setClients((data || []).map(mapRow));
+      setLoading(false);
+    });
+  }, []);
 
-  const filtered = mockClients.filter(c => {
+  const responsibles = [...new Set(clients.map(c => c.csResponsible).filter(Boolean))];
+
+  const filtered = clients.filter(c => {
     const matchSearch = search === '' ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.document.includes(search);
@@ -32,10 +68,10 @@ export default function ClientList() {
   });
 
   const stats = {
-    total: mockClients.length,
-    atRisk: mockClients.filter(c => c.status === 'at_risk' || c.status === 'recovery').length,
-    critical: mockClients.filter(c => c.healthScore === 'critical').length,
-    healthy: mockClients.filter(c => c.healthScore === 'healthy').length,
+    total: clients.length,
+    atRisk: clients.filter(c => c.status === 'at_risk' || c.status === 'recovery').length,
+    critical: clients.filter(c => c.healthScore === 'critical').length,
+    healthy: clients.filter(c => c.healthScore === 'healthy').length,
   };
 
   return (
@@ -106,43 +142,47 @@ export default function ClientList() {
         </div>
 
         {/* Client cards */}
-        <div className="space-y-2">
-          {filtered.map((client, i) => (
-            <motion.div
-              key={client.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              onClick={() => navigate(`/client/${client.id}`)}
-              className="group flex items-center gap-4 rounded-lg border bg-card p-4 shadow-card cursor-pointer transition-all hover:shadow-card-hover hover:border-primary/20"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm shrink-0">
-                {client.complexity}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((client, i) => (
+              <motion.div
+                key={client.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                onClick={() => navigate(`/client/${client.id}`)}
+                className="group flex items-center gap-4 rounded-lg border bg-card p-4 shadow-card cursor-pointer transition-all hover:shadow-card-hover hover:border-primary/20"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm shrink-0">
+                  {client.complexity}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="font-mono">{client.document}</span>
-                  <span>•</span>
-                  <span>{client.segment}</span>
-                  <span>•</span>
-                  <span>CS: {client.csResponsible}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="font-mono">{client.document}</span>
+                    <span>•</span>
+                    <span>{client.segment}</span>
+                    <span>•</span>
+                    <span>CS: {client.csResponsible}</span>
+                  </div>
                 </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <HealthScoreBadge score={client.healthScore} />
+                  <FinancialStatusBadge status={client.financialStatus} />
+                </div>
+              </motion.div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhum cliente encontrado com os filtros selecionados.
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <HealthScoreBadge score={client.healthScore} />
-                <FinancialStatusBadge status={client.financialStatus} />
-              </div>
-            </motion.div>
-          ))}
-          {filtered.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhum cliente encontrado com os filtros selecionados.
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </AppLayout>
   );
