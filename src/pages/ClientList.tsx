@@ -62,19 +62,6 @@ export default function ClientList() {
 
   const handleGclickSync = async () => {
     setSyncing(true);
-    const steps = ['sync-clients', 'sync-carteiras', 'sync-tasks'] as const;
-    const results: string[] = [];
-    for (const action of steps) {
-      try {
-        const { data, error } = await supabase.functions.invoke('gclick-sync', {
-          body: null,
-          headers: { 'Content-Type': 'application/json' },
-        // @ts-ignore - query params via URL
-        } as any);
-        // Use fetch directly for query params
-      } catch {}
-    }
-    // Use fetch for proper query param support
     const baseUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/gclick-sync`;
     const { data: { session } } = await supabase.auth.getSession();
     const headers: Record<string, string> = {
