@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2 } from 'lucide-react';
+import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Client, STATUS_LABELS, COMPLEXITY_LABELS, HEALTH_LABELS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
 import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 function mapRow(r: any): Client {
   return {
