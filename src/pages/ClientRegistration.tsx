@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,7 +59,51 @@ export default function ClientRegistration() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<ClientForm>(emptyForm);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
   const { toast } = useToast();
+
+  const formatCnpj = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 14);
+    return digits
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  };
+
+  const lookupCnpj = useCallback(async (rawDoc: string) => {
+    const digits = rawDoc.replace(/\D/g, '');
+    if (digits.length !== 14) return;
+
+    setCnpjLoading(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`);
+      if (!res.ok) {
+        toast({ title: 'CNPJ não encontrado', description: 'Verifique o número digitado.', variant: 'destructive' });
+        return;
+      }
+      const data = await res.json();
+      setForm(prev => ({
+        ...prev,
+        name: data.razao_social || prev.name,
+        segment: data.cnae_fiscal_descricao || prev.segment,
+      }));
+      toast({ title: 'Dados carregados', description: `Empresa: ${data.razao_social}` });
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível consultar o CNPJ.', variant: 'destructive' });
+    } finally {
+      setCnpjLoading(false);
+    }
+  }, [toast]);
+
+  const handleDocumentChange = (value: string) => {
+    const formatted = formatCnpj(value);
+    updateField('document', formatted);
+    const digits = formatted.replace(/\D/g, '');
+    if (digits.length === 14) {
+      lookupCnpj(digits);
+    }
+  };
 
   const fetchClients = async () => {
     setLoading(true);
@@ -203,7 +247,16 @@ export default function ClientRegistration() {
             </div>
             <div className="space-y-2">
               <Label>CPF/CNPJ</Label>
-              <Input value={form.document} onChange={e => updateField('document', e.target.value)} />
+              <div className="relative">
+                <Input
+                  value={form.document}
+                  onChange={e => handleDocumentChange(e.target.value)}
+                  placeholder="00.000.000/0000-00"
+                />
+                {cnpjLoading && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Segmento</Label>
