@@ -211,6 +211,7 @@ export type Database = {
         Row: {
           access_profile: string
           active: boolean
+          auth_user_id: string | null
           created_at: string
           email: string
           id: string
@@ -222,6 +223,7 @@ export type Database = {
         Insert: {
           access_profile?: string
           active?: boolean
+          auth_user_id?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -233,6 +235,7 @@ export type Database = {
         Update: {
           access_profile?: string
           active?: boolean
+          auth_user_id?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -406,7 +409,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
+      is_internal_user: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
