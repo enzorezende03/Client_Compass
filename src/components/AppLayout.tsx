@@ -1,12 +1,24 @@
 import { NavLink } from '@/components/NavLink';
 import { NotificationBell } from '@/components/NotificationBell';
-import { Users, Building2, LayoutDashboard, CalendarClock } from 'lucide-react';
+import { Users, Building2, LayoutDashboard, CalendarClock, LogOut } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import logo from '@/assets/logo-cshub.png';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <nav className="border-b bg-card">
-        <div className="container mx-auto px-6 flex items-center gap-1 h-12">
+        <div className="container mx-auto px-6 flex items-center gap-1 h-14">
+          <img src={logo} alt="CS HUB" className="h-8 mr-4" />
           <NavLink
             to="/"
             end
@@ -40,8 +52,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <Users className="h-4 w-4" />
             Usuários Internos
           </NavLink>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <NotificationBell />
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </nav>
