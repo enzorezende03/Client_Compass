@@ -41,19 +41,68 @@ function mapRow(r: any): Client {
 
 export default function ClientList() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [complexityFilter, setComplexityFilter] = useState<string>('all');
   const [healthFilter, setHealthFilter] = useState<string>('all');
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
 
-  useEffect(() => {
+  const loadClients = useCallback(() => {
     supabase.from('clients').select('*').order('name').then(({ data }) => {
       setClients((data || []).map(mapRow));
       setLoading(false);
     });
+  }, []);
+
+  useEffect(() => { loadClients(); }, [loadClients]);
+
+  const handleGclickSync = async () => {
+    setSyncing(true);
+    const steps = ['sync-clients', 'sync-carteiras', 'sync-tasks'] as const;
+    const results: string[] = [];
+    for (const action of steps) {
+      try {
+        const { data, error } = await supabase.functions.invoke('gclick-sync', {
+          body: null,
+          headers: { 'Content-Type': 'application/json' },
+        // @ts-ignore - query params via URL
+        } as any);
+        // Use fetch directly for query params
+      } catch {}
+    }
+    // Use fetch for proper query param support
+    const baseUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/gclick-sync`;
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    };
+
+    for (const action of steps) {
+      try {
+        const res = await fetch(`${baseUrl}?action=${action}`, { headers });
+        const data = await res.json();
+        if (data.success) {
+          results.push(`✅ ${action}: ${data.synced ?? 0} sincronizados`);
+        } else {
+          results.push(`❌ ${action}: ${data.error || 'erro'}`);
+        }
+      } catch (err: any) {
+        results.push(`❌ ${action}: ${err.message}`);
+      }
+    }
+
+    toast({
+      title: 'Sincronização G-Click concluída',
+      description: results.join('\n'),
+    });
+    setSyncing(false);
+    loadClients();
+  };
   }, []);
 
   const responsibles = [...new Set(clients.map(c => c.csResponsible).filter(Boolean))];
