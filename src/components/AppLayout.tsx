@@ -1,6 +1,6 @@
 import { NavLink } from '@/components/NavLink';
 import { NotificationBell } from '@/components/NotificationBell';
-import { Users, Building2, LayoutDashboard, CalendarClock, LogOut } from 'lucide-react';
+import { Users, Building2, LayoutDashboard, CalendarClock, LogOut, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <Users className="h-4 w-4" />
             Usuários Internos
+          </NavLink>
+          <NavLink
+            to="/gclick-sync"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            activeClassName="text-foreground bg-accent"
+          >
+            <RefreshCw className="h-4 w-4" />
+            G-Click
+          </NavLink>
           </NavLink>
           <div className="ml-auto flex items-center gap-2">
             <NotificationBell />
