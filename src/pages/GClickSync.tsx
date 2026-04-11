@@ -183,7 +183,7 @@ export default function GClickSync() {
               <>
                 <div className="flex items-center justify-between mb-4 gap-4">
                   <Input
-                    placeholder="Filtrar por nome ou CNPJ..."
+                    placeholder="Filtrar por nome, CPF ou CNPJ..."
                     value={clientSearch}
                     onChange={e => setClientSearch(e.target.value)}
                     className="max-w-sm"
