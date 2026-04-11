@@ -60,7 +60,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <RefreshCw className="h-4 w-4" />
             G-Click
           </NavLink>
-          </NavLink>
           <div className="ml-auto flex items-center gap-2">
             <NotificationBell />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
