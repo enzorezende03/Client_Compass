@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RefreshCw, Check, X, CheckSquare, Square, ArrowLeft, Users, Briefcase, ClipboardList } from 'lucide-react';
+import { RefreshCw, Check, CheckSquare, Square, Users, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AppLayout } from '@/components/AppLayout';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 
 interface PreviewClient {
   gclick_id: string;
@@ -150,16 +149,11 @@ export default function GClickSync() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-6 py-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Sincronização G-Click</h1>
-            <p className="text-sm text-muted-foreground">Visualize e aprove os dados antes de importar</p>
-          </div>
-        </div>
+       <div className="container mx-auto px-6 py-6">
+         <div className="mb-6">
+           <h1 className="text-2xl font-bold text-foreground">Sincronização G-Click</h1>
+           <p className="text-sm text-muted-foreground">Visualize e aprove os dados antes de importar</p>
+         </div>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as SyncTab)}>
           <div className="flex items-center justify-between mb-4">
