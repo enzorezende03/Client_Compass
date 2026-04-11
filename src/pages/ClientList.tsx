@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2, RefreshCw } from 'lucide-react';
+import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -84,15 +84,9 @@ export default function ClientList() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-6 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground tracking-tight">Customer Success</h1>
-              <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
-            </div>
-            <Button onClick={() => navigate('/gclick-sync')} variant="outline" className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Sincronizar G-Click
-            </Button>
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Customer Success</h1>
+            <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
           </div>
 
           {/* Stats */}
