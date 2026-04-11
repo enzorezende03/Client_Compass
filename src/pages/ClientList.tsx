@@ -89,9 +89,9 @@ export default function ClientList() {
               <h1 className="text-2xl font-bold text-foreground tracking-tight">Customer Success</h1>
               <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
             </div>
-            <Button onClick={handleGclickSync} disabled={syncing} variant="outline" className="gap-2">
-              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Sincronizando...' : 'Sincronizar G-Click'}
+            <Button onClick={() => navigate('/gclick-sync')} variant="outline" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Sincronizar G-Click
             </Button>
           </div>
 
