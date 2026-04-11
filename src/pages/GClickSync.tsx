@@ -134,11 +134,13 @@ export default function GClickSync() {
     }
   };
 
-  const filteredClients = previewClients.filter(c =>
-    clientSearch === '' ||
-    c.nome.toLowerCase().includes(clientSearch.toLowerCase()) ||
-    c.inscricao.includes(clientSearch)
-  );
+  const filteredClients = previewClients.filter(c => {
+    if (clientSearch === '') return true;
+    const term = clientSearch.toLowerCase().replace(/\D/g, '');
+    const termRaw = clientSearch.toLowerCase();
+    const docClean = (c.inscricao || '').replace(/\D/g, '');
+    return c.nome.toLowerCase().includes(termRaw) || (term.length > 0 && docClean.includes(term));
+  });
 
   const filteredTasks = previewTasks.filter(t =>
     taskSearch === '' ||
@@ -181,7 +183,7 @@ export default function GClickSync() {
               <>
                 <div className="flex items-center justify-between mb-4 gap-4">
                   <Input
-                    placeholder="Filtrar por nome ou CNPJ..."
+                    placeholder="Filtrar por nome, CPF ou CNPJ..."
                     value={clientSearch}
                     onChange={e => setClientSearch(e.target.value)}
                     className="max-w-sm"
