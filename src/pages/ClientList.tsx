@@ -44,7 +44,6 @@ export default function ClientList() {
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [complexityFilter, setComplexityFilter] = useState<string>('all');
@@ -59,52 +58,6 @@ export default function ClientList() {
   }, []);
 
   useEffect(() => { loadClients(); }, [loadClients]);
-
-  const handleGclickSync = async () => {
-    setSyncing(true);
-    toast({ title: 'Sincronização iniciada', description: 'Isso pode levar alguns minutos...' });
-
-    const steps = ['sync-clients', 'sync-carteiras', 'sync-tasks'] as const;
-    const results: string[] = [];
-    const baseUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/gclick-sync`;
-    const { data: { session } } = await supabase.auth.getSession();
-    const fetchHeaders: Record<string, string> = {
-      'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    };
-
-    for (const action of steps) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000); // 2min timeout
-        const res = await fetch(`${baseUrl}?action=${action}`, {
-          headers: fetchHeaders,
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        const data = await res.json();
-        if (data.success) {
-          const details = [data.synced && `${data.synced} vinculados`, data.created && `${data.created} criados`].filter(Boolean).join(', ');
-          results.push(`✅ ${action}: ${details || 'OK'}`);
-        } else {
-          results.push(`❌ ${action}: ${data.error || 'erro'}`);
-        }
-      } catch (err: any) {
-        if (err.name === 'AbortError') {
-          results.push(`⏳ ${action}: processando em background`);
-        } else {
-          results.push(`❌ ${action}: ${err.message}`);
-        }
-      }
-    }
-
-    toast({
-      title: 'Sincronização G-Click concluída',
-      description: results.join(' | '),
-    });
-    setSyncing(false);
-    loadClients();
-  };
 
   const responsibles = [...new Set(clients.map(c => c.csResponsible).filter(Boolean))];
 
@@ -136,9 +89,9 @@ export default function ClientList() {
               <h1 className="text-2xl font-bold text-foreground tracking-tight">Customer Success</h1>
               <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
             </div>
-            <Button onClick={handleGclickSync} disabled={syncing} variant="outline" className="gap-2">
-              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Sincronizando...' : 'Sincronizar G-Click'}
+            <Button onClick={() => navigate('/gclick-sync')} variant="outline" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Sincronizar G-Click
             </Button>
           </div>
 

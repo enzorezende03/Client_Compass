@@ -17,7 +17,6 @@ async function getAccessToken(): Promise<string> {
     `${GCLICK_BASE}/token`,
   ];
 
-  // Try form-urlencoded first, then JSON
   for (const contentType of ["application/x-www-form-urlencoded", "application/json"]) {
     for (const url of endpoints) {
       try {
@@ -42,7 +41,7 @@ async function getAccessToken(): Promise<string> {
             return data.access_token;
           }
         }
-        await res.text(); // consume
+        await res.text();
       } catch (_) { /* skip */ }
     }
   }
@@ -62,7 +61,6 @@ async function gclickGet(token: string, path: string) {
   return res.json();
 }
 
-// Fetch all pages from paginated endpoint
 async function gclickGetAllPages(token: string, basePath: string, pageSize = 200): Promise<any[]> {
   const all: any[] = [];
   let page = 0;
@@ -91,6 +89,20 @@ function getSupabase() {
   );
 }
 
+// ── Build maps of existing clients ──
+async function getExistingClientMaps(supabase: any) {
+  const { data: ourClients } = await supabase.from("clients").select("id, document, name, gclick_id");
+  const docMap = new Map<string, string>();
+  const nameMap = new Map<string, string>();
+  const gclickIdSet = new Set<string>();
+  for (const c of ourClients || []) {
+    if (c.document) docMap.set(c.document.replace(/\D/g, ""), c.id);
+    if (c.name) nameMap.set(c.name.toLowerCase().trim(), c.id);
+    if (c.gclick_id) gclickIdSet.add(c.gclick_id);
+  }
+  return { docMap, nameMap, gclickIdSet };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -103,7 +115,8 @@ Deno.serve(async (req) => {
     });
 
   try {
-    const action = new URL(req.url).searchParams.get("action") || "test";
+    const url = new URL(req.url);
+    const action = url.searchParams.get("action") || "test";
     const supabase = getSupabase();
 
     // ── TEST CONNECTION ──
@@ -117,41 +130,66 @@ Deno.serve(async (req) => {
       return json({ success: true, message: "Conexão OK!", departments: deptList });
     }
 
-    // ── SYNC CLIENTS ──
-    if (action === "sync-clients") {
+    // ── PREVIEW CLIENTS (no insert, just return what's available) ──
+    if (action === "preview-clients") {
       const token = await getAccessToken();
       const allGclickClients = await gclickGetAllPages(token, "/clientes");
-      // Filter only active clients
       const gclickClients = allGclickClients.filter((c: any) => c.status === "ATIVO");
 
-      const logId = await createLog(supabase, "clients");
+      const { docMap, nameMap, gclickIdSet } = await getExistingClientMaps(supabase);
 
-      // Get all our clients
-      const { data: ourClients } = await supabase.from("clients").select("id, document, name, gclick_id");
-      const docMap = new Map<string, string>();
-      const nameMap = new Map<string, string>();
-      const gclickIdSet = new Set<string>();
-      for (const c of ourClients || []) {
-        if (c.document) docMap.set(c.document.replace(/\D/g, ""), c.id);
-        if (c.name) nameMap.set(c.name.toLowerCase().trim(), c.id);
-        if (c.gclick_id) gclickIdSet.add(c.gclick_id);
+      const items: any[] = [];
+      for (const gc of gclickClients) {
+        const inscricao = (gc.inscricao || "").replace(/\D/g, "");
+        const nome = (gc.nome || "").trim();
+        const gclickId = String(gc.id);
+
+        if (gclickIdSet.has(gclickId)) continue; // already linked
+
+        let matchId = inscricao ? docMap.get(inscricao) : undefined;
+        if (!matchId && nome) matchId = nameMap.get(nome.toLowerCase());
+
+        items.push({
+          gclick_id: gclickId,
+          nome: nome || `Cliente G-Click ${gclickId}`,
+          inscricao: gc.inscricao || "",
+          segmento: gc.ramo || gc.segmento || "",
+          status: gc.status,
+          match_type: matchId ? "update" : "new",
+          match_id: matchId || null,
+        });
       }
 
-      let synced = 0;
-      let created = 0;
+      return json({ success: true, items });
+    }
+
+    // ── IMPORT SELECTED CLIENTS ──
+    if (action === "import-clients") {
+      const body = await req.json();
+      const selectedIds: string[] = body.selected_ids || [];
+      if (selectedIds.length === 0) return json({ success: false, error: "Nenhum ID selecionado" }, 400);
+
+      const token = await getAccessToken();
+      const allGclickClients = await gclickGetAllPages(token, "/clientes");
+      const selectedSet = new Set(selectedIds);
+      const gclickClients = allGclickClients.filter((c: any) => selectedSet.has(String(c.id)));
+
+      const { docMap, nameMap, gclickIdSet } = await getExistingClientMaps(supabase);
+      const logId = await createLog(supabase, "clients-selective");
+
+      let synced = 0, created = 0;
       const toUpdate: { id: string; gclick_id: string }[] = [];
       const toInsert: any[] = [];
 
       for (const gc of gclickClients) {
         const inscricao = (gc.inscricao || "").replace(/\D/g, "");
         const nome = (gc.nome || "").trim();
-        const nomeLower = nome.toLowerCase();
         const gclickId = String(gc.id);
 
         if (gclickIdSet.has(gclickId)) continue;
 
         let matchId = inscricao ? docMap.get(inscricao) : undefined;
-        if (!matchId && nomeLower) matchId = nameMap.get(nomeLower);
+        if (!matchId && nome) matchId = nameMap.get(nome.toLowerCase());
 
         if (matchId) {
           toUpdate.push({ id: matchId, gclick_id: gclickId });
@@ -171,13 +209,11 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Batch updates
       for (const u of toUpdate) {
         await supabase.from("clients").update({ gclick_id: u.gclick_id }).eq("id", u.id);
         synced++;
       }
 
-      // Batch inserts (chunks of 100)
       for (let i = 0; i < toInsert.length; i += 100) {
         const chunk = toInsert.slice(i, i + 100);
         const { error } = await supabase.from("clients").insert(chunk);
@@ -186,17 +222,145 @@ Deno.serve(async (req) => {
       }
 
       await updateLog(supabase, logId, "completed", synced + created,
-        `${gclickClients.length} clientes no G-Click, ${synced} vinculados, ${created} criados`);
+        `${selectedIds.length} selecionados, ${synced} vinculados, ${created} criados`);
 
-      return json({ success: true, total_gclick: gclickClients.length, synced, created });
+      return json({ success: true, imported: synced + created, synced, created });
     }
 
-    // ── SYNC CARTEIRAS (responsáveis por cliente) ──
+    // ── PREVIEW TASKS ──
+    if (action === "preview-tasks") {
+      const token = await getAccessToken();
+      const deptId = parseInt(url.searchParams.get("departamentoId") || "16");
+
+      let tasks: any[] = [];
+      const taskEndpoints = [
+        `/tarefas?departamentoId=${deptId}&size=100`,
+        `/departamentos/${deptId}/tarefas?size=100`,
+      ];
+      for (const ep of taskEndpoints) {
+        try {
+          const data = await gclickGet(token, ep);
+          tasks = data.content || data || [];
+          if (tasks.length > 0) break;
+        } catch (e) {
+          console.log(`Tasks endpoint ${ep}: ${e.message}`);
+        }
+      }
+
+      // Get linked clients map
+      const { data: linkedClients } = await supabase
+        .from("clients")
+        .select("id, gclick_id, name")
+        .not("gclick_id", "is", null);
+      const gclickToClient = new Map<string, { id: string; name: string }>();
+      for (const c of linkedClients || []) {
+        if (c.gclick_id) gclickToClient.set(c.gclick_id, { id: c.id, name: c.name });
+      }
+
+      const items: any[] = [];
+      for (const task of tasks) {
+        const clientGclickId = String(task.clienteId || task.cliente?.id || "");
+        const client = gclickToClient.get(clientGclickId);
+        if (!client) continue;
+
+        const title = task.assunto || task.titulo || task.nome || "Tarefa G-Click";
+
+        // Check duplicate
+        const { data: existing } = await supabase
+          .from("tasks")
+          .select("id")
+          .eq("client_id", client.id)
+          .eq("title", title)
+          .limit(1);
+        if (existing && existing.length > 0) continue;
+
+        items.push({
+          gclick_id: String(task.id || `${clientGclickId}-${title}`),
+          title,
+          client_name: client.name,
+          client_id: client.id,
+          responsible: task.responsavel?.nome || "",
+          due_date: task.dataVencimento || task.prazo || "",
+          description: task.andamento || task.descricao || "",
+        });
+      }
+
+      return json({ success: true, items });
+    }
+
+    // ── IMPORT SELECTED TASKS ──
+    if (action === "import-tasks") {
+      const body = await req.json();
+      const selectedIds: string[] = body.selected_ids || [];
+      if (selectedIds.length === 0) return json({ success: false, error: "Nenhum ID selecionado" }, 400);
+
+      // Re-fetch preview to get full data
+      const token = await getAccessToken();
+      const deptId = parseInt(url.searchParams.get("departamentoId") || "16");
+
+      let tasks: any[] = [];
+      const taskEndpoints = [
+        `/tarefas?departamentoId=${deptId}&size=100`,
+        `/departamentos/${deptId}/tarefas?size=100`,
+      ];
+      for (const ep of taskEndpoints) {
+        try {
+          const data = await gclickGet(token, ep);
+          tasks = data.content || data || [];
+          if (tasks.length > 0) break;
+        } catch (e) { console.log(`Tasks endpoint ${ep}: ${e.message}`); }
+      }
+
+      const { data: linkedClients } = await supabase
+        .from("clients")
+        .select("id, gclick_id")
+        .not("gclick_id", "is", null);
+      const gclickToOurId = new Map<string, string>();
+      for (const c of linkedClients || []) {
+        if (c.gclick_id) gclickToOurId.set(c.gclick_id, c.id);
+      }
+
+      const selectedSet = new Set(selectedIds);
+      const logId = await createLog(supabase, "tasks-selective");
+      let imported = 0;
+
+      for (const task of tasks) {
+        const taskId = String(task.id || "");
+        const clientGclickId = String(task.clienteId || task.cliente?.id || "");
+        const title = task.assunto || task.titulo || task.nome || "Tarefa G-Click";
+        const compositeId = taskId || `${clientGclickId}-${title}`;
+
+        if (!selectedSet.has(compositeId)) continue;
+
+        const clientId = gclickToOurId.get(clientGclickId);
+        if (!clientId) continue;
+
+        const { data: existing } = await supabase
+          .from("tasks").select("id").eq("client_id", clientId).eq("title", title).limit(1);
+        if (existing && existing.length > 0) continue;
+
+        await supabase.from("tasks").insert({
+          client_id: clientId,
+          title,
+          description: task.andamento || task.descricao || "",
+          responsible: task.responsavel?.nome || "",
+          due_date: task.dataVencimento || task.prazo || new Date().toISOString().split("T")[0],
+          status: "pending",
+        });
+        imported++;
+      }
+
+      await updateLog(supabase, logId, "completed", imported,
+        `${selectedIds.length} selecionadas, ${imported} importadas`);
+
+      return json({ success: true, imported });
+    }
+
+    // ── SYNC CARTEIRAS ──
     if (action === "sync-carteiras") {
       const token = await getAccessToken();
       const logId = await createLog(supabase, "carteiras");
 
-      // Get clients that have gclick_id
       const { data: linkedClients } = await supabase
         .from("clients")
         .select("id, gclick_id")
@@ -207,7 +371,6 @@ Deno.serve(async (req) => {
         try {
           const responsaveis = await gclickGet(token, `/clientes/${client.gclick_id}/responsaveis`);
           if (Array.isArray(responsaveis) && responsaveis.length > 0) {
-            // Get names of all responsáveis per department
             const carteira = responsaveis
               .filter((r: any) => r.ativo !== false)
               .map((r: any) => {
@@ -232,85 +395,13 @@ Deno.serve(async (req) => {
       return json({ success: true, linked_clients: (linkedClients || []).length, synced });
     }
 
-    // ── SYNC TASKS (dept "5. Atendimento ao Cliente" = ID 16) ──
-    if (action === "sync-tasks") {
-      const token = await getAccessToken();
-      const deptIdParam = new URL(req.url).searchParams.get("departamentoId");
-
-      const deptId = deptIdParam ? parseInt(deptIdParam) : 16;
-      const deptName = deptIdParam ? `Dept ${deptId}` : "5. Atendimento ao Cliente";
-
-      // Try fetching tasks for this department
-      let tasks: any[] = [];
-      const taskEndpoints = [
-        `/tarefas?departamentoId=${deptId}&size=100`,
-        `/departamentos/${deptId}/tarefas?size=100`,
-      ];
-
-      for (const ep of taskEndpoints) {
-        try {
-          const data = await gclickGet(token, ep);
-          tasks = data.content || data || [];
-          if (tasks.length > 0) break;
-        } catch (e) {
-          console.log(`Tasks endpoint ${ep}: ${e.message}`);
-        }
-      }
-
-      const logId = await createLog(supabase, "tasks", `Dept: ${deptName} (ID: ${deptId})`);
-
-      // Get linked clients map (gclick_id -> our id)
-      const { data: linkedClients } = await supabase
-        .from("clients")
-        .select("id, gclick_id")
-        .not("gclick_id", "is", null);
-      const gclickToOurId = new Map<string, string>();
-      for (const c of linkedClients || []) {
-        if (c.gclick_id) gclickToOurId.set(c.gclick_id, c.id);
-      }
-
-      let synced = 0;
-      for (const task of tasks) {
-        const clientGclickId = String(task.clienteId || task.cliente?.id || "");
-        const clientId = gclickToOurId.get(clientGclickId);
-        if (!clientId) continue;
-
-        const title = task.assunto || task.titulo || task.nome || "Tarefa G-Click";
-
-        // Check duplicate
-        const { data: existing } = await supabase
-          .from("tasks")
-          .select("id")
-          .eq("client_id", clientId)
-          .eq("title", title)
-          .limit(1);
-        if (existing && existing.length > 0) continue;
-
-        await supabase.from("tasks").insert({
-          client_id: clientId,
-          title,
-          description: task.andamento || task.descricao || "",
-          responsible: task.responsavel?.nome || "",
-          due_date: task.dataVencimento || task.prazo || new Date().toISOString().split("T")[0],
-          status: "pending",
-        });
-        synced++;
-      }
-
-      await updateLog(supabase, logId, "completed", synced,
-        `Dept: ${deptName}, ${tasks.length} tarefas no G-Click, ${synced} importadas`);
-
-      return json({ success: true, department: deptName, total_tasks: tasks.length, synced });
-    }
-
-    return json({ error: "Ação inválida. Use: test, sync-clients, sync-carteiras, sync-tasks" }, 400);
+    return json({ error: "Ação inválida. Use: test, preview-clients, import-clients, preview-tasks, import-tasks, sync-carteiras" }, 400);
   } catch (err) {
     console.error("gclick-sync error:", err);
     return json({ success: false, error: err.message }, 500);
   }
 });
 
-// Helper: create sync log entry
 async function createLog(supabase: any, type: string, details = "") {
   const { data } = await supabase.from("gclick_sync_log").insert({
     sync_type: type, status: "running", details,
@@ -318,7 +409,6 @@ async function createLog(supabase: any, type: string, details = "") {
   return data?.id;
 }
 
-// Helper: update sync log
 async function updateLog(supabase: any, id: string | undefined, status: string, count: number, details: string) {
   if (!id) return;
   await supabase.from("gclick_sync_log").update({
