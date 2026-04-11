@@ -47,7 +47,6 @@ async function callGclick(action: string, body?: any) {
 }
 
 export default function GClickSync() {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [tab, setTab] = useState<SyncTab>('clients');
   const [loading, setLoading] = useState(false);
