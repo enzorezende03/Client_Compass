@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { lovable } from '@/integrations/lovable/index';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import logo from '@/assets/logo-cshub.png';
 
 export default function Login() {
@@ -43,41 +41,6 @@ export default function Login() {
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error, data } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: window.location.origin },
-    });
-    if (error) {
-      toast({ title: 'Erro ao cadastrar', description: error.message, variant: 'destructive' });
-      setLoading(false);
-    } else if (data.session) {
-      await supabase.rpc('link_auth_user');
-      navigate('/', { replace: true });
-    } else {
-      toast({ title: 'Conta criada!', description: 'Verifique seu email para confirmar o cadastro.' });
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    const result = await lovable.auth.signInWithOAuth('google', {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast({ title: 'Erro ao entrar com Google', description: String(result.error), variant: 'destructive' });
-      setLoading(false);
-      return;
-    }
-    if (result.redirected) return;
-    await supabase.rpc('link_auth_user');
-    navigate('/', { replace: true });
-  };
-
   const handleForgotPassword = async () => {
     if (!email.trim()) {
       toast({ title: 'Informe seu email', description: 'Digite seu email para receber o link de recuperação.', variant: 'destructive' });
@@ -105,57 +68,22 @@ export default function Login() {
           <p className="text-sm text-muted-foreground">Acesse sua conta para continuar</p>
         </div>
         <CardContent className="pt-4">
-          <Tabs defaultValue="login" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Cadastrar</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="seu@email.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Senha</Label>
-                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Entrando...' : 'Entrar'}
-                </Button>
-                <Button type="button" variant="link" className="w-full text-xs" onClick={handleForgotPassword}>
-                  Esqueci minha senha
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="seu@email.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Senha</Label>
-                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Criando conta...' : 'Criar conta'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-
-          <div className="mt-4">
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-              <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="seu@email.com" />
             </div>
-            <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
-              Entrar com Google
+            <div className="space-y-2">
+              <Label>Senha</Label>
+              <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Entrando...' : 'Entrar'}
             </Button>
-          </div>
+            <Button type="button" variant="link" className="w-full text-xs" onClick={handleForgotPassword}>
+              Esqueci minha senha
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
