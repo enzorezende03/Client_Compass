@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Check, CheckSquare, Square, Users, ClipboardList, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,31 @@ import { AppLayout } from '@/components/AppLayout';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+function useSessionState<T>(key: string, initialValue: T): [T, (val: T | ((prev: T) => T)) => void] {
+  const [state, setState] = useState<T>(() => {
+    try {
+      const saved = sessionStorage.getItem(key);
+      return saved ? JSON.parse(saved) : initialValue;
+    } catch { return initialValue; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem(key, JSON.stringify(state)); } catch {}
+  }, [key, state]);
+  return [state, setState];
+}
+
+function useSessionSet(key: string, initialValue: string[] = []): [Set<string>, (val: Set<string> | ((prev: Set<string>) => Set<string>)) => void] {
+  const [state, setState] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem(key);
+      return saved ? new Set(JSON.parse(saved)) : new Set(initialValue);
+    } catch { return new Set(initialValue); }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem(key, JSON.stringify([...state])); } catch {}
+  }, [key, state]);
+  return [state, setState];
+}
 interface PreviewContact {
   nome: string;
   telefone: string;
