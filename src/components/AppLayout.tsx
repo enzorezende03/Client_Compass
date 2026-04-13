@@ -4,7 +4,7 @@ import { Users, Building2, LayoutDashboard, CalendarClock, LogOut, RefreshCw } f
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import logo from '@/assets/logo-cshub.png';
+
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <nav className="border-b bg-card">
         <div className="container mx-auto px-6 flex items-center gap-1 h-14">
-          <img src={logo} alt="CS HUB" className="h-8 mr-4" />
+          <span className="text-lg font-bold text-foreground mr-4 tracking-tight">CS HUB</span>
           <NavLink
             to="/"
             end
