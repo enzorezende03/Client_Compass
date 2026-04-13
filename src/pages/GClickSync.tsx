@@ -277,12 +277,24 @@ export default function GClickSync() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10"></TableHead>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>CNPJ/CPF</TableHead>
-                        <TableHead>Segmento</TableHead>
-                        <TableHead>Data Início</TableHead>
-                        <TableHead>Tributação</TableHead>
-                        <TableHead>Tipo</TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort('nome')}>
+                          <span className="flex items-center">Nome<SortIcon column="nome" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort('inscricao')}>
+                          <span className="flex items-center">CNPJ/CPF<SortIcon column="inscricao" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort('segmento')}>
+                          <span className="flex items-center">Segmento<SortIcon column="segmento" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort('data_inicio')}>
+                          <span className="flex items-center">Data Início<SortIcon column="data_inicio" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort('tributacao')}>
+                          <span className="flex items-center">Tributação<SortIcon column="tributacao" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort('match_type')}>
+                          <span className="flex items-center">Tipo<SortIcon column="match_type" /></span>
+                        </TableHead>
                         <TableHead>Contatos</TableHead>
                       </TableRow>
                     </TableHeader>
