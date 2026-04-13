@@ -8,6 +8,21 @@ const corsHeaders = {
 const GCLICK_BASE = "https://api.gclick.com.br";
 
 // Known taxation group names from G-Click
+const ALLOWED_STATUSES = ["ATIVO", "SUSPENSO"];
+
+function isAllowedClient(c: any): boolean {
+  if (!ALLOWED_STATUSES.includes(c.status)) return false;
+  const doc = (c.inscricao || "").replace(/\D/g, "");
+  if (doc.length !== 14) return false; // Only CNPJ
+  // Filter by complementary status "em carteira"
+  const complementar = (c.statusComplementar || c.situacaoComplementar || c.statusCliente || "").toLowerCase().trim();
+  if (complementar && complementar !== "em carteira") return false;
+  // Also check inside situacao object if present
+  const situacao = (c.situacao?.nome || c.situacao?.descricao || "").toLowerCase().trim();
+  if (situacao && situacao !== "em carteira") return false;
+  return true;
+}
+
 const TAXATION_KEYWORDS = [
   "simples nacional fator r",
   "simples nacional",
