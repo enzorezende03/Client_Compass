@@ -161,6 +161,38 @@ export default function GClickSync() {
     return c.nome.toLowerCase().includes(termRaw) || (term.length > 0 && docClean.includes(term));
   });
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedClients = [...filteredClients].sort((a, b) => {
+    if (!sortColumn) return 0;
+    const fieldMap: Record<string, (c: PreviewClient) => string> = {
+      nome: c => c.nome || '',
+      inscricao: c => c.inscricao || '',
+      segmento: c => c.segmento || '',
+      data_inicio: c => c.data_inicio || '',
+      tributacao: c => c.tributacao || '',
+      match_type: c => c.match_type || '',
+    };
+    const getter = fieldMap[sortColumn];
+    if (!getter) return 0;
+    const valA = getter(a).toLowerCase();
+    const valB = getter(b).toLowerCase();
+    const cmp = valA.localeCompare(valB, 'pt-BR');
+    return sortDirection === 'asc' ? cmp : -cmp;
+  });
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDirection === 'asc' ? <ArrowUp className="h-3 w-3 ml-1" /> : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
+
   const filteredTasks = previewTasks.filter(t =>
     taskSearch === '' ||
     t.title.toLowerCase().includes(taskSearch.toLowerCase()) ||
