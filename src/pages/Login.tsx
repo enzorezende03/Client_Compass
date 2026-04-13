@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import logo from '@/assets/logo-cshub.png';
+import logoGrupo from '@/assets/logo-grupo.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -64,7 +64,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 px-4">
       <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-sm">
         <div className="flex flex-col items-center pt-8 pb-2">
-          <img src={logo} alt="CS HUB" className="h-16 mb-3" />
+          <img src={logoGrupo} alt="Grupo" className="h-20 mb-3" />
           <p className="text-sm text-muted-foreground">Acesse sua conta para continuar</p>
         </div>
         <CardContent className="pt-4">
