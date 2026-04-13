@@ -91,16 +91,16 @@ export default function GClickSync() {
   // Clients preview
   const [previewClients, setPreviewClients] = useSessionState<PreviewClient[]>('gclick_preview_clients', []);
   const [selectedClients, setSelectedClients] = useSessionSet('gclick_selected_clients');
-
-  const [previewTasks, setPreviewTasks] = useSessionState<PreviewTask[]>('gclick_preview_tasks', []);
-  const [selectedTasks, setSelectedTasks] = useSessionSet('gclick_selected_tasks');
+  const [clientSearch, setClientSearch] = useState('');
+  const [docTypeFilter, setDocTypeFilter] = useState<'all' | 'cpf' | 'cnpj'>('all');
+  const [taxationFilter, setTaxationFilter] = useState<string>('all');
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Tasks preview
-  const [previewTasks, setPreviewTasks] = useState<PreviewTask[]>([]);
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [previewTasks, setPreviewTasks] = useSessionState<PreviewTask[]>('gclick_preview_tasks', []);
+  const [selectedTasks, setSelectedTasks] = useSessionSet('gclick_selected_tasks');
   const [taskSearch, setTaskSearch] = useState('');
 
   const fetchPreview = async (type: SyncTab) => {
