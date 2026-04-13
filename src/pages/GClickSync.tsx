@@ -299,7 +299,7 @@ export default function GClickSync() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredClients.map(c => (
+                      {sortedClients.map(c => (
                         <>
                         <TableRow key={c.gclick_id} className="cursor-pointer" onClick={() => toggleItem('clients', c.gclick_id)}>
                           <TableCell>
