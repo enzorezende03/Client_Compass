@@ -181,12 +181,24 @@ export default function GClickSync() {
             {previewClients.length > 0 && (
               <>
                 <div className="flex items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-3">
                   <Input
                     placeholder="Filtrar por nome, CPF ou CNPJ..."
                     value={clientSearch}
                     onChange={e => setClientSearch(e.target.value)}
                     className="max-w-sm"
                   />
+                  <Select value={docTypeFilter} onValueChange={(v) => setDocTypeFilter(v as 'all' | 'cpf' | 'cnpj')}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Tipo doc" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="cpf">CPF</SelectItem>
+                      <SelectItem value="cnpj">CNPJ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">
                       {selectedClients.size} de {previewClients.length} selecionados
