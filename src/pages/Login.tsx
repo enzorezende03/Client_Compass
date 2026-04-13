@@ -67,7 +67,8 @@ export default function Login() {
           <div className="w-full bg-primary flex items-center justify-center py-8 rounded-b-none">
             <img src={logoGrupo} alt="Grupo" className="h-20" />
           </div>
-          <p className="text-sm text-muted-foreground mt-4">Acesse sua conta para continuar</p>
+          <h1 className="text-xl font-bold text-foreground mt-4">CS HUB</h1>
+          <p className="text-sm text-muted-foreground mt-1">Acesse sua conta para continuar</p>
         </div>
         <CardContent className="pt-4">
           <form onSubmit={handleLogin} className="space-y-4">
