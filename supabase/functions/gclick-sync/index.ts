@@ -159,22 +159,27 @@ Deno.serve(async (req) => {
         id: d.id,
         nome: d.nome,
       }));
-      // Try to fetch status complementar list
-      let statusList: any[] = [];
-      const statusEndpoints = ["/statuscomplementar", "/status-complementar", "/clientes/status-complementar", "/situacoes"];
-      for (const ep of statusEndpoints) {
+      // Try to get detail of first client to see full fields
+      const allClients = await gclickGetAllPages(token, "/clientes");
+      const firstActive = allClients.find((c: any) => c.status === "ATIVO" && c.statusComplementarId === 1);
+      let detailFields: any = null;
+      if (firstActive) {
         try {
-          const data = await gclickGet(token, ep);
-          statusList = data.content || data || [];
-          if (statusList.length > 0) {
-            console.log(`Status complementar from ${ep}:`, JSON.stringify(statusList));
-            break;
-          }
+          const detail = await gclickGet(token, `/clientes/${firstActive.id}`);
+          detailFields = detail;
+          console.log("Client detail keys:", JSON.stringify(Object.keys(detail)));
+          console.log("Client detail status fields:", JSON.stringify({
+            status: detail.status,
+            statusComplementarId: detail.statusComplementarId,
+            statusComplementar: detail.statusComplementar,
+            situacao: detail.situacao,
+            situacaoComplementar: detail.situacaoComplementar,
+          }));
         } catch (e) {
-          console.log(`Status endpoint ${ep}: ${e.message}`);
+          console.log("Detail fetch error:", e.message);
         }
       }
-      return json({ success: true, message: "Conexão OK!", departments: deptList, statusComplementar: statusList });
+      return json({ success: true, message: "Conexão OK!", departments: deptList, detailFields });
     }
 
     // ── PREVIEW CLIENTS ──
