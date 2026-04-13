@@ -236,6 +236,7 @@ export default function GClickSync() {
                         <TableHead>Data Início</TableHead>
                         <TableHead>Tributação</TableHead>
                         <TableHead>Tipo</TableHead>
+                        <TableHead>Contatos</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
