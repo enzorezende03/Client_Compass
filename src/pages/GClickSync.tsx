@@ -70,6 +70,8 @@ export default function GClickSync() {
   const [docTypeFilter, setDocTypeFilter] = useState<'all' | 'cpf' | 'cnpj'>('all');
   const [taxationFilter, setTaxationFilter] = useState<string>('all');
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Tasks preview
   const [previewTasks, setPreviewTasks] = useState<PreviewTask[]>([]);
