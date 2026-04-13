@@ -168,15 +168,17 @@ Deno.serve(async (req) => {
       const allGclickClients = await gclickGetAllPages(token, "/clientes");
       // Log first client fields for debugging complementary status field name
       if (allGclickClients.length > 0) {
-        const sample = allGclickClients[0];
-        console.log("Sample client fields:", JSON.stringify(Object.keys(sample)));
-        console.log("Sample client status fields:", JSON.stringify({
-          status: sample.status,
-          statusComplementar: sample.statusComplementar,
-          situacaoComplementar: sample.situacaoComplementar,
-          statusCliente: sample.statusCliente,
-          situacao: sample.situacao,
+        // Log unique statusComplementarId values to discover the "em carteira" ID
+        const statusIds = new Set(allGclickClients.map((c: any) => c.statusComplementarId));
+        console.log("Unique statusComplementarId values:", JSON.stringify([...statusIds]));
+        // Log a few samples with their statusComplementarId
+        const samples = allGclickClients.slice(0, 5).map((c: any) => ({
+          nome: c.nome,
+          status: c.status,
+          statusComplementarId: c.statusComplementarId,
+          inscricao: c.inscricao,
         }));
+        console.log("Sample clients:", JSON.stringify(samples));
       }
       const gclickClients = allGclickClients.filter(isAllowedClient);
 
