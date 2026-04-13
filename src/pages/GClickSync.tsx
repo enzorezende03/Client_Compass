@@ -19,6 +19,9 @@ interface PreviewClient {
   status: string;
   match_type: 'new' | 'update';
   match_id?: string;
+  data_inicio: string;
+  tributacao: string;
+}
 }
 
 interface PreviewTask {
@@ -222,6 +225,8 @@ export default function GClickSync() {
                         <TableHead>Nome</TableHead>
                         <TableHead>CNPJ/CPF</TableHead>
                         <TableHead>Segmento</TableHead>
+                        <TableHead>Data Início</TableHead>
+                        <TableHead>Tributação</TableHead>
                         <TableHead>Tipo</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -234,6 +239,8 @@ export default function GClickSync() {
                           <TableCell className="font-medium">{c.nome}</TableCell>
                           <TableCell className="font-mono text-sm">{c.inscricao}</TableCell>
                           <TableCell>{c.segmento}</TableCell>
+                          <TableCell className="text-sm">{c.data_inicio || '—'}</TableCell>
+                          <TableCell className="text-sm">{c.tributacao || '—'}</TableCell>
                           <TableCell>
                             <Badge variant={c.match_type === 'new' ? 'default' : 'secondary'}>
                               {c.match_type === 'new' ? 'Novo' : 'Atualizar'}
