@@ -159,7 +159,22 @@ Deno.serve(async (req) => {
         id: d.id,
         nome: d.nome,
       }));
-      return json({ success: true, message: "Conexão OK!", departments: deptList });
+      // Try to fetch status complementar list
+      let statusList: any[] = [];
+      const statusEndpoints = ["/statuscomplementar", "/status-complementar", "/clientes/status-complementar", "/situacoes"];
+      for (const ep of statusEndpoints) {
+        try {
+          const data = await gclickGet(token, ep);
+          statusList = data.content || data || [];
+          if (statusList.length > 0) {
+            console.log(`Status complementar from ${ep}:`, JSON.stringify(statusList));
+            break;
+          }
+        } catch (e) {
+          console.log(`Status endpoint ${ep}: ${e.message}`);
+        }
+      }
+      return json({ success: true, message: "Conexão OK!", departments: deptList, statusComplementar: statusList });
     }
 
     // ── PREVIEW CLIENTS ──
