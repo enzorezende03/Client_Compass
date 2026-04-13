@@ -146,12 +146,13 @@ export default function GClickSync() {
     }
   };
 
+  const taxationOptions = [...new Set(previewClients.map(c => c.tributacao).filter(Boolean))];
+
   const filteredClients = previewClients.filter(c => {
     const docClean = (c.inscricao || '').replace(/\D/g, '');
-    // Filter by doc type
     if (docTypeFilter === 'cpf' && docClean.length !== 11) return false;
     if (docTypeFilter === 'cnpj' && docClean.length !== 14) return false;
-    // Filter by search
+    if (taxationFilter !== 'all' && (c.tributacao || '') !== taxationFilter) return false;
     if (clientSearch === '') return true;
     const term = clientSearch.toLowerCase().replace(/\D/g, '');
     const termRaw = clientSearch.toLowerCase();
