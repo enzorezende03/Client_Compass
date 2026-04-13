@@ -167,12 +167,19 @@ Deno.serve(async (req) => {
     if (action === "preview-clients") {
       const token = await getAccessToken();
       const allGclickClients = await gclickGetAllPages(token, "/clientes");
-      const ALLOWED_STATUSES = ["ATIVO", "SUSPENSO"];
-      const gclickClients = allGclickClients.filter((c: any) => {
-        if (!ALLOWED_STATUSES.includes(c.status)) return false;
-        const doc = (c.inscricao || "").replace(/\D/g, "");
-        return doc.length === 14; // Only CNPJ (14 digits), skip CPF (11 digits)
-      });
+      // Log first client fields for debugging complementary status field name
+      if (allGclickClients.length > 0) {
+        const sample = allGclickClients[0];
+        console.log("Sample client fields:", JSON.stringify(Object.keys(sample)));
+        console.log("Sample client status fields:", JSON.stringify({
+          status: sample.status,
+          statusComplementar: sample.statusComplementar,
+          situacaoComplementar: sample.situacaoComplementar,
+          statusCliente: sample.statusCliente,
+          situacao: sample.situacao,
+        }));
+      }
+      const gclickClients = allGclickClients.filter(isAllowedClient);
 
       const { docMap, nameMap, gclickIdSet } = await getExistingClientMaps(supabase);
 
