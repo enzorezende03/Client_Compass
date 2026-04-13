@@ -68,6 +68,7 @@ export default function GClickSync() {
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
   const [clientSearch, setClientSearch] = useState('');
   const [docTypeFilter, setDocTypeFilter] = useState<'all' | 'cpf' | 'cnpj'>('all');
+  const [taxationFilter, setTaxationFilter] = useState<string>('all');
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
   // Tasks preview
@@ -145,12 +146,13 @@ export default function GClickSync() {
     }
   };
 
+  const taxationOptions = [...new Set(previewClients.map(c => c.tributacao).filter(Boolean))];
+
   const filteredClients = previewClients.filter(c => {
     const docClean = (c.inscricao || '').replace(/\D/g, '');
-    // Filter by doc type
     if (docTypeFilter === 'cpf' && docClean.length !== 11) return false;
     if (docTypeFilter === 'cnpj' && docClean.length !== 14) return false;
-    // Filter by search
+    if (taxationFilter !== 'all' && (c.tributacao || '') !== taxationFilter) return false;
     if (clientSearch === '') return true;
     const term = clientSearch.toLowerCase().replace(/\D/g, '');
     const termRaw = clientSearch.toLowerCase();
@@ -207,6 +209,17 @@ export default function GClickSync() {
                       <SelectItem value="all">Todos</SelectItem>
                       <SelectItem value="cpf">CPF</SelectItem>
                       <SelectItem value="cnpj">CNPJ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={taxationFilter} onValueChange={setTaxationFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Tributação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas tributações</SelectItem>
+                      {taxationOptions.map(t => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
