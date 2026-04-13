@@ -130,6 +130,14 @@ Deno.serve(async (req) => {
       return json({ success: true, message: "Conexão OK!", departments: deptList });
     }
 
+    // ── INSPECT: return raw fields from first client ──
+    if (action === "inspect-client") {
+      const token = await getAccessToken();
+      const data = await gclickGet(token, "/clientes?size=2&page=0");
+      const clients = data.content || data || [];
+      return json({ success: true, sample: clients.slice(0, 2) });
+    }
+
     // ── PREVIEW CLIENTS (no insert, just return what's available) ──
     if (action === "preview-clients") {
       const token = await getAccessToken();
@@ -194,7 +202,12 @@ Deno.serve(async (req) => {
         if (matchId) {
           toUpdate.push({ id: matchId, gclick_id: gclickId });
         } else {
-          toInsert.push({
+          // Extract taxation from G-Click fields
+          const taxation = gc.regimeTributario || gc.tributacao || gc.regime_tributario || "";
+          // Extract start date
+          const startDate = gc.dataInicio || gc.dataCadastro || gc.data_inicio || "";
+          
+          const clientData: any = {
             name: nome || `Cliente G-Click ${gclickId}`,
             document: gc.inscricao || "",
             gclick_id: gclickId,
@@ -205,7 +218,12 @@ Deno.serve(async (req) => {
             financial_status: "active_financial",
             complexity: "C",
             profile: "standard",
-          });
+          };
+          
+          if (taxation) clientData.taxation = taxation;
+          if (startDate) clientData.contract_start_date = startDate;
+          
+          toInsert.push(clientData);
         }
       }
 
@@ -395,7 +413,7 @@ Deno.serve(async (req) => {
       return json({ success: true, linked_clients: (linkedClients || []).length, synced });
     }
 
-    return json({ error: "Ação inválida. Use: test, preview-clients, import-clients, preview-tasks, import-tasks, sync-carteiras" }, 400);
+    return json({ error: "Ação inválida. Use: test, preview-clients, import-clients, preview-tasks, import-tasks, sync-carteiras, inspect-client" }, 400);
   } catch (err) {
     console.error("gclick-sync error:", err);
     return json({ success: false, error: err.message }, 500);
