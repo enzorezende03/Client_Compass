@@ -472,3 +472,30 @@ async function updateLog(supabase: any, id: string | undefined, status: string, 
     status, records_synced: count, details,
   }).eq("id", id);
 }
+
+async function importContacts(supabase: any, token: string, gclickId: string, clientId: string) {
+  try {
+    const contatosData = await gclickGet(token, `/clientes/${gclickId}/contatos`);
+    const contatos = Array.isArray(contatosData) ? contatosData : (contatosData.content || []);
+    if (contatos.length === 0) return;
+
+    // Remove existing contacts for this client before re-importing
+    await supabase.from("client_contacts").delete().eq("client_id", clientId);
+
+    const toInsert = contatos.map((ct: any) => ({
+      client_id: clientId,
+      name: ct.nome || "",
+      phone: ct.telefone || ct.celular || "",
+      email: ct.email || "",
+      role: ct.cargo || ct.funcao || "",
+    }));
+
+    for (let i = 0; i < toInsert.length; i += 100) {
+      const chunk = toInsert.slice(i, i + 100);
+      const { error } = await supabase.from("client_contacts").insert(chunk);
+      if (error) console.error("Contact insert error:", error.message);
+    }
+  } catch (e) {
+    console.log(`Import contacts error for gclick_id ${gclickId}: ${e.message}`);
+  }
+}
