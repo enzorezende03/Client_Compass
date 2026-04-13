@@ -56,6 +56,7 @@ export default function GClickSync() {
   const [previewClients, setPreviewClients] = useState<PreviewClient[]>([]);
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
   const [clientSearch, setClientSearch] = useState('');
+  const [docTypeFilter, setDocTypeFilter] = useState<'all' | 'cpf' | 'cnpj'>('all');
 
   // Tasks preview
   const [previewTasks, setPreviewTasks] = useState<PreviewTask[]>([]);
