@@ -7,6 +7,25 @@ const corsHeaders = {
 
 const GCLICK_BASE = "https://api.gclick.com.br";
 
+// Known taxation group names from G-Click
+const TAXATION_KEYWORDS = [
+  "simples nacional fator r",
+  "simples nacional",
+  "lucro presumido equiparação hospitalar",
+  "lucro presumido",
+  "lucro real",
+  "mei",
+];
+
+function extractTaxation(grupos: any[]): string {
+  if (!Array.isArray(grupos)) return "";
+  for (const keyword of TAXATION_KEYWORDS) {
+    const match = grupos.find((g: any) => (g.nome || "").toLowerCase().includes(keyword));
+    if (match) return match.nome;
+  }
+  return "";
+}
+
 async function getAccessToken(): Promise<string> {
   const clientId = Deno.env.get("GCLICK_CLIENT_ID")!;
   const clientSecret = Deno.env.get("GCLICK_CLIENT_SECRET")!;
@@ -89,7 +108,6 @@ function getSupabase() {
   );
 }
 
-// ── Build maps of existing clients ──
 async function getExistingClientMaps(supabase: any) {
   const { data: ourClients } = await supabase.from("clients").select("id, document, name, gclick_id");
   const docMap = new Map<string, string>();
@@ -130,15 +148,7 @@ Deno.serve(async (req) => {
       return json({ success: true, message: "Conexão OK!", departments: deptList });
     }
 
-    // ── INSPECT: return raw fields from first client ──
-    if (action === "inspect-client") {
-      const token = await getAccessToken();
-      const data = await gclickGet(token, "/clientes?size=2&page=0");
-      const clients = data.content || data || [];
-      return json({ success: true, sample: clients.slice(0, 2) });
-    }
-
-    // ── PREVIEW CLIENTS (no insert, just return what's available) ──
+    // ── PREVIEW CLIENTS ──
     if (action === "preview-clients") {
       const token = await getAccessToken();
       const allGclickClients = await gclickGetAllPages(token, "/clientes");
@@ -152,7 +162,7 @@ Deno.serve(async (req) => {
         const nome = (gc.nome || "").trim();
         const gclickId = String(gc.id);
 
-        if (gclickIdSet.has(gclickId)) continue; // already linked
+        if (gclickIdSet.has(gclickId)) continue;
 
         let matchId = inscricao ? docMap.get(inscricao) : undefined;
         if (!matchId && nome) matchId = nameMap.get(nome.toLowerCase());
@@ -165,6 +175,8 @@ Deno.serve(async (req) => {
           status: gc.status,
           match_type: matchId ? "update" : "new",
           match_id: matchId || null,
+          data_inicio: gc.dataInicio || "",
+          tributacao: extractTaxation(gc.grupos),
         });
       }
 
@@ -186,7 +198,7 @@ Deno.serve(async (req) => {
       const logId = await createLog(supabase, "clients-selective");
 
       let synced = 0, created = 0;
-      const toUpdate: { id: string; gclick_id: string }[] = [];
+      const toUpdate: { id: string; gclick_id: string; taxation: string; contract_start_date: string }[] = [];
       const toInsert: any[] = [];
 
       for (const gc of gclickClients) {
@@ -199,14 +211,12 @@ Deno.serve(async (req) => {
         let matchId = inscricao ? docMap.get(inscricao) : undefined;
         if (!matchId && nome) matchId = nameMap.get(nome.toLowerCase());
 
+        const taxation = extractTaxation(gc.grupos);
+        const startDate = gc.dataInicio || "";
+
         if (matchId) {
-          toUpdate.push({ id: matchId, gclick_id: gclickId });
+          toUpdate.push({ id: matchId, gclick_id: gclickId, taxation, contract_start_date: startDate });
         } else {
-          // Extract taxation from G-Click fields
-          const taxation = gc.regimeTributario || gc.tributacao || gc.regime_tributario || "";
-          // Extract start date
-          const startDate = gc.dataInicio || gc.dataCadastro || gc.data_inicio || "";
-          
           const clientData: any = {
             name: nome || `Cliente G-Click ${gclickId}`,
             document: gc.inscricao || "",
@@ -219,16 +229,17 @@ Deno.serve(async (req) => {
             complexity: "C",
             profile: "standard",
           };
-          
           if (taxation) clientData.taxation = taxation;
           if (startDate) clientData.contract_start_date = startDate;
-          
           toInsert.push(clientData);
         }
       }
 
       for (const u of toUpdate) {
-        await supabase.from("clients").update({ gclick_id: u.gclick_id }).eq("id", u.id);
+        const updateData: any = { gclick_id: u.gclick_id };
+        if (u.taxation) updateData.taxation = u.taxation;
+        if (u.contract_start_date) updateData.contract_start_date = u.contract_start_date;
+        await supabase.from("clients").update(updateData).eq("id", u.id);
         synced++;
       }
 
@@ -265,7 +276,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Get linked clients map
       const { data: linkedClients } = await supabase
         .from("clients")
         .select("id, gclick_id, name")
@@ -283,7 +293,6 @@ Deno.serve(async (req) => {
 
         const title = task.assunto || task.titulo || task.nome || "Tarefa G-Click";
 
-        // Check duplicate
         const { data: existing } = await supabase
           .from("tasks")
           .select("id")
@@ -312,7 +321,6 @@ Deno.serve(async (req) => {
       const selectedIds: string[] = body.selected_ids || [];
       if (selectedIds.length === 0) return json({ success: false, error: "Nenhum ID selecionado" }, 400);
 
-      // Re-fetch preview to get full data
       const token = await getAccessToken();
       const deptId = parseInt(url.searchParams.get("departamentoId") || "16");
 
@@ -413,7 +421,7 @@ Deno.serve(async (req) => {
       return json({ success: true, linked_clients: (linkedClients || []).length, synced });
     }
 
-    return json({ error: "Ação inválida. Use: test, preview-clients, import-clients, preview-tasks, import-tasks, sync-carteiras, inspect-client" }, 400);
+    return json({ error: "Ação inválida" }, 400);
   } catch (err) {
     console.error("gclick-sync error:", err);
     return json({ success: false, error: err.message }, 500);
