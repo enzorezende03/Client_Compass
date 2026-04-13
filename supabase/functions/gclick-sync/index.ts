@@ -154,47 +154,13 @@ Deno.serve(async (req) => {
         id: d.id,
         nome: d.nome,
       }));
-      // Try to get detail of first client to see full fields
-      const allClients = await gclickGetAllPages(token, "/clientes");
-      const firstActive = allClients.find((c: any) => c.status === "ATIVO" && c.statusComplementarId === 1);
-      let detailFields: any = null;
-      if (firstActive) {
-        try {
-          const detail = await gclickGet(token, `/clientes/${firstActive.id}`);
-          detailFields = detail;
-          console.log("Client detail keys:", JSON.stringify(Object.keys(detail)));
-          console.log("Client detail status fields:", JSON.stringify({
-            status: detail.status,
-            statusComplementarId: detail.statusComplementarId,
-            statusComplementar: detail.statusComplementar,
-            situacao: detail.situacao,
-            situacaoComplementar: detail.situacaoComplementar,
-          }));
-        } catch (e) {
-          console.log("Detail fetch error:", e.message);
-        }
-      }
-      return json({ success: true, message: "Conexão OK!", departments: deptList, detailFields });
+      return json({ success: true, message: "Conexão OK!", departments: deptList });
     }
 
     // ── PREVIEW CLIENTS ──
     if (action === "preview-clients") {
       const token = await getAccessToken();
       const allGclickClients = await gclickGetAllPages(token, "/clientes");
-      // Log first client fields for debugging complementary status field name
-      if (allGclickClients.length > 0) {
-        // Log unique statusComplementarId values to discover the "em carteira" ID
-        const statusIds = new Set(allGclickClients.map((c: any) => c.statusComplementarId));
-        console.log("Unique statusComplementarId values:", JSON.stringify([...statusIds]));
-        // Log a few samples with their statusComplementarId
-        const samples = allGclickClients.slice(0, 5).map((c: any) => ({
-          nome: c.nome,
-          status: c.status,
-          statusComplementarId: c.statusComplementarId,
-          inscricao: c.inscricao,
-        }));
-        console.log("Sample clients:", JSON.stringify(samples));
-      }
       const gclickClients = allGclickClients.filter(isAllowedClient);
 
       const { docMap, nameMap, gclickIdSet } = await getExistingClientMaps(supabase);
