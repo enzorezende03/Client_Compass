@@ -164,25 +164,16 @@ Deno.serve(async (req) => {
       const sample = allClients.find((c: any) => c.status === "ATIVO");
       if (!sample) return json({ success: false, error: "No active client found" });
       
-      // Try to get detailed client info
-      let detail = null;
-      try { detail = await gclickGet(token, `/clientes/${sample.id}`); } catch (_) {}
-      
-      // Try contacts
-      let contatos = null;
-      try { contatos = await gclickGet(token, `/clientes/${sample.id}/contatos`); } catch (e) { contatos = { error: e.message }; }
-      
       return json({ 
         success: true, 
-        sample_keys: Object.keys(sample),
-        sample_grupos: sample.grupos,
-        sample_tributacao: sample.tributacao || sample.regimeTributario || null,
         sample_id: sample.id,
         sample_nome: sample.nome,
-        detail_keys: detail ? Object.keys(detail) : null,
-        detail_grupos: detail?.grupos,
-        detail_tributacao: detail?.tributacao || detail?.regimeTributario || null,
-        contatos,
+        sample_grupos: sample.grupos,
+        extracted_taxation: extractTaxation(sample.grupos),
+        telefones: sample.telefones,
+        emails: sample.emails,
+        endereco: sample.endereco,
+        camposAdicionais: sample.camposAdicionais,
       });
     }
 
