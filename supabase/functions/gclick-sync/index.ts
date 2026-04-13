@@ -14,11 +14,6 @@ function isAllowedClient(c: any): boolean {
   if (!ALLOWED_STATUSES.includes(c.status)) return false;
   const doc = (c.inscricao || "").replace(/\D/g, "");
   if (doc.length !== 14) return false; // Only CNPJ
-  // Require complementary status "em carteira"
-  const complementar = (c.statusComplementar || c.situacaoComplementar || c.statusCliente || "").toLowerCase().trim();
-  const situacao = (c.situacao?.nome || c.situacao?.descricao || "").toLowerCase().trim();
-  const statusValue = complementar || situacao;
-  if (statusValue !== "em carteira") return false;
   return true;
 }
 
@@ -159,47 +154,13 @@ Deno.serve(async (req) => {
         id: d.id,
         nome: d.nome,
       }));
-      // Try to get detail of first client to see full fields
-      const allClients = await gclickGetAllPages(token, "/clientes");
-      const firstActive = allClients.find((c: any) => c.status === "ATIVO" && c.statusComplementarId === 1);
-      let detailFields: any = null;
-      if (firstActive) {
-        try {
-          const detail = await gclickGet(token, `/clientes/${firstActive.id}`);
-          detailFields = detail;
-          console.log("Client detail keys:", JSON.stringify(Object.keys(detail)));
-          console.log("Client detail status fields:", JSON.stringify({
-            status: detail.status,
-            statusComplementarId: detail.statusComplementarId,
-            statusComplementar: detail.statusComplementar,
-            situacao: detail.situacao,
-            situacaoComplementar: detail.situacaoComplementar,
-          }));
-        } catch (e) {
-          console.log("Detail fetch error:", e.message);
-        }
-      }
-      return json({ success: true, message: "Conexão OK!", departments: deptList, detailFields });
+      return json({ success: true, message: "Conexão OK!", departments: deptList });
     }
 
     // ── PREVIEW CLIENTS ──
     if (action === "preview-clients") {
       const token = await getAccessToken();
       const allGclickClients = await gclickGetAllPages(token, "/clientes");
-      // Log first client fields for debugging complementary status field name
-      if (allGclickClients.length > 0) {
-        // Log unique statusComplementarId values to discover the "em carteira" ID
-        const statusIds = new Set(allGclickClients.map((c: any) => c.statusComplementarId));
-        console.log("Unique statusComplementarId values:", JSON.stringify([...statusIds]));
-        // Log a few samples with their statusComplementarId
-        const samples = allGclickClients.slice(0, 5).map((c: any) => ({
-          nome: c.nome,
-          status: c.status,
-          statusComplementarId: c.statusComplementarId,
-          inscricao: c.inscricao,
-        }));
-        console.log("Sample clients:", JSON.stringify(samples));
-      }
       const gclickClients = allGclickClients.filter(isAllowedClient);
 
       const { docMap, nameMap, gclickIdSet } = await getExistingClientMaps(supabase);
@@ -215,15 +176,6 @@ Deno.serve(async (req) => {
         let matchId = inscricao ? docMap.get(inscricao) : undefined;
         if (!matchId && nome) matchId = nameMap.get(nome.toLowerCase());
 
-        // Fetch contacts for this client
-        let contatos: any[] = [];
-        try {
-          const contatosData = await gclickGet(token, `/clientes/${gclickId}/contatos`);
-          contatos = Array.isArray(contatosData) ? contatosData : (contatosData.content || []);
-        } catch (e) {
-          console.log(`Contatos error for gclick_id ${gclickId}: ${e.message}`);
-        }
-
         items.push({
           gclick_id: gclickId,
           nome: nome || `Cliente G-Click ${gclickId}`,
@@ -234,12 +186,7 @@ Deno.serve(async (req) => {
           match_id: matchId || null,
           data_inicio: gc.dataInicio || "",
           tributacao: extractTaxation(gc.grupos),
-          contatos: contatos.map((ct: any) => ({
-            nome: ct.nome || "",
-            telefone: ct.telefone || ct.celular || "",
-            email: ct.email || "",
-            cargo: ct.cargo || ct.funcao || "",
-          })),
+          contatos: [],
         });
       }
 
