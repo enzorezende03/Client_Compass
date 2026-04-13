@@ -22,7 +22,6 @@ interface PreviewClient {
   data_inicio: string;
   tributacao: string;
 }
-}
 
 interface PreviewTask {
   gclick_id: string;
