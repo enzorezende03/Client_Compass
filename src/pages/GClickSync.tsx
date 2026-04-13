@@ -211,6 +211,17 @@ export default function GClickSync() {
                       <SelectItem value="cnpj">CNPJ</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select value={taxationFilter} onValueChange={setTaxationFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Tributação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas tributações</SelectItem>
+                      {taxationOptions.map(t => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">
