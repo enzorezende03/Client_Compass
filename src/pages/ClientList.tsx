@@ -85,7 +85,7 @@ export default function ClientList() {
       <header className="border-b bg-card">
         <div className="container mx-auto px-6 py-6">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">Customer Success</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">CS HUB</h1>
             <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
           </div>
 
