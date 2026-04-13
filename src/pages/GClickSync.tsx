@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Check, CheckSquare, Square, Users, ClipboardList, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,31 @@ import { AppLayout } from '@/components/AppLayout';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+function useSessionState<T>(key: string, initialValue: T): [T, (val: T | ((prev: T) => T)) => void] {
+  const [state, setState] = useState<T>(() => {
+    try {
+      const saved = sessionStorage.getItem(key);
+      return saved ? JSON.parse(saved) : initialValue;
+    } catch { return initialValue; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem(key, JSON.stringify(state)); } catch {}
+  }, [key, state]);
+  return [state, setState];
+}
+
+function useSessionSet(key: string, initialValue: string[] = []): [Set<string>, (val: Set<string> | ((prev: Set<string>) => Set<string>)) => void] {
+  const [state, setState] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem(key);
+      return saved ? new Set(JSON.parse(saved)) : new Set(initialValue);
+    } catch { return new Set(initialValue); }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem(key, JSON.stringify([...state])); } catch {}
+  }, [key, state]);
+  return [state, setState];
+}
 interface PreviewContact {
   nome: string;
   telefone: string;
@@ -64,8 +89,8 @@ export default function GClickSync() {
   const [importing, setImporting] = useState(false);
 
   // Clients preview
-  const [previewClients, setPreviewClients] = useState<PreviewClient[]>([]);
-  const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
+  const [previewClients, setPreviewClients] = useSessionState<PreviewClient[]>('gclick_preview_clients', []);
+  const [selectedClients, setSelectedClients] = useSessionSet('gclick_selected_clients');
   const [clientSearch, setClientSearch] = useState('');
   const [docTypeFilter, setDocTypeFilter] = useState<'all' | 'cpf' | 'cnpj'>('all');
   const [taxationFilter, setTaxationFilter] = useState<string>('all');
@@ -74,8 +99,8 @@ export default function GClickSync() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Tasks preview
-  const [previewTasks, setPreviewTasks] = useState<PreviewTask[]>([]);
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [previewTasks, setPreviewTasks] = useSessionState<PreviewTask[]>('gclick_preview_tasks', []);
+  const [selectedTasks, setSelectedTasks] = useSessionSet('gclick_selected_tasks');
   const [taskSearch, setTaskSearch] = useState('');
 
   const fetchPreview = async (type: SyncTab) => {
