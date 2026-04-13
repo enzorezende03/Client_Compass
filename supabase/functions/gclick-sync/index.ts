@@ -463,21 +463,46 @@ async function updateLog(supabase: any, id: string | undefined, status: string, 
   }).eq("id", id);
 }
 
-async function importContacts(supabase: any, token: string, gclickId: string, clientId: string) {
+async function importContactsFromClientData(supabase: any, clientId: string, gc: any) {
   try {
-    const contatosData = await gclickGet(token, `/clientes/${gclickId}/contatos`);
-    const contatos = Array.isArray(contatosData) ? contatosData : (contatosData.content || []);
-    if (contatos.length === 0) return;
+    const telefones = gc.telefones || [];
+    const emails = gc.emails || [];
+
+    // Build a contact map by name, merging phone+email
+    const contactMap = new Map<string, { name: string; phone: string; email: string; role: string }>();
+
+    for (const t of telefones) {
+      const name = (t.nome || "").trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      const existing = contactMap.get(key) || { name, phone: "", email: "", role: "" };
+      existing.phone = t.numero || "";
+      if (t.categorias && t.categorias.length > 0) existing.role = t.categorias.join(", ");
+      contactMap.set(key, existing);
+    }
+
+    for (const e of emails) {
+      const name = (e.nome || "").trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      const existing = contactMap.get(key) || { name, phone: "", email: "", role: "" };
+      existing.email = e.email || "";
+      if (!existing.role && e.categorias && e.categorias.length > 0) existing.role = e.categorias.join(", ");
+      contactMap.set(key, existing);
+    }
+
+    const contacts = Array.from(contactMap.values());
+    if (contacts.length === 0) return;
 
     // Remove existing contacts for this client before re-importing
     await supabase.from("client_contacts").delete().eq("client_id", clientId);
 
-    const toInsert = contatos.map((ct: any) => ({
+    const toInsert = contacts.map((ct) => ({
       client_id: clientId,
-      name: ct.nome || "",
-      phone: ct.telefone || ct.celular || "",
-      email: ct.email || "",
-      role: ct.cargo || ct.funcao || "",
+      name: ct.name,
+      phone: ct.phone,
+      email: ct.email,
+      role: ct.role,
     }));
 
     for (let i = 0; i < toInsert.length; i += 100) {
@@ -485,7 +510,8 @@ async function importContacts(supabase: any, token: string, gclickId: string, cl
       const { error } = await supabase.from("client_contacts").insert(chunk);
       if (error) console.error("Contact insert error:", error.message);
     }
+    console.log(`Imported ${toInsert.length} contacts for client ${clientId}`);
   } catch (e) {
-    console.log(`Import contacts error for gclick_id ${gclickId}: ${e.message}`);
+    console.log(`Import contacts error for client ${clientId}: ${e.message}`);
   }
 }
