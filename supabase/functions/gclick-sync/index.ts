@@ -176,15 +176,6 @@ Deno.serve(async (req) => {
         let matchId = inscricao ? docMap.get(inscricao) : undefined;
         if (!matchId && nome) matchId = nameMap.get(nome.toLowerCase());
 
-        // Fetch contacts for this client
-        let contatos: any[] = [];
-        try {
-          const contatosData = await gclickGet(token, `/clientes/${gclickId}/contatos`);
-          contatos = Array.isArray(contatosData) ? contatosData : (contatosData.content || []);
-        } catch (e) {
-          console.log(`Contatos error for gclick_id ${gclickId}: ${e.message}`);
-        }
-
         items.push({
           gclick_id: gclickId,
           nome: nome || `Cliente G-Click ${gclickId}`,
@@ -195,12 +186,7 @@ Deno.serve(async (req) => {
           match_id: matchId || null,
           data_inicio: gc.dataInicio || "",
           tributacao: extractTaxation(gc.grupos),
-          contatos: contatos.map((ct: any) => ({
-            nome: ct.nome || "",
-            telefone: ct.telefone || ct.celular || "",
-            email: ct.email || "",
-            cargo: ct.cargo || ct.funcao || "",
-          })),
+          contatos: [],
         });
       }
 
