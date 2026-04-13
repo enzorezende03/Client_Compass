@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RefreshCw, Check, CheckSquare, Square, Users, ClipboardList } from 'lucide-react';
+import { RefreshCw, Check, CheckSquare, Square, Users, ClipboardList, ChevronDown, ChevronRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,13 @@ import { AppLayout } from '@/components/AppLayout';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+interface PreviewContact {
+  nome: string;
+  telefone: string;
+  email: string;
+  cargo: string;
+}
+
 interface PreviewClient {
   gclick_id: string;
   nome: string;
@@ -21,6 +28,7 @@ interface PreviewClient {
   match_id?: string;
   data_inicio: string;
   tributacao: string;
+  contatos: PreviewContact[];
 }
 
 interface PreviewTask {
