@@ -62,10 +62,12 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 px-4">
-      <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-sm">
-        <div className="flex flex-col items-center pt-8 pb-2">
-          <img src={logoGrupo} alt="Grupo" className="h-20 mb-3" />
-          <p className="text-sm text-muted-foreground">Acesse sua conta para continuar</p>
+      <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-sm overflow-hidden">
+        <div className="flex flex-col items-center pt-0 pb-2">
+          <div className="w-full bg-primary flex items-center justify-center py-8 rounded-b-none">
+            <img src={logoGrupo} alt="Grupo" className="h-20" />
+          </div>
+          <p className="text-sm text-muted-foreground mt-4">Acesse sua conta para continuar</p>
         </div>
         <CardContent className="pt-4">
           <form onSubmit={handleLogin} className="space-y-4">
