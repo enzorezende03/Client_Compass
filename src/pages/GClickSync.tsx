@@ -135,10 +135,14 @@ export default function GClickSync() {
   };
 
   const filteredClients = previewClients.filter(c => {
+    const docClean = (c.inscricao || '').replace(/\D/g, '');
+    // Filter by doc type
+    if (docTypeFilter === 'cpf' && docClean.length !== 11) return false;
+    if (docTypeFilter === 'cnpj' && docClean.length !== 14) return false;
+    // Filter by search
     if (clientSearch === '') return true;
     const term = clientSearch.toLowerCase().replace(/\D/g, '');
     const termRaw = clientSearch.toLowerCase();
-    const docClean = (c.inscricao || '').replace(/\D/g, '');
     return c.nome.toLowerCase().includes(termRaw) || (term.length > 0 && docClean.includes(term));
   });
 
