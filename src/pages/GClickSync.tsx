@@ -240,6 +240,7 @@ export default function GClickSync() {
                     </TableHeader>
                     <TableBody>
                       {filteredClients.map(c => (
+                        <>
                         <TableRow key={c.gclick_id} className="cursor-pointer" onClick={() => toggleItem('clients', c.gclick_id)}>
                           <TableCell>
                             <Checkbox checked={selectedClients.has(c.gclick_id)} />
@@ -254,7 +255,47 @@ export default function GClickSync() {
                               {c.match_type === 'new' ? 'Novo' : 'Atualizar'}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            {c.contatos && c.contatos.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedClients(prev => {
+                                    const next = new Set(prev);
+                                    next.has(c.gclick_id) ? next.delete(c.gclick_id) : next.add(c.gclick_id);
+                                    return next;
+                                  });
+                                }}
+                                className="gap-1 text-xs"
+                              >
+                                {expandedClients.has(c.gclick_id) ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                {c.contatos.length} contato{c.contatos.length > 1 ? 's' : ''}
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
+                        {expandedClients.has(c.gclick_id) && c.contatos && c.contatos.length > 0 && (
+                          <TableRow key={`${c.gclick_id}-contacts`}>
+                            <TableCell colSpan={8} className="bg-muted/30 p-0">
+                              <div className="px-12 py-3">
+                                <p className="text-xs font-semibold text-muted-foreground mb-2">Contatos</p>
+                                <div className="grid gap-1">
+                                  {c.contatos.map((ct, idx) => (
+                                    <div key={idx} className="text-sm flex gap-4">
+                                      <span className="font-medium min-w-[150px]">{ct.nome}</span>
+                                      {ct.cargo && <span className="text-muted-foreground">{ct.cargo}</span>}
+                                      {ct.telefone && <span className="font-mono">{ct.telefone}</span>}
+                                      {ct.email && <span className="text-primary">{ct.email}</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        </>
                       ))}
                     </TableBody>
                   </Table>
