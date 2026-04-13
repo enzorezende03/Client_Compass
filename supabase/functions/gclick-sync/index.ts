@@ -208,8 +208,8 @@ Deno.serve(async (req) => {
       const logId = await createLog(supabase, "clients-selective");
 
       let synced = 0, created = 0;
-      const toUpdate: { id: string; gclick_id: string; taxation: string; contract_start_date: string }[] = [];
-      const toInsert: any[] = [];
+      const toUpdate: { id: string; gclick_id: string; taxation: string; contract_start_date: string; gc: any }[] = [];
+      const toInsert: { data: any; gc: any }[] = [];
 
       for (const gc of gclickClients) {
         const inscricao = (gc.inscricao || "").replace(/\D/g, "");
@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
         const startDate = gc.dataInicio || "";
 
         if (matchId) {
-          toUpdate.push({ id: matchId, gclick_id: gclickId, taxation, contract_start_date: startDate });
+          toUpdate.push({ id: matchId, gclick_id: gclickId, taxation, contract_start_date: startDate, gc });
         } else {
           const clientData: any = {
             name: nome || `Cliente G-Click ${gclickId}`,
@@ -238,10 +238,10 @@ Deno.serve(async (req) => {
             financial_status: "active_financial",
             complexity: "C",
             profile: "standard",
+            taxation: taxation || "",
           };
-          if (taxation) clientData.taxation = taxation;
           if (startDate) clientData.contract_start_date = startDate;
-          toInsert.push(clientData);
+          toInsert.push({ data: clientData, gc });
         }
       }
 
@@ -250,20 +250,26 @@ Deno.serve(async (req) => {
         if (u.taxation) updateData.taxation = u.taxation;
         if (u.contract_start_date) updateData.contract_start_date = u.contract_start_date;
         await supabase.from("clients").update(updateData).eq("id", u.id);
-        // Import contacts for updated client
-        await importContacts(supabase, token, u.gclick_id, u.id);
+        await importContactsFromClientData(supabase, u.id, u.gc);
         synced++;
       }
 
-      for (let i = 0; i < toInsert.length; i += 100) {
-        const chunk = toInsert.slice(i, i + 100);
+      // Build a map of gclick_id -> gc for contact import after insert
+      const gcByGclickId = new Map<string, any>();
+      for (const item of toInsert) {
+        gcByGclickId.set(item.data.gclick_id, item.gc);
+      }
+
+      const insertRows = toInsert.map(item => item.data);
+      for (let i = 0; i < insertRows.length; i += 100) {
+        const chunk = insertRows.slice(i, i + 100);
         const { data: inserted, error } = await supabase.from("clients").insert(chunk).select("id, gclick_id");
         if (!error && inserted) {
           created += inserted.length;
-          // Import contacts for each new client
           for (const newClient of inserted) {
-            if (newClient.gclick_id) {
-              await importContacts(supabase, token, newClient.gclick_id, newClient.id);
+            const gc = gcByGclickId.get(newClient.gclick_id);
+            if (gc) {
+              await importContactsFromClientData(supabase, newClient.id, gc);
             }
           }
         } else if (error) {
