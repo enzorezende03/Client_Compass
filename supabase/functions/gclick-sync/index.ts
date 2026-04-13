@@ -260,14 +260,25 @@ Deno.serve(async (req) => {
         if (u.taxation) updateData.taxation = u.taxation;
         if (u.contract_start_date) updateData.contract_start_date = u.contract_start_date;
         await supabase.from("clients").update(updateData).eq("id", u.id);
+        // Import contacts for updated client
+        await importContacts(supabase, token, u.gclick_id, u.id);
         synced++;
       }
 
       for (let i = 0; i < toInsert.length; i += 100) {
         const chunk = toInsert.slice(i, i + 100);
-        const { error } = await supabase.from("clients").insert(chunk);
-        if (!error) created += chunk.length;
-        else console.error("Insert batch error:", error.message);
+        const { data: inserted, error } = await supabase.from("clients").insert(chunk).select("id, gclick_id");
+        if (!error && inserted) {
+          created += inserted.length;
+          // Import contacts for each new client
+          for (const newClient of inserted) {
+            if (newClient.gclick_id) {
+              await importContacts(supabase, token, newClient.gclick_id, newClient.id);
+            }
+          }
+        } else if (error) {
+          console.error("Insert batch error:", error.message);
+        }
       }
 
       await updateLog(supabase, logId, "completed", synced + created,
