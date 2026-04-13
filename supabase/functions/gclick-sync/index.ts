@@ -208,8 +208,8 @@ Deno.serve(async (req) => {
       const logId = await createLog(supabase, "clients-selective");
 
       let synced = 0, created = 0;
-      const toUpdate: { id: string; gclick_id: string; taxation: string; contract_start_date: string }[] = [];
-      const toInsert: any[] = [];
+      const toUpdate: { id: string; gclick_id: string; taxation: string; contract_start_date: string; gc: any }[] = [];
+      const toInsert: { data: any; gc: any }[] = [];
 
       for (const gc of gclickClients) {
         const inscricao = (gc.inscricao || "").replace(/\D/g, "");
@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
         const startDate = gc.dataInicio || "";
 
         if (matchId) {
-          toUpdate.push({ id: matchId, gclick_id: gclickId, taxation, contract_start_date: startDate });
+          toUpdate.push({ id: matchId, gclick_id: gclickId, taxation, contract_start_date: startDate, gc });
         } else {
           const clientData: any = {
             name: nome || `Cliente G-Click ${gclickId}`,
@@ -238,10 +238,10 @@ Deno.serve(async (req) => {
             financial_status: "active_financial",
             complexity: "C",
             profile: "standard",
+            taxation: taxation || "",
           };
-          if (taxation) clientData.taxation = taxation;
           if (startDate) clientData.contract_start_date = startDate;
-          toInsert.push(clientData);
+          toInsert.push({ data: clientData, gc });
         }
       }
 
@@ -250,20 +250,26 @@ Deno.serve(async (req) => {
         if (u.taxation) updateData.taxation = u.taxation;
         if (u.contract_start_date) updateData.contract_start_date = u.contract_start_date;
         await supabase.from("clients").update(updateData).eq("id", u.id);
-        // Import contacts for updated client
-        await importContacts(supabase, token, u.gclick_id, u.id);
+        await importContactsFromClientData(supabase, u.id, u.gc);
         synced++;
       }
 
-      for (let i = 0; i < toInsert.length; i += 100) {
-        const chunk = toInsert.slice(i, i + 100);
+      // Build a map of gclick_id -> gc for contact import after insert
+      const gcByGclickId = new Map<string, any>();
+      for (const item of toInsert) {
+        gcByGclickId.set(item.data.gclick_id, item.gc);
+      }
+
+      const insertRows = toInsert.map(item => item.data);
+      for (let i = 0; i < insertRows.length; i += 100) {
+        const chunk = insertRows.slice(i, i + 100);
         const { data: inserted, error } = await supabase.from("clients").insert(chunk).select("id, gclick_id");
         if (!error && inserted) {
           created += inserted.length;
-          // Import contacts for each new client
           for (const newClient of inserted) {
-            if (newClient.gclick_id) {
-              await importContacts(supabase, token, newClient.gclick_id, newClient.id);
+            const gc = gcByGclickId.get(newClient.gclick_id);
+            if (gc) {
+              await importContactsFromClientData(supabase, newClient.id, gc);
             }
           }
         } else if (error) {
@@ -463,21 +469,46 @@ async function updateLog(supabase: any, id: string | undefined, status: string, 
   }).eq("id", id);
 }
 
-async function importContacts(supabase: any, token: string, gclickId: string, clientId: string) {
+async function importContactsFromClientData(supabase: any, clientId: string, gc: any) {
   try {
-    const contatosData = await gclickGet(token, `/clientes/${gclickId}/contatos`);
-    const contatos = Array.isArray(contatosData) ? contatosData : (contatosData.content || []);
-    if (contatos.length === 0) return;
+    const telefones = gc.telefones || [];
+    const emails = gc.emails || [];
+
+    // Build a contact map by name, merging phone+email
+    const contactMap = new Map<string, { name: string; phone: string; email: string; role: string }>();
+
+    for (const t of telefones) {
+      const name = (t.nome || "").trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      const existing = contactMap.get(key) || { name, phone: "", email: "", role: "" };
+      existing.phone = t.numero || "";
+      if (t.categorias && t.categorias.length > 0) existing.role = t.categorias.join(", ");
+      contactMap.set(key, existing);
+    }
+
+    for (const e of emails) {
+      const name = (e.nome || "").trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      const existing = contactMap.get(key) || { name, phone: "", email: "", role: "" };
+      existing.email = e.email || "";
+      if (!existing.role && e.categorias && e.categorias.length > 0) existing.role = e.categorias.join(", ");
+      contactMap.set(key, existing);
+    }
+
+    const contacts = Array.from(contactMap.values());
+    if (contacts.length === 0) return;
 
     // Remove existing contacts for this client before re-importing
     await supabase.from("client_contacts").delete().eq("client_id", clientId);
 
-    const toInsert = contatos.map((ct: any) => ({
+    const toInsert = contacts.map((ct) => ({
       client_id: clientId,
-      name: ct.nome || "",
-      phone: ct.telefone || ct.celular || "",
-      email: ct.email || "",
-      role: ct.cargo || ct.funcao || "",
+      name: ct.name,
+      phone: ct.phone,
+      email: ct.email,
+      role: ct.role,
     }));
 
     for (let i = 0; i < toInsert.length; i += 100) {
@@ -485,7 +516,8 @@ async function importContacts(supabase: any, token: string, gclickId: string, cl
       const { error } = await supabase.from("client_contacts").insert(chunk);
       if (error) console.error("Contact insert error:", error.message);
     }
+    console.log(`Imported ${toInsert.length} contacts for client ${clientId}`);
   } catch (e) {
-    console.log(`Import contacts error for gclick_id ${gclickId}: ${e.message}`);
+    console.log(`Import contacts error for client ${clientId}: ${e.message}`);
   }
 }
