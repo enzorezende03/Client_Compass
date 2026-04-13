@@ -152,7 +152,8 @@ Deno.serve(async (req) => {
     if (action === "preview-clients") {
       const token = await getAccessToken();
       const allGclickClients = await gclickGetAllPages(token, "/clientes");
-      const gclickClients = allGclickClients.filter((c: any) => c.status === "ATIVO");
+      const ALLOWED_STATUSES = ["ATIVO", "SUSPENSO"];
+      const gclickClients = allGclickClients.filter((c: any) => ALLOWED_STATUSES.includes(c.status));
 
       const { docMap, nameMap, gclickIdSet } = await getExistingClientMaps(supabase);
 
