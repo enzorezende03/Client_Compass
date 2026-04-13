@@ -157,26 +157,6 @@ Deno.serve(async (req) => {
       return json({ success: true, message: "Conexão OK!", departments: deptList });
     }
 
-    // ── DEBUG: inspect a single client structure ──
-    if (action === "debug-client") {
-      const token = await getAccessToken();
-      const allClients = await gclickGetAllPages(token, "/clientes");
-      const sample = allClients.find((c: any) => c.status === "ATIVO");
-      if (!sample) return json({ success: false, error: "No active client found" });
-      
-      return json({ 
-        success: true, 
-        sample_id: sample.id,
-        sample_nome: sample.nome,
-        sample_grupos: sample.grupos,
-        extracted_taxation: extractTaxation(sample.grupos),
-        telefones: sample.telefones,
-        emails: sample.emails,
-        endereco: sample.endereco,
-        camposAdicionais: sample.camposAdicionais,
-      });
-    }
-
     // ── PREVIEW CLIENTS ──
     if (action === "preview-clients") {
       const token = await getAccessToken();
