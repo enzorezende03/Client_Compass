@@ -153,7 +153,11 @@ Deno.serve(async (req) => {
       const token = await getAccessToken();
       const allGclickClients = await gclickGetAllPages(token, "/clientes");
       const ALLOWED_STATUSES = ["ATIVO", "SUSPENSO"];
-      const gclickClients = allGclickClients.filter((c: any) => ALLOWED_STATUSES.includes(c.status));
+      const gclickClients = allGclickClients.filter((c: any) => {
+        if (!ALLOWED_STATUSES.includes(c.status)) return false;
+        const doc = (c.inscricao || "").replace(/\D/g, "");
+        return doc.length === 14; // Only CNPJ (14 digits), skip CPF (11 digits)
+      });
 
       const { docMap, nameMap, gclickIdSet } = await getExistingClientMaps(supabase);
 
