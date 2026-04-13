@@ -172,6 +172,15 @@ Deno.serve(async (req) => {
         let matchId = inscricao ? docMap.get(inscricao) : undefined;
         if (!matchId && nome) matchId = nameMap.get(nome.toLowerCase());
 
+        // Fetch contacts for this client
+        let contatos: any[] = [];
+        try {
+          const contatosData = await gclickGet(token, `/clientes/${gclickId}/contatos`);
+          contatos = Array.isArray(contatosData) ? contatosData : (contatosData.content || []);
+        } catch (e) {
+          console.log(`Contatos error for gclick_id ${gclickId}: ${e.message}`);
+        }
+
         items.push({
           gclick_id: gclickId,
           nome: nome || `Cliente G-Click ${gclickId}`,
@@ -182,6 +191,12 @@ Deno.serve(async (req) => {
           match_id: matchId || null,
           data_inicio: gc.dataInicio || "",
           tributacao: extractTaxation(gc.grupos),
+          contatos: contatos.map((ct: any) => ({
+            nome: ct.nome || "",
+            telefone: ct.telefone || ct.celular || "",
+            email: ct.email || "",
+            cargo: ct.cargo || ct.funcao || "",
+          })),
         });
       }
 
@@ -245,14 +260,25 @@ Deno.serve(async (req) => {
         if (u.taxation) updateData.taxation = u.taxation;
         if (u.contract_start_date) updateData.contract_start_date = u.contract_start_date;
         await supabase.from("clients").update(updateData).eq("id", u.id);
+        // Import contacts for updated client
+        await importContacts(supabase, token, u.gclick_id, u.id);
         synced++;
       }
 
       for (let i = 0; i < toInsert.length; i += 100) {
         const chunk = toInsert.slice(i, i + 100);
-        const { error } = await supabase.from("clients").insert(chunk);
-        if (!error) created += chunk.length;
-        else console.error("Insert batch error:", error.message);
+        const { data: inserted, error } = await supabase.from("clients").insert(chunk).select("id, gclick_id");
+        if (!error && inserted) {
+          created += inserted.length;
+          // Import contacts for each new client
+          for (const newClient of inserted) {
+            if (newClient.gclick_id) {
+              await importContacts(supabase, token, newClient.gclick_id, newClient.id);
+            }
+          }
+        } else if (error) {
+          console.error("Insert batch error:", error.message);
+        }
       }
 
       await updateLog(supabase, logId, "completed", synced + created,
@@ -445,4 +471,31 @@ async function updateLog(supabase: any, id: string | undefined, status: string, 
   await supabase.from("gclick_sync_log").update({
     status, records_synced: count, details,
   }).eq("id", id);
+}
+
+async function importContacts(supabase: any, token: string, gclickId: string, clientId: string) {
+  try {
+    const contatosData = await gclickGet(token, `/clientes/${gclickId}/contatos`);
+    const contatos = Array.isArray(contatosData) ? contatosData : (contatosData.content || []);
+    if (contatos.length === 0) return;
+
+    // Remove existing contacts for this client before re-importing
+    await supabase.from("client_contacts").delete().eq("client_id", clientId);
+
+    const toInsert = contatos.map((ct: any) => ({
+      client_id: clientId,
+      name: ct.nome || "",
+      phone: ct.telefone || ct.celular || "",
+      email: ct.email || "",
+      role: ct.cargo || ct.funcao || "",
+    }));
+
+    for (let i = 0; i < toInsert.length; i += 100) {
+      const chunk = toInsert.slice(i, i + 100);
+      const { error } = await supabase.from("client_contacts").insert(chunk);
+      if (error) console.error("Contact insert error:", error.message);
+    }
+  } catch (e) {
+    console.log(`Import contacts error for gclick_id ${gclickId}: ${e.message}`);
+  }
 }
