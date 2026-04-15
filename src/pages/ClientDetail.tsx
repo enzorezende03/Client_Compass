@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
 import {
-  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, ChevronDown, ChevronUp, FileText
+  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, ChevronDown, ChevronUp, FileText, Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +16,7 @@ import { EditableStrategicCard } from '@/components/EditableStrategicCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AuditLog } from '@/components/AuditLog';
+import { ActionPlanTab } from '@/components/ActionPlanTab';
 import {
   COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS, TAXATION_LABELS,
   TimelineEntry, Task, ClientProfile, TaxationType, Client
@@ -226,12 +227,17 @@ export default function ClientDetail() {
         <Tabs defaultValue="timeline" className="mt-4">
           <TabsList>
             <TabsTrigger value="timeline" className="gap-2"><Clock className="h-4 w-4" /> Histórico ({timeline.length})</TabsTrigger>
+            <TabsTrigger value="action-plan" className="gap-2"><Target className="h-4 w-4" /> Plano de Ação</TabsTrigger>
             <TabsTrigger value="tasks" className="gap-2"><CheckSquare className="h-4 w-4" /> Tarefas ({clientTasks.filter(t => t.status === 'pending').length})</TabsTrigger>
             <TabsTrigger value="audit" className="gap-2"><FileText className="h-4 w-4" /> Auditoria</TabsTrigger>
           </TabsList>
 
           <TabsContent value="timeline" className="mt-4">
             {timeline.length > 0 ? <Timeline entries={timeline} /> : <div className="text-center py-12 text-muted-foreground">Nenhuma interação registrada.</div>}
+          </TabsContent>
+
+          <TabsContent value="action-plan" className="mt-4">
+            <ActionPlanTab clientId={client.id} />
           </TabsContent>
 
           <TabsContent value="tasks" className="mt-4 space-y-2">
