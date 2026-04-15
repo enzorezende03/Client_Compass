@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_plans: {
+        Row: {
+          category: string
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          description: string
+          due_date: string
+          expected_result: string
+          id: string
+          next_step: string
+          objective: string
+          observations: string
+          priority: string
+          responsible: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string
+          expected_result?: string
+          id?: string
+          next_step?: string
+          objective?: string
+          observations?: string
+          priority?: string
+          responsible?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          due_date?: string
+          expected_result?: string
+          id?: string
+          next_step?: string
+          objective?: string
+          observations?: string
+          priority?: string
+          responsible?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           changed_by: string
