@@ -12,6 +12,29 @@ export type RiskType = 'operational' | 'financial' | 'relationship';
 export type TaxationType = 'simples_nacional' | 'simples_nacional_fator_r' | 'lucro_presumido' | 'lucro_presumido_equiparacao_hospitalar';
 export type TaskStatus = 'pending' | 'completed';
 
+export type ActionPlanStatus = 'pending' | 'in_progress' | 'waiting_client' | 'completed' | 'cancelled';
+export type ActionPlanPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type ActionPlanCategory = 'tributario' | 'financeiro' | 'documental' | 'societario' | 'comercial' | 'relacionamento' | 'regularizacao' | 'planejamento' | 'outro';
+
+export interface ActionPlan {
+  id: string;
+  clientId: string;
+  title: string;
+  description: string;
+  objective: string;
+  category: ActionPlanCategory;
+  priority: ActionPlanPriority;
+  responsible: string;
+  dueDate: string;
+  status: ActionPlanStatus;
+  expectedResult: string;
+  observations: string;
+  nextStep: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Client {
   id: string;
   name: string;
