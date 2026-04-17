@@ -1,114 +1,45 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Search, X, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
+import { ClientWizardDialog } from '@/components/ClientWizardDialog';
+import { computeCompleteness, completenessTone } from '@/lib/clientCompleteness';
+import { cn } from '@/lib/utils';
 import {
-  STATUS_LABELS, COMPLEXITY_LABELS, PROFILE_LABELS, FINANCIAL_LABELS, HEALTH_LABELS, RISK_TYPE_LABELS, TAXATION_LABELS,
-  ClientStatus, ComplexityLevel, ClientProfile, FinancialStatus, HealthScore, RiskType, TaxationType
+  STATUS_LABELS, COMPLEXITY_LABELS, ClientStatus, ComplexityLevel,
 } from '@/types/client';
-
-interface ClientForm {
-  id?: string;
-  name: string;
-  document: string;
-  segment: string;
-  contract_start_date: string;
-  cs_responsible: string;
-  complexity: string;
-  status: string;
-  profile: string;
-  financial_status: string;
-  health_score: string;
-  pain_points: string;
-  expectations: string;
-  attention_points: string;
-  recurring_issues: string;
-  behavioral_profile: string;
-  strategic_notes: string;
-  risk_reason: string;
-  risk_type: string;
-  risk_identified_date: string;
-  action_plan: string;
-  taxation: string;
-}
-
-const emptyForm: ClientForm = {
-  name: '', document: '', segment: '', contract_start_date: new Date().toISOString().split('T')[0],
-  cs_responsible: '', complexity: 'C', status: 'active', profile: 'standard',
-  financial_status: 'active_financial', health_score: 'healthy',
-  pain_points: '', expectations: '', attention_points: '', recurring_issues: '',
-  behavioral_profile: '', strategic_notes: '',
-  risk_reason: '', risk_type: '', risk_identified_date: '', action_plan: '',
-  taxation: '',
-};
 
 export default function ClientRegistration() {
   const [clients, setClients] = useState<any[]>([]);
+  const [contactCounts, setContactCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [form, setForm] = useState<ClientForm>(emptyForm);
-  const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
   const { toast } = useToast();
-
-  const formatCnpj = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 14);
-    return digits
-      .replace(/^(\d{2})(\d)/, '$1.$2')
-      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-      .replace(/\.(\d{3})(\d)/, '.$1/$2')
-      .replace(/(\d{4})(\d)/, '$1-$2');
-  };
-
-  const lookupCnpj = useCallback(async (rawDoc: string) => {
-    const digits = rawDoc.replace(/\D/g, '');
-    if (digits.length !== 14) return;
-
-    setCnpjLoading(true);
-    try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`);
-      if (!res.ok) {
-        toast({ title: 'CNPJ não encontrado', description: 'Verifique o número digitado.', variant: 'destructive' });
-        return;
-      }
-      const data = await res.json();
-      setForm(prev => ({
-        ...prev,
-        name: data.razao_social || prev.name,
-        segment: data.cnae_fiscal_descricao || prev.segment,
-      }));
-      toast({ title: 'Dados carregados', description: `Empresa: ${data.razao_social}` });
-    } catch {
-      toast({ title: 'Erro', description: 'Não foi possível consultar o CNPJ.', variant: 'destructive' });
-    } finally {
-      setCnpjLoading(false);
-    }
-  }, [toast]);
-
-  const handleDocumentChange = (value: string) => {
-    const formatted = formatCnpj(value);
-    updateField('document', formatted);
-    const digits = formatted.replace(/\D/g, '');
-    if (digits.length === 14) {
-      lookupCnpj(digits);
-    }
-  };
 
   const fetchClients = async () => {
     setLoading(true);
     const { data, error } = await supabase.from('clients').select('*').order('name');
-    if (!error && data) setClients(data);
+    if (!error && data) {
+      setClients(data);
+      const ids = data.map(c => c.id);
+      if (ids.length) {
+        const { data: contacts } = await supabase.from('client_contacts').select('client_id').in('client_id', ids);
+        if (contacts) {
+          const counts: Record<string, number> = {};
+          contacts.forEach((c: any) => { counts[c.client_id] = (counts[c.client_id] || 0) + 1; });
+          setContactCounts(counts);
+        }
+      }
+    }
     setLoading(false);
   };
 
@@ -119,49 +50,16 @@ export default function ClientRegistration() {
     c.document.includes(search)
   );
 
-  const openNew = () => { setForm(emptyForm); setSelectedId(null); setDialogOpen(true); };
-  const openEdit = (client: any) => {
-    setForm({
-      name: client.name, document: client.document, segment: client.segment,
-      contract_start_date: client.contract_start_date, cs_responsible: client.cs_responsible,
-      complexity: client.complexity, status: client.status, profile: client.profile,
-      financial_status: client.financial_status, health_score: client.health_score,
-      pain_points: client.pain_points, expectations: client.expectations,
-      attention_points: client.attention_points, recurring_issues: client.recurring_issues,
-      behavioral_profile: client.behavioral_profile, strategic_notes: client.strategic_notes,
-      risk_reason: client.risk_reason || '', risk_type: client.risk_type || '',
-      risk_identified_date: client.risk_identified_date || '', action_plan: client.action_plan || '',
-      taxation: client.taxation || '',
-    });
-    setSelectedId(client.id);
-    setDialogOpen(true);
+  const openNew = () => {
+    setSelectedId(null);
+    setSelectedClient(null);
+    setWizardOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!form.name.trim()) {
-      toast({ title: 'Erro', description: 'Nome é obrigatório.', variant: 'destructive' });
-      return;
-    }
-    const payload = {
-      ...form,
-      risk_reason: form.risk_reason || null,
-      risk_type: form.risk_type || null,
-      risk_identified_date: form.risk_identified_date || null,
-      action_plan: form.action_plan || null,
-      taxation: form.taxation || '',
-    };
-
-    if (selectedId) {
-      const { error } = await supabase.from('clients').update(payload).eq('id', selectedId);
-      if (error) { toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' }); return; }
-      toast({ title: 'Cliente atualizado!' });
-    } else {
-      const { error } = await supabase.from('clients').insert(payload);
-      if (error) { toast({ title: 'Erro ao criar', description: error.message, variant: 'destructive' }); return; }
-      toast({ title: 'Cliente criado!' });
-    }
-    setDialogOpen(false);
-    fetchClients();
+  const openEdit = (client: any) => {
+    setSelectedId(client.id);
+    setSelectedClient(client);
+    setWizardOpen(true);
   };
 
   const handleDelete = async () => {
@@ -173,8 +71,6 @@ export default function ClientRegistration() {
     setSelectedId(null);
     fetchClients();
   };
-
-  const updateField = (field: keyof ClientForm, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
   return (
     <AppLayout>
@@ -201,167 +97,60 @@ export default function ClientRegistration() {
                 <TableHead>Status</TableHead>
                 <TableHead>CS Responsável</TableHead>
                 <TableHead>Complexidade</TableHead>
+                <TableHead className="w-[160px]">Completude</TableHead>
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>
               ) : (
-                filtered.map(c => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.document}</TableCell>
-                    <TableCell>{c.segment}</TableCell>
-                    <TableCell>{STATUS_LABELS[c.status as ClientStatus] || c.status}</TableCell>
-                    <TableCell>{c.cs_responsible}</TableCell>
-                    <TableCell>{COMPLEXITY_LABELS[c.complexity as ComplexityLevel] || c.complexity}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => { setSelectedId(c.id); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filtered.map(c => {
+                  const pct = computeCompleteness(c, contactCounts[c.id] || 0);
+                  const tone = completenessTone(pct);
+                  return (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell className="font-mono text-xs">{c.document}</TableCell>
+                      <TableCell>{c.segment}</TableCell>
+                      <TableCell>{STATUS_LABELS[c.status as ClientStatus] || c.status}</TableCell>
+                      <TableCell>{c.cs_responsible}</TableCell>
+                      <TableCell>{COMPLEXITY_LABELS[c.complexity as ComplexityLevel] || c.complexity}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden min-w-[60px]">
+                            <div className={cn('h-full transition-all', tone.barClass)} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className={cn('text-xs font-semibold tabular-nums px-1.5 py-0.5 rounded border', tone.badgeClass)}>
+                            {pct}%
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedId(c.id); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </div>
       </div>
 
-      {/* Form Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedId ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
-            <DialogDescription>Preencha os dados do cliente.</DialogDescription>
-          </DialogHeader>
+      <ClientWizardDialog
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        clientId={selectedId}
+        initialClient={selectedClient}
+        onSaved={fetchClients}
+      />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Nome *</Label>
-              <Input value={form.name} onChange={e => updateField('name', e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>CPF/CNPJ</Label>
-              <div className="relative">
-                <Input
-                  value={form.document}
-                  onChange={e => handleDocumentChange(e.target.value)}
-                  placeholder="00.000.000/0000-00"
-                />
-                {cnpjLoading && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Segmento</Label>
-              <Input value={form.segment} onChange={e => updateField('segment', e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Data Início Contrato</Label>
-              <Input type="date" value={form.contract_start_date} onChange={e => updateField('contract_start_date', e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>CS Responsável</Label>
-              <Input value={form.cs_responsible} onChange={e => updateField('cs_responsible', e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Complexidade</Label>
-              <Select value={form.complexity} onValueChange={v => updateField('complexity', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(COMPLEXITY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={v => updateField('status', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Perfil</Label>
-              <Select value={form.profile} onValueChange={v => updateField('profile', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PROFILE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Status Financeiro</Label>
-              <Select value={form.financial_status} onValueChange={v => updateField('financial_status', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(FINANCIAL_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Health Score</Label>
-              <Select value={form.health_score} onValueChange={v => updateField('health_score', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(HEALTH_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Tributação</Label>
-              <Select value={form.taxation || 'none'} onValueChange={v => updateField('taxation', v === 'none' ? '' : v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Não definida</SelectItem>
-                  {Object.entries(TAXATION_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <h3 className="text-sm font-semibold text-foreground mt-4 mb-2">Visão Estratégica</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Principais Dores</Label><Textarea value={form.pain_points} onChange={e => updateField('pain_points', e.target.value)} rows={2} /></div>
-            <div className="space-y-2"><Label>Expectativas</Label><Textarea value={form.expectations} onChange={e => updateField('expectations', e.target.value)} rows={2} /></div>
-            <div className="space-y-2"><Label>Pontos de Atenção</Label><Textarea value={form.attention_points} onChange={e => updateField('attention_points', e.target.value)} rows={2} /></div>
-            <div className="space-y-2"><Label>Problemas Recorrentes</Label><Textarea value={form.recurring_issues} onChange={e => updateField('recurring_issues', e.target.value)} rows={2} /></div>
-            <div className="space-y-2"><Label>Perfil Comportamental</Label><Textarea value={form.behavioral_profile} onChange={e => updateField('behavioral_profile', e.target.value)} rows={2} /></div>
-            <div className="space-y-2"><Label>Notas Estratégicas</Label><Textarea value={form.strategic_notes} onChange={e => updateField('strategic_notes', e.target.value)} rows={2} /></div>
-          </div>
-
-          <h3 className="text-sm font-semibold text-foreground mt-4 mb-2">Gestão de Risco</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Motivo do Risco</Label><Input value={form.risk_reason} onChange={e => updateField('risk_reason', e.target.value)} /></div>
-            <div className="space-y-2">
-              <Label>Tipo de Risco</Label>
-              <Select value={form.risk_type || 'none'} onValueChange={v => updateField('risk_type', v === 'none' ? '' : v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {Object.entries(RISK_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2"><Label>Data Identificação</Label><Input type="date" value={form.risk_identified_date} onChange={e => updateField('risk_identified_date', e.target.value)} /></div>
-            <div className="space-y-2"><Label>Plano de Ação</Label><Textarea value={form.action_plan} onChange={e => updateField('action_plan', e.target.value)} rows={2} /></div>
-          </div>
-
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{selectedId ? 'Salvar' : 'Criar'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
