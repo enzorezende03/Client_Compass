@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
-import { Client, STATUS_LABELS, COMPLEXITY_LABELS, HEALTH_LABELS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
+import { Client, STATUS_LABELS, COMPLEXITY_LABELS, COMPLEXITY_EMOJIS, HEALTH_LABELS, PROFILE_LABELS, PROFILE_ICONS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
 import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -158,12 +158,23 @@ export default function ClientList() {
                 onClick={() => navigate(`/client/${client.id}`)}
                 className="group flex items-center gap-4 rounded-lg border bg-card p-4 shadow-card cursor-pointer transition-all hover:shadow-card-hover hover:border-primary/20"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm shrink-0">
-                  {client.complexity}
+                <div
+                  className="flex h-11 w-11 flex-col items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs shrink-0 leading-none"
+                  title={`Complexidade ${COMPLEXITY_LABELS[client.complexity]}`}
+                >
+                  <span className="text-base" aria-hidden>{COMPLEXITY_EMOJIS[client.complexity]}</span>
+                  <span className="mt-0.5">{client.complexity}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
+                    <span
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                      title={`Tier ${PROFILE_LABELS[client.profile]}`}
+                    >
+                      <span aria-hidden>{PROFILE_ICONS[client.profile]}</span>
+                      <span className="hidden sm:inline">{PROFILE_LABELS[client.profile]}</span>
+                    </span>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="font-mono">{client.document}</span>

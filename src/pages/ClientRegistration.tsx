@@ -11,7 +11,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { computeCompleteness, completenessTone } from '@/lib/clientCompleteness';
 import { cn } from '@/lib/utils';
 import {
-  STATUS_LABELS, COMPLEXITY_LABELS, ClientStatus, ComplexityLevel,
+  STATUS_LABELS, COMPLEXITY_LABELS, STATUS_EMOJIS, COMPLEXITY_EMOJIS, ClientStatus, ComplexityLevel,
 } from '@/types/client';
 
 export default function ClientRegistration() {
@@ -105,9 +105,19 @@ export default function ClientRegistration() {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell className="font-mono text-xs">{c.document}</TableCell>
                       <TableCell>{c.segment}</TableCell>
-                      <TableCell>{STATUS_LABELS[c.status as ClientStatus] || c.status}</TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span aria-hidden>{STATUS_EMOJIS[c.status as ClientStatus] ?? ''}</span>
+                          {STATUS_LABELS[c.status as ClientStatus] || c.status}
+                        </span>
+                      </TableCell>
                       <TableCell>{c.cs_responsible}</TableCell>
-                      <TableCell>{COMPLEXITY_LABELS[c.complexity as ComplexityLevel] || c.complexity}</TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span aria-hidden>{COMPLEXITY_EMOJIS[c.complexity as ComplexityLevel] ?? ''}</span>
+                          {COMPLEXITY_LABELS[c.complexity as ComplexityLevel] || c.complexity}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden min-w-[60px]">
