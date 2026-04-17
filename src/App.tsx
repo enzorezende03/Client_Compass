@@ -7,6 +7,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import ClientList from "./pages/ClientList";
 import ClientDetail from "./pages/ClientDetail";
 import ClientRegistration from "./pages/ClientRegistration";
+import ClientFormPage from "./pages/ClientFormPage";
 import InternalUsersRegistration from "./pages/InternalUsersRegistration";
 import TaskCenter from "./pages/TaskCenter";
 import GClickSync from "./pages/GClickSync";
@@ -28,6 +29,8 @@ const App = () => (
           <Route path="/" element={<AuthGuard><ClientList /></AuthGuard>} />
           <Route path="/client/:id" element={<AuthGuard><ClientDetail /></AuthGuard>} />
           <Route path="/cadastro/clientes" element={<AuthGuard><ClientRegistration /></AuthGuard>} />
+          <Route path="/cadastro/clientes/novo" element={<AuthGuard><ClientFormPage /></AuthGuard>} />
+          <Route path="/cadastro/clientes/:id/editar" element={<AuthGuard><ClientFormPage /></AuthGuard>} />
           <Route path="/cadastro/usuarios" element={<AuthGuard><InternalUsersRegistration /></AuthGuard>} />
           <Route path="/tarefas" element={<AuthGuard><TaskCenter /></AuthGuard>} />
           <Route path="/gclick-sync" element={<AuthGuard><GClickSync /></AuthGuard>} />
