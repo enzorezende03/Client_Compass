@@ -9,10 +9,14 @@ interface Props {
   updateField: (field: string, value: string) => void;
 }
 
+const Emoji = ({ char }: { char: string }) => (
+  <span className="text-lg leading-none" aria-hidden>{char}</span>
+);
+
 const RISK_OPTS = [
-  { value: 'operational', label: 'Operacional', description: 'Falhas de processo, prazos, qualidade', activeClass: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 ring-orange-500/40', icon: <Wrench className="h-4 w-4" /> },
-  { value: 'financial', label: 'Financeiro', description: 'Inadimplência, queda de receita', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <DollarSign className="h-4 w-4" /> },
-  { value: 'relationship', label: 'Relacionamento', description: 'Insatisfação, ruído de comunicação', activeClass: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-violet-500/40', icon: <Heart className="h-4 w-4" /> },
+  { value: 'operational', label: 'Operacional', description: 'Falhas de processo, prazos, qualidade', activeClass: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 ring-orange-500/40', icon: <Emoji char="🛠️" /> },
+  { value: 'financial', label: 'Financeiro', description: 'Inadimplência, queda de receita', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Emoji char="💸" /> },
+  { value: 'relationship', label: 'Relacionamento', description: 'Insatisfação, ruído de comunicação', activeClass: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-violet-500/40', icon: <Emoji char="💔" /> },
 ];
 
 export function StepRisk({ form, updateField }: Props) {
