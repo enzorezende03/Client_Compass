@@ -32,43 +32,54 @@ function FieldLabel({ icon: Icon, children, hint }: { icon: any; children: React
   );
 }
 
+const Emoji = ({ char }: { char: string }) => (
+  <span className="text-lg leading-none" aria-hidden>{char}</span>
+);
+
 const COMPLEXITY_OPTS = [
-  { value: 'A', label: 'A — Alta', description: 'Operação muito complexa', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Layers className="h-4 w-4" /> },
-  { value: 'B', label: 'B — Média-Alta', description: 'Demanda atenção frequente', activeClass: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 ring-orange-500/40', icon: <Layers className="h-4 w-4" /> },
-  { value: 'C', label: 'C — Média', description: 'Padrão de mercado', activeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-500/40', icon: <Layers className="h-4 w-4" /> },
-  { value: 'D', label: 'D — Baixa', description: 'Operação simples', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Layers className="h-4 w-4" /> },
+  { value: 'A', label: 'A — Alta', description: 'Operação muito complexa', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Emoji char="🔥" /> },
+  { value: 'B', label: 'B — Média-Alta', description: 'Demanda atenção frequente', activeClass: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 ring-orange-500/40', icon: <Emoji char="⚡" /> },
+  { value: 'C', label: 'C — Média', description: 'Padrão de mercado', activeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-500/40', icon: <Emoji char="⚖️" /> },
+  { value: 'D', label: 'D — Baixa', description: 'Operação simples', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Emoji char="🌱" /> },
 ];
 
 const STATUS_OPTS = [
-  { value: 'active', label: 'Ativo', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Activity className="h-4 w-4" /> },
-  { value: 'at_risk', label: 'Em Risco', activeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/40', icon: <AlertTriangle className="h-4 w-4" /> },
-  { value: 'recovery', label: 'Recuperação', activeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-500/40', icon: <RotateCcw className="h-4 w-4" /> },
-  { value: 'cancelled', label: 'Cancelado', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <XCircle className="h-4 w-4" /> },
+  { value: 'active', label: 'Ativo', description: 'Tudo em dia', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Emoji char="✅" /> },
+  { value: 'at_risk', label: 'Em Risco', description: 'Requer atenção', activeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/40', icon: <Emoji char="⚠️" /> },
+  { value: 'recovery', label: 'Recuperação', description: 'Em retomada', activeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-500/40', icon: <Emoji char="🔄" /> },
+  { value: 'cancelled', label: 'Cancelado', description: 'Encerrado', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Emoji char="🛑" /> },
 ];
 
 const PROFILE_OPTS = [
-  { value: 'vip', label: 'VIP', description: 'Atendimento prioritário', activeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/40', icon: <Crown className="h-4 w-4" /> },
-  { value: 'premium', label: 'Premium', description: 'Atenção destacada', activeClass: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-violet-500/40', icon: <Star className="h-4 w-4" /> },
-  { value: 'standard', label: 'Standard', description: 'Atendimento padrão', activeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-500/40', icon: <CircleDot className="h-4 w-4" /> },
-  { value: 'basic', label: 'Básico', description: 'Operação enxuta', activeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 ring-slate-500/40', icon: <Circle className="h-4 w-4" /> },
+  { value: 'vip', label: 'VIP', description: 'Atendimento prioritário', activeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/40', icon: <Emoji char="👑" /> },
+  { value: 'premium', label: 'Premium', description: 'Atenção destacada', activeClass: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-violet-500/40', icon: <Emoji char="⭐" /> },
+  { value: 'standard', label: 'Standard', description: 'Atendimento padrão', activeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-500/40', icon: <Emoji char="💼" /> },
+  { value: 'basic', label: 'Básico', description: 'Operação enxuta', activeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 ring-slate-500/40', icon: <Emoji char="📦" /> },
 ];
 
 const FINANCIAL_OPTS = [
-  { value: 'active_financial', label: 'Ativo', description: 'Pagamentos em dia', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Wallet className="h-4 w-4" /> },
-  { value: 'suspended', label: 'Suspenso', description: 'Pagamento em atraso', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Pause className="h-4 w-4" /> },
+  { value: 'active_financial', label: 'Ativo', description: 'Pagamentos em dia', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Emoji char="💚" /> },
+  { value: 'suspended', label: 'Suspenso', description: 'Pagamento em atraso', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Emoji char="⛔" /> },
 ];
 
 const HEALTH_OPTS = [
-  { value: 'healthy', label: 'Saudável', description: 'Tudo certo', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <span className="text-base leading-none">🟢</span> },
-  { value: 'attention', label: 'Atenção', description: 'Sinais de alerta', activeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/40', icon: <span className="text-base leading-none">🟡</span> },
-  { value: 'critical', label: 'Crítico', description: 'Risco elevado', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <span className="text-base leading-none">🔴</span> },
+  { value: 'healthy', label: 'Saudável', description: 'Cliente feliz', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Emoji char="😊" /> },
+  { value: 'attention', label: 'Atenção', description: 'Sinais de alerta', activeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/40', icon: <Emoji char="😐" /> },
+  { value: 'critical', label: 'Crítico', description: 'Risco elevado', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Emoji char="😟" /> },
 ];
+
+const TAXATION_EMOJI: Record<string, string> = {
+  simples_nacional: '🟢',
+  simples_nacional_fator_r: '🟡',
+  lucro_presumido: '🔵',
+  lucro_presumido_equiparacao_hospitalar: '🏥',
+};
 
 const TAXATION_OPTS = Object.entries(TAXATION_LABELS).map(([value, label]) => ({
   value,
   label,
   activeClass: 'bg-primary/10 text-primary ring-primary/40',
-  icon: <Receipt className="h-4 w-4" />,
+  icon: <Emoji char={TAXATION_EMOJI[value] ?? '📄'} />,
 }));
 
 export function StepIdentification({ form, updateField, cnpjLoading, onDocumentChange }: Props) {
