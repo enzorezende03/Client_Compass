@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
-import { ClientWizardDialog } from '@/components/ClientWizardDialog';
 import { computeCompleteness, completenessTone } from '@/lib/clientCompleteness';
 import { cn } from '@/lib/utils';
 import {
@@ -15,14 +15,13 @@ import {
 } from '@/types/client';
 
 export default function ClientRegistration() {
+  const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
   const [contactCounts, setContactCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedClient, setSelectedClient] = useState<any>(null);
   const { toast } = useToast();
 
   const fetchClients = async () => {
@@ -50,17 +49,8 @@ export default function ClientRegistration() {
     c.document.includes(search)
   );
 
-  const openNew = () => {
-    setSelectedId(null);
-    setSelectedClient(null);
-    setWizardOpen(true);
-  };
-
-  const openEdit = (client: any) => {
-    setSelectedId(client.id);
-    setSelectedClient(client);
-    setWizardOpen(true);
-  };
+  const openNew = () => navigate('/cadastro/clientes/novo');
+  const openEdit = (client: any) => navigate(`/cadastro/clientes/${client.id}/editar`);
 
   const handleDelete = async () => {
     if (!selectedId) return;
@@ -142,14 +132,6 @@ export default function ClientRegistration() {
           </Table>
         </div>
       </div>
-
-      <ClientWizardDialog
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        clientId={selectedId}
-        initialClient={selectedClient}
-        onSaved={fetchClients}
-      />
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
