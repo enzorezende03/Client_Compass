@@ -95,11 +95,25 @@ export const STATUS_LABELS: Record<ClientStatus, string> = {
   cancelled: 'Cancelado',
 };
 
+export const STATUS_EMOJIS: Record<ClientStatus, string> = {
+  active: '✅',
+  at_risk: '⚠️',
+  recovery: '🔄',
+  cancelled: '🛑',
+};
+
 export const COMPLEXITY_LABELS: Record<ComplexityLevel, string> = {
   A: 'A - Alta',
   B: 'B - Média-Alta',
   C: 'C - Média',
   D: 'D - Baixa',
+};
+
+export const COMPLEXITY_EMOJIS: Record<ComplexityLevel, string> = {
+  A: '🔥',
+  B: '⚡',
+  C: '⚖️',
+  D: '🌱',
 };
 
 export const PROFILE_LABELS: Record<ClientProfile, string> = {
@@ -119,8 +133,8 @@ export const PROFILE_COLORS: Record<ClientProfile, { bg: string; text: string; b
 export const PROFILE_ICONS: Record<ClientProfile, string> = {
   vip: '👑',
   premium: '⭐',
-  standard: '●',
-  basic: '○',
+  standard: '💼',
+  basic: '📦',
 };
 
 export const FINANCIAL_LABELS: Record<FinancialStatus, string> = {
@@ -128,10 +142,21 @@ export const FINANCIAL_LABELS: Record<FinancialStatus, string> = {
   suspended: 'Suspenso',
 };
 
+export const FINANCIAL_EMOJIS: Record<FinancialStatus, string> = {
+  active_financial: '💚',
+  suspended: '⛔',
+};
+
 export const HEALTH_LABELS: Record<HealthScore, string> = {
   healthy: 'Saudável',
   attention: 'Atenção',
   critical: 'Crítico',
+};
+
+export const HEALTH_EMOJIS: Record<HealthScore, string> = {
+  healthy: '😊',
+  attention: '😐',
+  critical: '😟',
 };
 
 export const INTERACTION_LABELS: Record<InteractionType, string> = {
@@ -172,9 +197,22 @@ export const RISK_TYPE_LABELS: Record<RiskType, string> = {
   relationship: 'Relacionamento',
 };
 
+export const RISK_TYPE_EMOJIS: Record<RiskType, string> = {
+  operational: '🛠️',
+  financial: '💸',
+  relationship: '💔',
+};
+
 export const TAXATION_LABELS: Record<TaxationType, string> = {
   simples_nacional: 'Simples Nacional',
   simples_nacional_fator_r: 'Simples Nacional Fator R',
   lucro_presumido: 'Lucro Presumido',
   lucro_presumido_equiparacao_hospitalar: 'Lucro Presumido Equiparação Hospitalar',
+};
+
+export const TAXATION_EMOJIS: Record<TaxationType, string> = {
+  simples_nacional: '🟢',
+  simples_nacional_fator_r: '🟡',
+  lucro_presumido: '🔵',
+  lucro_presumido_equiparacao_hospitalar: '🏥',
 };
