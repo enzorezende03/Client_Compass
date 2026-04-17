@@ -1,12 +1,10 @@
-import { Loader2, Check, Building2, Briefcase, Calendar, User, Layers, Activity, Heart, Wallet, BadgeCheck, Receipt } from 'lucide-react';
+import { Loader2, Check, Building2, Briefcase, Calendar, User, Layers, Activity, Heart, Wallet, BadgeCheck, Receipt, Crown, Star, Circle, CircleDot, AlertTriangle, Pause, ShieldAlert, RotateCcw, XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HelpCircle } from 'lucide-react';
-import {
-  STATUS_LABELS, COMPLEXITY_LABELS, PROFILE_LABELS, FINANCIAL_LABELS, HEALTH_LABELS, TAXATION_LABELS, PROFILE_ICONS,
-} from '@/types/client';
+import { OptionButtons } from '@/components/ui/option-buttons';
+import { TAXATION_LABELS } from '@/types/client';
 
 interface Props {
   form: any;
@@ -15,15 +13,9 @@ interface Props {
   onDocumentChange: (value: string) => void;
 }
 
-const HEALTH_DOTS: Record<string, string> = {
-  healthy: '🟢',
-  attention: '🟡',
-  critical: '🔴',
-};
-
 function FieldLabel({ icon: Icon, children, hint }: { icon: any; children: React.ReactNode; hint?: string }) {
   return (
-    <Label className="flex items-center gap-2 text-sm">
+    <Label className="flex items-center gap-2 text-sm font-medium">
       <Icon className="h-3.5 w-3.5 text-muted-foreground" />
       {children}
       {hint && (
@@ -40,14 +32,53 @@ function FieldLabel({ icon: Icon, children, hint }: { icon: any; children: React
   );
 }
 
+const COMPLEXITY_OPTS = [
+  { value: 'A', label: 'A — Alta', description: 'Operação muito complexa', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Layers className="h-4 w-4" /> },
+  { value: 'B', label: 'B — Média-Alta', description: 'Demanda atenção frequente', activeClass: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 ring-orange-500/40', icon: <Layers className="h-4 w-4" /> },
+  { value: 'C', label: 'C — Média', description: 'Padrão de mercado', activeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-500/40', icon: <Layers className="h-4 w-4" /> },
+  { value: 'D', label: 'D — Baixa', description: 'Operação simples', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Layers className="h-4 w-4" /> },
+];
+
+const STATUS_OPTS = [
+  { value: 'active', label: 'Ativo', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Activity className="h-4 w-4" /> },
+  { value: 'at_risk', label: 'Em Risco', activeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/40', icon: <AlertTriangle className="h-4 w-4" /> },
+  { value: 'recovery', label: 'Recuperação', activeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-500/40', icon: <RotateCcw className="h-4 w-4" /> },
+  { value: 'cancelled', label: 'Cancelado', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <XCircle className="h-4 w-4" /> },
+];
+
+const PROFILE_OPTS = [
+  { value: 'vip', label: 'VIP', description: 'Atendimento prioritário', activeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/40', icon: <Crown className="h-4 w-4" /> },
+  { value: 'premium', label: 'Premium', description: 'Atenção destacada', activeClass: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-violet-500/40', icon: <Star className="h-4 w-4" /> },
+  { value: 'standard', label: 'Standard', description: 'Atendimento padrão', activeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-500/40', icon: <CircleDot className="h-4 w-4" /> },
+  { value: 'basic', label: 'Básico', description: 'Operação enxuta', activeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 ring-slate-500/40', icon: <Circle className="h-4 w-4" /> },
+];
+
+const FINANCIAL_OPTS = [
+  { value: 'active_financial', label: 'Ativo', description: 'Pagamentos em dia', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <Wallet className="h-4 w-4" /> },
+  { value: 'suspended', label: 'Suspenso', description: 'Pagamento em atraso', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Pause className="h-4 w-4" /> },
+];
+
+const HEALTH_OPTS = [
+  { value: 'healthy', label: 'Saudável', description: 'Tudo certo', activeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/40', icon: <span className="text-base leading-none">🟢</span> },
+  { value: 'attention', label: 'Atenção', description: 'Sinais de alerta', activeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/40', icon: <span className="text-base leading-none">🟡</span> },
+  { value: 'critical', label: 'Crítico', description: 'Risco elevado', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <span className="text-base leading-none">🔴</span> },
+];
+
+const TAXATION_OPTS = Object.entries(TAXATION_LABELS).map(([value, label]) => ({
+  value,
+  label,
+  activeClass: 'bg-primary/10 text-primary ring-primary/40',
+  icon: <Receipt className="h-4 w-4" />,
+}));
+
 export function StepIdentification({ form, updateField, cnpjLoading, onDocumentChange }: Props) {
   const docDigits = (form.document || '').replace(/\D/g, '');
   const docOk = docDigits.length === 14;
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border bg-card p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+      <div className="rounded-xl border bg-card p-5 space-y-4 shadow-sm">
+        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
           <Building2 className="h-4 w-4 text-primary" /> Identificação
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -87,74 +118,41 @@ export function StepIdentification({ form, updateField, cnpjLoading, onDocumentC
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+      <div className="rounded-xl border bg-card p-5 space-y-5 shadow-sm">
+        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
           <Layers className="h-4 w-4 text-primary" /> Classificação Estratégica
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <FieldLabel icon={Layers} hint="Complexidade operacional do cliente. A = mais complexa.">Complexidade</FieldLabel>
-            <Select value={form.complexity} onValueChange={v => updateField('complexity', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(COMPLEXITY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <FieldLabel icon={Activity}>Status</FieldLabel>
-            <Select value={form.status} onValueChange={v => updateField('status', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <FieldLabel icon={BadgeCheck} hint="Tier de atendimento: VIP, Premium, Standard ou Básico.">Perfil (Tier)</FieldLabel>
-            <Select value={form.profile} onValueChange={v => updateField('profile', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(PROFILE_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>
-                    <span className="mr-2">{PROFILE_ICONS[k as keyof typeof PROFILE_ICONS]}</span>{v}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+
+        <div className="space-y-2">
+          <FieldLabel icon={Layers} hint="Complexidade operacional do cliente. A = mais complexa.">Complexidade</FieldLabel>
+          <OptionButtons value={form.complexity} onChange={v => updateField('complexity', v)} options={COMPLEXITY_OPTS} columns={4} />
+        </div>
+
+        <div className="space-y-2">
+          <FieldLabel icon={Activity}>Status</FieldLabel>
+          <OptionButtons value={form.status} onChange={v => updateField('status', v)} options={STATUS_OPTS} columns={4} />
+        </div>
+
+        <div className="space-y-2">
+          <FieldLabel icon={BadgeCheck} hint="Tier de atendimento: VIP, Premium, Standard ou Básico.">Perfil (Tier)</FieldLabel>
+          <OptionButtons value={form.profile} onChange={v => updateField('profile', v)} options={PROFILE_OPTS} columns={4} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="space-y-2">
             <FieldLabel icon={Wallet}>Status Financeiro</FieldLabel>
-            <Select value={form.financial_status} onValueChange={v => updateField('financial_status', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(FINANCIAL_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <OptionButtons value={form.financial_status} onChange={v => updateField('financial_status', v)} options={FINANCIAL_OPTS} columns={2} />
           </div>
           <div className="space-y-2">
             <FieldLabel icon={Heart} hint="Saúde do relacionamento com o cliente.">Health Score</FieldLabel>
-            <Select value={form.health_score} onValueChange={v => updateField('health_score', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(HEALTH_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>
-                    <span className="mr-2">{HEALTH_DOTS[k]}</span>{v}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <OptionButtons value={form.health_score} onChange={v => updateField('health_score', v)} options={HEALTH_OPTS} columns={3} />
           </div>
-          <div className="space-y-2">
-            <FieldLabel icon={Receipt}>Tributação</FieldLabel>
-            <Select value={form.taxation || 'none'} onValueChange={v => updateField('taxation', v === 'none' ? '' : v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Não definida</SelectItem>
-                {Object.entries(TAXATION_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+        </div>
+
+        <div className="space-y-2">
+          <FieldLabel icon={Receipt}>Tributação</FieldLabel>
+          <OptionButtons value={form.taxation || ''} onChange={v => updateField('taxation', v)} options={TAXATION_OPTS} columns={4} clearable size="sm" />
+          <p className="text-xs text-muted-foreground">Clique novamente para limpar a seleção.</p>
         </div>
       </div>
     </div>
