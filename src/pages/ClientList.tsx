@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2 } from 'lucide-react';
+import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,30 @@ export default function ClientList() {
     healthy: clients.filter(c => c.healthScore === 'healthy').length,
   };
 
+  const exportClientsReport = () => {
+    const rows = filtered.map(client => ({
+      Nome: client.name,
+      Documento: client.document,
+      Segmento: client.segment,
+      Status: STATUS_LABELS[client.status as ClientStatus] || client.status,
+      'CS Responsável': client.csResponsible,
+      Complexidade: COMPLEXITY_LABELS[client.complexity as ComplexityLevel] || client.complexity,
+      Tier: PROFILE_LABELS[client.profile] || client.profile,
+      'Health Score': HEALTH_LABELS[client.healthScore as HealthScore] || client.healthScore,
+      'Início do contrato': client.contractStartDate,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 34 }, { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 24 },
+      { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
+    XLSX.writeFile(workbook, `relatorio-clientes-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast({ title: 'Relatório baixado!', description: `${rows.length} cliente(s) exportado(s) para Excel.` });
+  };
+
   return (
     <AppLayout>
       {/* Header */}
@@ -101,7 +126,7 @@ export default function ClientList() {
 
       {/* Filters */}
       <div className="container mx-auto px-6 py-4">
-        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <div className="flex flex-wrap items-center gap-3 mb-6">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -111,6 +136,9 @@ export default function ClientList() {
               className="pl-9"
             />
           </div>
+            <Button variant="outline" onClick={exportClientsReport} className="gap-2" disabled={loading || filtered.length === 0}>
+              <Download className="h-4 w-4" /> Baixar Excel
+            </Button>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
