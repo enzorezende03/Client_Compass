@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -52,6 +53,33 @@ export default function ClientRegistration() {
   const openNew = () => navigate('/cadastro/clientes/novo');
   const openEdit = (client: any) => navigate(`/cadastro/clientes/${client.id}/editar`);
 
+  const exportClientsReport = () => {
+    const rows = filtered.map(c => {
+      const pct = computeCompleteness(c, contactCounts[c.id] || 0);
+      return {
+        Nome: c.name,
+        Documento: c.document,
+        Segmento: c.segment,
+        Status: `${STATUS_EMOJIS[c.status as ClientStatus] ?? ''} ${STATUS_LABELS[c.status as ClientStatus] || c.status}`.trim(),
+        'CS Responsável': c.cs_responsible,
+        Complexidade: `${COMPLEXITY_EMOJIS[c.complexity as ComplexityLevel] ?? ''} ${COMPLEXITY_LABELS[c.complexity as ComplexityLevel] || c.complexity}`.trim(),
+        'Completude (%)': pct,
+        'Contatos cadastrados': contactCounts[c.id] || 0,
+        'Início do contrato': c.contract_start_date,
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 34 }, { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 24 },
+      { wch: 20 }, { wch: 16 }, { wch: 20 }, { wch: 18 },
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
+    XLSX.writeFile(workbook, `relatorio-clientes-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast({ title: 'Relatório baixado!', description: `${rows.length} cliente(s) exportado(s) para Excel.` });
+  };
+
   const handleDelete = async () => {
     if (!selectedId) return;
     const { error } = await supabase.from('clients').delete().eq('id', selectedId);
@@ -67,9 +95,14 @@ export default function ClientRegistration() {
       <div className="container mx-auto px-6 py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">Cadastro de Clientes</h1>
-          <Button onClick={openNew} className="gap-2">
-            <Plus className="h-4 w-4" /> Novo Cliente
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={exportClientsReport} className="gap-2" disabled={loading || filtered.length === 0}>
+              <Download className="h-4 w-4" /> Baixar Excel
+            </Button>
+            <Button onClick={openNew} className="gap-2">
+              <Plus className="h-4 w-4" /> Novo Cliente
+            </Button>
+          </div>
         </div>
 
         <div className="relative mb-4 max-w-sm">
