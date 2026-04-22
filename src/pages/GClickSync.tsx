@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Check, CheckSquare, Square, Users, ClipboardList, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { RefreshCw, Check, CheckSquare, Square, Users, ClipboardList, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -224,6 +225,37 @@ export default function GClickSync() {
     t.client_name.toLowerCase().includes(taskSearch.toLowerCase())
   );
 
+  const exportGClickReport = () => {
+    const isClients = tab === 'clients';
+    const rows = isClients
+      ? sortedClients.map(c => ({
+          Nome: c.nome,
+          'CNPJ/CPF': c.inscricao,
+          Segmento: c.segmento,
+          'Data Início': c.data_inicio,
+          Tributação: c.tributacao,
+          Tipo: c.match_type === 'new' ? 'Novo' : 'Atualizar',
+          'Qtd. Contatos': c.contatos?.length || 0,
+          Contatos: (c.contatos || []).map(ct => [ct.nome, ct.cargo, ct.telefone, ct.email].filter(Boolean).join(' - ')).join(' | '),
+        }))
+      : filteredTasks.map(t => ({
+          Título: t.title,
+          Cliente: t.client_name,
+          Responsável: t.responsible,
+          Vencimento: t.due_date,
+          'ID G-Click': t.gclick_id,
+        }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = isClients
+      ? [{ wch: 34 }, { wch: 18 }, { wch: 22 }, { wch: 16 }, { wch: 22 }, { wch: 12 }, { wch: 14 }, { wch: 70 }]
+      : [{ wch: 34 }, { wch: 34 }, { wch: 24 }, { wch: 16 }, { wch: 22 }];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, isClients ? 'Clientes G-Click' : 'Tarefas G-Click');
+    XLSX.writeFile(workbook, `gclick-${isClients ? 'clientes' : 'tarefas'}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast({ title: 'Relatório baixado!', description: `${rows.length} registro(s) exportado(s) para Excel.` });
+  };
+
   return (
     <AppLayout>
        <div className="container mx-auto px-6 py-6">
@@ -242,10 +274,20 @@ export default function GClickSync() {
                 <ClipboardList className="h-4 w-4" /> Tarefas
               </TabsTrigger>
             </TabsList>
-            <Button onClick={() => fetchPreview(tab)} disabled={loading} className="gap-2">
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              {loading ? 'Buscando...' : 'Buscar do G-Click'}
-            </Button>
+             <div className="flex items-center gap-2">
+               <Button
+                 variant="outline"
+                 onClick={exportGClickReport}
+                 disabled={loading || (tab === 'clients' ? sortedClients.length === 0 : filteredTasks.length === 0)}
+                 className="gap-2"
+               >
+                 <Download className="h-4 w-4" /> Baixar Excel
+               </Button>
+               <Button onClick={() => fetchPreview(tab)} disabled={loading} className="gap-2">
+                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                 {loading ? 'Buscando...' : 'Buscar do G-Click'}
+               </Button>
+             </div>
           </div>
 
           {/* CLIENTS TAB */}
