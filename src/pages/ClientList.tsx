@@ -62,10 +62,11 @@ export default function ClientList() {
   const [clients, setClients] = useState<ClientWithArchive[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [financialFilter, setFinancialFilter] = useState<string>('all');
   const [complexityFilter, setComplexityFilter] = useState<string>('all');
   const [healthFilter, setHealthFilter] = useState<string>('all');
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
+  const [profileFilter, setProfileFilter] = useState<string>('all');
   const [showArchived, setShowArchived] = useState(false);
 
   // Archive dialog state
