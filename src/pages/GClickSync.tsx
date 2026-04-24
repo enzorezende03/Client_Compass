@@ -174,13 +174,18 @@ export default function GClickSync() {
     }
   };
 
-  const taxationOptions = [...new Set(previewClients.map(c => c.tributacao).filter(Boolean))];
+  const taxationOptions = [...new Set(previewClients.map(c => c.tributacao).filter(Boolean))].sort();
+  const hasUntaxed = previewClients.some(c => !c.tributacao);
 
   const filteredClients = previewClients.filter(c => {
     const docClean = (c.inscricao || '').replace(/\D/g, '');
     if (docTypeFilter === 'cpf' && docClean.length !== 11) return false;
     if (docTypeFilter === 'cnpj' && docClean.length !== 14) return false;
-    if (taxationFilter !== 'all' && (c.tributacao || '') !== taxationFilter) return false;
+    if (taxationFilter === '__none__') {
+      if (c.tributacao) return false;
+    } else if (taxationFilter !== 'all' && (c.tributacao || '') !== taxationFilter) {
+      return false;
+    }
     if (clientSearch === '') return true;
     const term = clientSearch.toLowerCase().replace(/\D/g, '');
     const termRaw = clientSearch.toLowerCase();
