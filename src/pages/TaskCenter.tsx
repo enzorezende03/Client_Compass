@@ -70,7 +70,7 @@ export default function TaskCenter() {
     setLoading(true);
     const [tasksRes, clientsRes, usersRes] = await Promise.all([
       supabase.from('tasks').select('*').order('due_date', { ascending: true }),
-      supabase.from('clients').select('id, name'),
+      supabase.from('clients').select('id, name').eq('archived', false),
       supabase.from('internal_users').select('id, name, email, active').eq('active', true).order('name'),
     ]);
     if (usersRes.data) setInternalUsers(usersRes.data as InternalUser[]);
