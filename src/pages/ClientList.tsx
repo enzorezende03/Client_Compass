@@ -235,11 +235,13 @@ export default function ClientList() {
           </Button>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={financialFilter} onValueChange={setFinancialFilter}>
               <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos Status</SelectItem>
-                {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                {Object.entries(FINANCIAL_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{FINANCIAL_EMOJIS[k as FinancialStatus]} {v}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={complexityFilter} onValueChange={setComplexityFilter}>
@@ -261,6 +263,15 @@ export default function ClientList() {
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 {responsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={profileFilter} onValueChange={setProfileFilter}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Tipo de cliente" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Tipos</SelectItem>
+                {Object.entries(PROFILE_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{PROFILE_ICONS[k as ClientProfile]} {v}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
