@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
-import { Client, STATUS_LABELS, COMPLEXITY_LABELS, COMPLEXITY_EMOJIS, HEALTH_LABELS, PROFILE_LABELS, PROFILE_ICONS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
+import { Client, STATUS_LABELS, COMPLEXITY_LABELS, COMPLEXITY_EMOJIS, HEALTH_LABELS, PROFILE_LABELS, PROFILE_ICONS, FINANCIAL_LABELS, FINANCIAL_EMOJIS, ClientStatus, ComplexityLevel, HealthScore, FinancialStatus, ClientProfile } from '@/types/client';
 import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
