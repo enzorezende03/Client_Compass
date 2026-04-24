@@ -92,11 +92,12 @@ export default function ClientList() {
     const matchSearch = search === '' ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.document.includes(search);
-    const matchStatus = statusFilter === 'all' || c.status === statusFilter;
+    const matchFinancial = financialFilter === 'all' || c.financialStatus === financialFilter;
     const matchComplexity = complexityFilter === 'all' || c.complexity === complexityFilter;
     const matchHealth = healthFilter === 'all' || c.healthScore === healthFilter;
     const matchResp = responsibleFilter === 'all' || c.csResponsible === responsibleFilter;
-    return matchSearch && matchStatus && matchComplexity && matchHealth && matchResp;
+    const matchProfile = profileFilter === 'all' || c.profile === profileFilter;
+    return matchSearch && matchFinancial && matchComplexity && matchHealth && matchResp && matchProfile;
   });
 
   const activeClients = clients.filter(c => !c.archived);
