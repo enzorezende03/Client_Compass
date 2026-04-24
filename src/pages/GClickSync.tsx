@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Check, CheckSquare, Square, Users, ClipboardList, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react';
+import { RefreshCw, Check, CheckSquare, Square, Users, ClipboardList, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { AppLayout } from '@/components/AppLayout';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -103,6 +105,12 @@ export default function GClickSync() {
   const [previewTasks, setPreviewTasks] = useSessionState<PreviewTask[]>('gclick_preview_tasks', []);
   const [selectedTasks, setSelectedTasks] = useSessionSet('gclick_selected_tasks');
   const [taskSearch, setTaskSearch] = useState('');
+
+  // Ignored clients management
+  const [ignoredList, setIgnoredList] = useState<Array<{ id: string; gclick_id: string; nome: string; inscricao: string; ignored_by: string; created_at: string }>>([]);
+  const [ignoredDialogOpen, setIgnoredDialogOpen] = useState(false);
+  const [confirmIgnoreOpen, setConfirmIgnoreOpen] = useState(false);
+  const [loadingIgnored, setLoadingIgnored] = useState(false);
 
   const fetchPreview = async (type: SyncTab) => {
     setLoading(true);
@@ -261,6 +269,55 @@ export default function GClickSync() {
     toast({ title: 'Relatório baixado!', description: `${rows.length} registro(s) exportado(s) para Excel.` });
   };
 
+  const loadIgnored = async () => {
+    setLoadingIgnored(true);
+    try {
+      const data = await callGclick('list-ignored');
+      if (!data.success) throw new Error(data.error);
+      setIgnoredList(data.items || []);
+    } catch (err: any) {
+      toast({ title: 'Erro ao carregar ignorados', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoadingIgnored(false);
+    }
+  };
+
+  const handleIgnoreSelected = async () => {
+    const items = previewClients
+      .filter(c => selectedClients.has(c.gclick_id))
+      .map(c => ({ gclick_id: c.gclick_id, nome: c.nome, inscricao: c.inscricao }));
+    if (items.length === 0) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const data = await callGclick('ignore-clients', { items, ignored_by: user?.email || '' });
+      if (!data.success) throw new Error(data.error);
+      toast({ title: 'Clientes desconsiderados', description: `${data.ignored} cliente(s) não aparecerão mais nas próximas sincronizações.` });
+      // Remove from current preview
+      setPreviewClients(previewClients.filter(c => !selectedClients.has(c.gclick_id)));
+      setSelectedClients(new Set());
+    } catch (err: any) {
+      toast({ title: 'Erro ao desconsiderar', description: err.message, variant: 'destructive' });
+    } finally {
+      setConfirmIgnoreOpen(false);
+    }
+  };
+
+  const handleRestoreIgnored = async (gclickId: string) => {
+    try {
+      const data = await callGclick('restore-ignored', { gclick_ids: [gclickId] });
+      if (!data.success) throw new Error(data.error);
+      toast({ title: 'Cliente restaurado', description: 'Voltará a aparecer na próxima sincronização.' });
+      setIgnoredList(prev => prev.filter(i => i.gclick_id !== gclickId));
+    } catch (err: any) {
+      toast({ title: 'Erro ao restaurar', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const openIgnoredDialog = () => {
+    setIgnoredDialogOpen(true);
+    loadIgnored();
+  };
+
   return (
     <AppLayout>
        <div className="container mx-auto px-6 py-6">
@@ -280,6 +337,14 @@ export default function GClickSync() {
               </TabsTrigger>
             </TabsList>
              <div className="flex items-center gap-2">
+               <Button
+                 variant="outline"
+                 onClick={openIgnoredDialog}
+                 className="gap-2"
+                 title="Ver clientes desconsiderados"
+               >
+                 <EyeOff className="h-4 w-4" /> Desconsiderados
+               </Button>
                <Button
                  variant="outline"
                  onClick={exportGClickReport}
@@ -340,6 +405,15 @@ export default function GClickSync() {
                       {filteredClients.every(c => selectedClients.has(c.gclick_id))
                         ? <><Square className="h-4 w-4 mr-1" /> Desmarcar todos</>
                         : <><CheckSquare className="h-4 w-4 mr-1" /> Selecionar todos</>}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setConfirmIgnoreOpen(true)}
+                      disabled={selectedClients.size === 0}
+                      className="gap-2 text-destructive hover:text-destructive"
+                    >
+                      <EyeOff className="h-4 w-4" />
+                      Desconsiderar ({selectedClients.size})
                     </Button>
                     <Button onClick={() => handleImport('clients')} disabled={importing || selectedClients.size === 0} className="gap-2">
                       <Check className="h-4 w-4" />
@@ -508,6 +582,86 @@ export default function GClickSync() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Confirm Ignore Dialog */}
+      <AlertDialog open={confirmIgnoreOpen} onOpenChange={setConfirmIgnoreOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desconsiderar clientes selecionados?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os {selectedClients.size} cliente(s) selecionado(s) não aparecerão mais nas próximas sincronizações com o G-Click.
+              Você poderá restaurá-los a qualquer momento clicando em "Desconsiderados".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleIgnoreSelected} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sim, desconsiderar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Ignored List Dialog */}
+      <Dialog open={ignoredDialogOpen} onOpenChange={setIgnoredDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <EyeOff className="h-5 w-5" /> Clientes desconsiderados
+            </DialogTitle>
+            <DialogDescription>
+              Estes clientes não aparecem nas sincronizações com o G-Click. Restaure para voltarem a aparecer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto flex-1 -mx-6 px-6">
+            {loadingIgnored ? (
+              <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+            ) : ignoredList.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <EyeOff className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                Nenhum cliente desconsiderado.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>CNPJ/CPF</TableHead>
+                    <TableHead>Desconsiderado por</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="w-24"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ignoredList.map(item => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.nome || '—'}</TableCell>
+                      <TableCell className="font-mono text-sm">{item.inscricao || '—'}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{item.ignored_by || '—'}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRestoreIgnored(item.gclick_id)}
+                          className="gap-1"
+                        >
+                          <RotateCcw className="h-3 w-3" /> Restaurar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIgnoredDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

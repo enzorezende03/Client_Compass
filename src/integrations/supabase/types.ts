@@ -283,6 +283,33 @@ export type Database = {
           },
         ]
       }
+      gclick_ignored_clients: {
+        Row: {
+          created_at: string
+          gclick_id: string
+          id: string
+          ignored_by: string
+          inscricao: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          gclick_id: string
+          id?: string
+          ignored_by?: string
+          inscricao?: string
+          nome?: string
+        }
+        Update: {
+          created_at?: string
+          gclick_id?: string
+          id?: string
+          ignored_by?: string
+          inscricao?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       gclick_sync_log: {
         Row: {
           created_at: string

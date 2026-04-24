@@ -130,6 +130,11 @@ async function getExistingClientMaps(supabase: any) {
   return { docMap, nameMap, gclickIdSet };
 }
 
+async function getIgnoredGclickIds(supabase: any): Promise<Set<string>> {
+  const { data } = await supabase.from("gclick_ignored_clients").select("gclick_id");
+  return new Set((data || []).map((r: any) => r.gclick_id));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -164,6 +169,7 @@ Deno.serve(async (req) => {
       const gclickClients = allGclickClients.filter(isAllowedClient);
 
       const { docMap, nameMap, gclickIdSet } = await getExistingClientMaps(supabase);
+      const ignoredSet = await getIgnoredGclickIds(supabase);
 
       const items: any[] = [];
       for (const gc of gclickClients) {
@@ -171,6 +177,8 @@ Deno.serve(async (req) => {
         const nome = (gc.nome || "").trim();
         const gclickId = String(gc.id);
 
+        // Skip if ignored
+        if (ignoredSet.has(gclickId)) continue;
         // Skip if already linked by gclick_id
         if (gclickIdSet.has(gclickId)) continue;
         // Skip if already exists in CSHUB by document or name (only show truly new clients)
@@ -192,6 +200,53 @@ Deno.serve(async (req) => {
       }
 
       return json({ success: true, items });
+    }
+
+    // ── LIST IGNORED CLIENTS ──
+    if (action === "list-ignored") {
+      const { data, error } = await supabase
+        .from("gclick_ignored_clients")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) return json({ success: false, error: error.message }, 500);
+      return json({ success: true, items: data || [] });
+    }
+
+    // ── IGNORE CLIENTS ──
+    if (action === "ignore-clients") {
+      const body = await req.json();
+      const items: { gclick_id: string; nome?: string; inscricao?: string }[] = body.items || [];
+      const ignoredBy: string = body.ignored_by || "";
+      if (items.length === 0) return json({ success: false, error: "Nenhum cliente informado" }, 400);
+
+      const rows = items.map((it) => ({
+        gclick_id: String(it.gclick_id),
+        nome: it.nome || "",
+        inscricao: it.inscricao || "",
+        ignored_by: ignoredBy,
+      }));
+
+      const { error } = await supabase
+        .from("gclick_ignored_clients")
+        .upsert(rows, { onConflict: "gclick_id", ignoreDuplicates: true });
+
+      if (error) return json({ success: false, error: error.message }, 500);
+      return json({ success: true, ignored: rows.length });
+    }
+
+    // ── RESTORE IGNORED CLIENTS ──
+    if (action === "restore-ignored") {
+      const body = await req.json();
+      const ids: string[] = body.gclick_ids || [];
+      if (ids.length === 0) return json({ success: false, error: "Nenhum ID informado" }, 400);
+
+      const { error } = await supabase
+        .from("gclick_ignored_clients")
+        .delete()
+        .in("gclick_id", ids);
+
+      if (error) return json({ success: false, error: error.message }, 500);
+      return json({ success: true, restored: ids.length });
     }
 
     // ── IMPORT SELECTED CLIENTS ──
