@@ -101,9 +101,9 @@ export default function ClientList() {
   const activeClients = clients.filter(c => !c.archived);
   const stats = {
     total: activeClients.length,
-    atRisk: activeClients.filter(c => c.status === 'at_risk' || c.status === 'recovery').length,
-    critical: activeClients.filter(c => c.healthScore === 'critical').length,
-    healthy: activeClients.filter(c => c.healthScore === 'healthy').length,
+    atRisk: activeClients.filter(c => c.status === 'at_risk' || c.status === 'recovery' || c.healthScore === 'critical').length,
+    suspended: activeClients.filter(c => c.financialStatus === 'suspended').length,
+    archived: archivedCount,
   };
 
   const exportClientsReport = () => {
