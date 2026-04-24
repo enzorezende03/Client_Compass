@@ -171,10 +171,11 @@ Deno.serve(async (req) => {
         const nome = (gc.nome || "").trim();
         const gclickId = String(gc.id);
 
+        // Skip if already linked by gclick_id
         if (gclickIdSet.has(gclickId)) continue;
-
-        let matchId = inscricao ? docMap.get(inscricao) : undefined;
-        if (!matchId && nome) matchId = nameMap.get(nome.toLowerCase());
+        // Skip if already exists in CSHUB by document or name (only show truly new clients)
+        if (inscricao && docMap.has(inscricao)) continue;
+        if (nome && nameMap.has(nome.toLowerCase())) continue;
 
         items.push({
           gclick_id: gclickId,
@@ -182,8 +183,8 @@ Deno.serve(async (req) => {
           inscricao: gc.inscricao || "",
           segmento: gc.ramo || gc.segmento || "",
           status: gc.status,
-          match_type: matchId ? "update" : "new",
-          match_id: matchId || null,
+          match_type: "new",
+          match_id: null,
           data_inicio: gc.dataInicio || "",
           tributacao: extractTaxation(gc.grupos),
           contatos: [],
