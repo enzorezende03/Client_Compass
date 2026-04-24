@@ -158,6 +158,10 @@ export type Database = {
       clients: {
         Row: {
           action_plan: string | null
+          archived: boolean
+          archived_at: string | null
+          archived_by: string
+          archived_reason: string
           attention_points: string
           behavioral_profile: string
           complexity: string
@@ -186,6 +190,10 @@ export type Database = {
         }
         Insert: {
           action_plan?: string | null
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string
+          archived_reason?: string
           attention_points?: string
           behavioral_profile?: string
           complexity?: string
@@ -214,6 +222,10 @@ export type Database = {
         }
         Update: {
           action_plan?: string | null
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string
+          archived_reason?: string
           attention_points?: string
           behavioral_profile?: string
           complexity?: string
