@@ -317,7 +317,14 @@ export default function GClickSync() {
     setIgnoredDialogOpen(true);
     loadIgnored();
   };
+
+  return (
+    <AppLayout>
+       <div className="container mx-auto px-6 py-6">
          <div className="mb-6">
+           <h1 className="text-2xl font-bold text-foreground">Sincronização G-Click</h1>
+           <p className="text-sm text-muted-foreground">Visualize e aprove os dados antes de importar</p>
+         </div>
            <h1 className="text-2xl font-bold text-foreground">Sincronização G-Click</h1>
            <p className="text-sm text-muted-foreground">Visualize e aprove os dados antes de importar</p>
          </div>
