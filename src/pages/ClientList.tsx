@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
-import { Client, STATUS_LABELS, COMPLEXITY_LABELS, COMPLEXITY_EMOJIS, HEALTH_LABELS, PROFILE_LABELS, PROFILE_ICONS, ClientStatus, ComplexityLevel, HealthScore } from '@/types/client';
+import { Client, STATUS_LABELS, COMPLEXITY_LABELS, COMPLEXITY_EMOJIS, HEALTH_LABELS, PROFILE_LABELS, PROFILE_ICONS, FINANCIAL_LABELS, FINANCIAL_EMOJIS, ClientStatus, ComplexityLevel, HealthScore, FinancialStatus, ClientProfile } from '@/types/client';
 import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -62,10 +62,11 @@ export default function ClientList() {
   const [clients, setClients] = useState<ClientWithArchive[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [financialFilter, setFinancialFilter] = useState<string>('all');
   const [complexityFilter, setComplexityFilter] = useState<string>('all');
   const [healthFilter, setHealthFilter] = useState<string>('all');
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
+  const [profileFilter, setProfileFilter] = useState<string>('all');
   const [showArchived, setShowArchived] = useState(false);
 
   // Archive dialog state
@@ -91,11 +92,12 @@ export default function ClientList() {
     const matchSearch = search === '' ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.document.includes(search);
-    const matchStatus = statusFilter === 'all' || c.status === statusFilter;
+    const matchFinancial = financialFilter === 'all' || c.financialStatus === financialFilter;
     const matchComplexity = complexityFilter === 'all' || c.complexity === complexityFilter;
     const matchHealth = healthFilter === 'all' || c.healthScore === healthFilter;
     const matchResp = responsibleFilter === 'all' || c.csResponsible === responsibleFilter;
-    return matchSearch && matchStatus && matchComplexity && matchHealth && matchResp;
+    const matchProfile = profileFilter === 'all' || c.profile === profileFilter;
+    return matchSearch && matchFinancial && matchComplexity && matchHealth && matchResp && matchProfile;
   });
 
   const activeClients = clients.filter(c => !c.archived);
@@ -233,11 +235,13 @@ export default function ClientList() {
           </Button>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={financialFilter} onValueChange={setFinancialFilter}>
               <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos Status</SelectItem>
-                {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                {Object.entries(FINANCIAL_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{FINANCIAL_EMOJIS[k as FinancialStatus]} {v}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={complexityFilter} onValueChange={setComplexityFilter}>
@@ -259,6 +263,15 @@ export default function ClientList() {
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 {responsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={profileFilter} onValueChange={setProfileFilter}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Tipo de cliente" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Tipos</SelectItem>
+                {Object.entries(PROFILE_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{PROFILE_ICONS[k as ClientProfile]} {v}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
