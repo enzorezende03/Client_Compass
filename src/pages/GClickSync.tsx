@@ -339,6 +339,14 @@ export default function GClickSync() {
              <div className="flex items-center gap-2">
                <Button
                  variant="outline"
+                 onClick={openIgnoredDialog}
+                 className="gap-2"
+                 title="Ver clientes desconsiderados"
+               >
+                 <EyeOff className="h-4 w-4" /> Desconsiderados
+               </Button>
+               <Button
+                 variant="outline"
                  onClick={exportGClickReport}
                  disabled={loading || (tab === 'clients' ? sortedClients.length === 0 : filteredTasks.length === 0)}
                  className="gap-2"
