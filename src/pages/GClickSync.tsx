@@ -269,9 +269,54 @@ export default function GClickSync() {
     toast({ title: 'Relatório baixado!', description: `${rows.length} registro(s) exportado(s) para Excel.` });
   };
 
-  return (
-    <AppLayout>
-       <div className="container mx-auto px-6 py-6">
+  const loadIgnored = async () => {
+    setLoadingIgnored(true);
+    try {
+      const data = await callGclick('list-ignored');
+      if (!data.success) throw new Error(data.error);
+      setIgnoredList(data.items || []);
+    } catch (err: any) {
+      toast({ title: 'Erro ao carregar ignorados', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoadingIgnored(false);
+    }
+  };
+
+  const handleIgnoreSelected = async () => {
+    const items = previewClients
+      .filter(c => selectedClients.has(c.gclick_id))
+      .map(c => ({ gclick_id: c.gclick_id, nome: c.nome, inscricao: c.inscricao }));
+    if (items.length === 0) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const data = await callGclick('ignore-clients', { items, ignored_by: user?.email || '' });
+      if (!data.success) throw new Error(data.error);
+      toast({ title: 'Clientes desconsiderados', description: `${data.ignored} cliente(s) não aparecerão mais nas próximas sincronizações.` });
+      // Remove from current preview
+      setPreviewClients(previewClients.filter(c => !selectedClients.has(c.gclick_id)));
+      setSelectedClients(new Set());
+    } catch (err: any) {
+      toast({ title: 'Erro ao desconsiderar', description: err.message, variant: 'destructive' });
+    } finally {
+      setConfirmIgnoreOpen(false);
+    }
+  };
+
+  const handleRestoreIgnored = async (gclickId: string) => {
+    try {
+      const data = await callGclick('restore-ignored', { gclick_ids: [gclickId] });
+      if (!data.success) throw new Error(data.error);
+      toast({ title: 'Cliente restaurado', description: 'Voltará a aparecer na próxima sincronização.' });
+      setIgnoredList(prev => prev.filter(i => i.gclick_id !== gclickId));
+    } catch (err: any) {
+      toast({ title: 'Erro ao restaurar', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const openIgnoredDialog = () => {
+    setIgnoredDialogOpen(true);
+    loadIgnored();
+  };
          <div className="mb-6">
            <h1 className="text-2xl font-bold text-foreground">Sincronização G-Click</h1>
            <p className="text-sm text-muted-foreground">Visualize e aprove os dados antes de importar</p>
