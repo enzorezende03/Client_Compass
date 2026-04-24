@@ -101,9 +101,9 @@ export default function ClientList() {
   const activeClients = clients.filter(c => !c.archived);
   const stats = {
     total: activeClients.length,
-    atRisk: activeClients.filter(c => c.status === 'at_risk' || c.status === 'recovery').length,
-    critical: activeClients.filter(c => c.healthScore === 'critical').length,
-    healthy: activeClients.filter(c => c.healthScore === 'healthy').length,
+    atRisk: activeClients.filter(c => c.status === 'at_risk' || c.status === 'recovery' || c.healthScore === 'critical').length,
+    suspended: activeClients.filter(c => c.financialStatus === 'suspended').length,
+    archived: archivedCount,
   };
 
   const exportClientsReport = () => {
@@ -199,10 +199,10 @@ export default function ClientList() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard icon={Building2} label="Total de Clientes" value={stats.total} />
-            <StatCard icon={AlertTriangle} label="Em Risco / Recuperação" value={stats.atRisk} variant="warning" />
-            <StatCard icon={TrendingUp} label="Health Crítico" value={stats.critical} variant="danger" />
-            <StatCard icon={Users} label="Saudáveis" value={stats.healthy} variant="success" />
+            <StatCard icon={Building2} label="Clientes Ativos" value={stats.total} />
+            <StatCard icon={AlertTriangle} label="Em Risco / Crítico" value={stats.atRisk} variant="danger" />
+            <StatCard icon={TrendingUp} label="Financeiro Suspenso" value={stats.suspended} variant="warning" />
+            <StatCard icon={Archive} label="Arquivados" value={stats.archived} />
           </div>
         </div>
       </header>
