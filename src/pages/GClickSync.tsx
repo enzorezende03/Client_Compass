@@ -106,6 +106,12 @@ export default function GClickSync() {
   const [selectedTasks, setSelectedTasks] = useSessionSet('gclick_selected_tasks');
   const [taskSearch, setTaskSearch] = useState('');
 
+  // Ignored clients management
+  const [ignoredList, setIgnoredList] = useState<Array<{ id: string; gclick_id: string; nome: string; inscricao: string; ignored_by: string; created_at: string }>>([]);
+  const [ignoredDialogOpen, setIgnoredDialogOpen] = useState(false);
+  const [confirmIgnoreOpen, setConfirmIgnoreOpen] = useState(false);
+  const [loadingIgnored, setLoadingIgnored] = useState(false);
+
   const fetchPreview = async (type: SyncTab) => {
     setLoading(true);
     try {
