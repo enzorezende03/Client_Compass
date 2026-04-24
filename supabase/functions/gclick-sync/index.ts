@@ -130,6 +130,11 @@ async function getExistingClientMaps(supabase: any) {
   return { docMap, nameMap, gclickIdSet };
 }
 
+async function getIgnoredGclickIds(supabase: any): Promise<Set<string>> {
+  const { data } = await supabase.from("gclick_ignored_clients").select("gclick_id");
+  return new Set((data || []).map((r: any) => r.gclick_id));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
