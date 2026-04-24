@@ -171,10 +171,11 @@ Deno.serve(async (req) => {
         const nome = (gc.nome || "").trim();
         const gclickId = String(gc.id);
 
+        // Skip if already linked by gclick_id
         if (gclickIdSet.has(gclickId)) continue;
-
-        let matchId = inscricao ? docMap.get(inscricao) : undefined;
-        if (!matchId && nome) matchId = nameMap.get(nome.toLowerCase());
+        // Skip if already exists in CSHUB by document or name (only show truly new clients)
+        if (inscricao && docMap.has(inscricao)) continue;
+        if (nome && nameMap.has(nome.toLowerCase())) continue;
 
         items.push({
           gclick_id: gclickId,
@@ -182,8 +183,8 @@ Deno.serve(async (req) => {
           inscricao: gc.inscricao || "",
           segmento: gc.ramo || gc.segmento || "",
           status: gc.status,
-          match_type: matchId ? "update" : "new",
-          match_id: matchId || null,
+          match_type: "new",
+          match_id: null,
           data_inicio: gc.dataInicio || "",
           tributacao: extractTaxation(gc.grupos),
           contatos: [],
@@ -298,7 +299,7 @@ Deno.serve(async (req) => {
           const data = await gclickGet(token, ep);
           tasks = data.content || data || [];
           if (tasks.length > 0) break;
-        } catch (e) {
+        } catch (e: any) {
           console.log(`Tasks endpoint ${ep}: ${e.message}`);
         }
       }
@@ -361,7 +362,7 @@ Deno.serve(async (req) => {
           const data = await gclickGet(token, ep);
           tasks = data.content || data || [];
           if (tasks.length > 0) break;
-        } catch (e) { console.log(`Tasks endpoint ${ep}: ${e.message}`); }
+        } catch (e: any) { console.log(`Tasks endpoint ${ep}: ${e.message}`); }
       }
 
       const { data: linkedClients } = await supabase
@@ -437,7 +438,7 @@ Deno.serve(async (req) => {
               synced++;
             }
           }
-        } catch (e) {
+        } catch (e: any) {
           console.log(`Carteira error for gclick_id ${client.gclick_id}: ${e.message}`);
         }
       }
@@ -449,7 +450,7 @@ Deno.serve(async (req) => {
     }
 
     return json({ error: "Ação inválida" }, 400);
-  } catch (err) {
+  } catch (err: any) {
     console.error("gclick-sync error:", err);
     return json({ success: false, error: err.message }, 500);
   }
@@ -517,7 +518,7 @@ async function importContactsFromClientData(supabase: any, clientId: string, gc:
       if (error) console.error("Contact insert error:", error.message);
     }
     console.log(`Imported ${toInsert.length} contacts for client ${clientId}`);
-  } catch (e) {
+  } catch (e: any) {
     console.log(`Import contacts error for client ${clientId}: ${e.message}`);
   }
 }
