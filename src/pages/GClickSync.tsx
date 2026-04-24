@@ -318,11 +318,14 @@ export default function GClickSync() {
                     </SelectContent>
                   </Select>
                   <Select value={taxationFilter} onValueChange={setTaxationFilter}>
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-[220px]">
                       <SelectValue placeholder="Tributação" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas tributações</SelectItem>
+                      {hasUntaxed && (
+                        <SelectItem value="__none__">⚠️ Sem tributação</SelectItem>
+                      )}
                       {taxationOptions.map(t => (
                         <SelectItem key={t} value={t}>{t}</SelectItem>
                       ))}
