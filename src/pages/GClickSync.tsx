@@ -406,6 +406,15 @@ export default function GClickSync() {
                         ? <><Square className="h-4 w-4 mr-1" /> Desmarcar todos</>
                         : <><CheckSquare className="h-4 w-4 mr-1" /> Selecionar todos</>}
                     </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setConfirmIgnoreOpen(true)}
+                      disabled={selectedClients.size === 0}
+                      className="gap-2 text-destructive hover:text-destructive"
+                    >
+                      <EyeOff className="h-4 w-4" />
+                      Desconsiderar ({selectedClients.size})
+                    </Button>
                     <Button onClick={() => handleImport('clients')} disabled={importing || selectedClients.size === 0} className="gap-2">
                       <Check className="h-4 w-4" />
                       {importing ? 'Importando...' : `Importar ${selectedClients.size} clientes`}
