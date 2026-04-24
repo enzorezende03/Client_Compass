@@ -582,6 +582,86 @@ export default function GClickSync() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Confirm Ignore Dialog */}
+      <AlertDialog open={confirmIgnoreOpen} onOpenChange={setConfirmIgnoreOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desconsiderar clientes selecionados?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os {selectedClients.size} cliente(s) selecionado(s) não aparecerão mais nas próximas sincronizações com o G-Click.
+              Você poderá restaurá-los a qualquer momento clicando em "Desconsiderados".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleIgnoreSelected} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sim, desconsiderar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Ignored List Dialog */}
+      <Dialog open={ignoredDialogOpen} onOpenChange={setIgnoredDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <EyeOff className="h-5 w-5" /> Clientes desconsiderados
+            </DialogTitle>
+            <DialogDescription>
+              Estes clientes não aparecem nas sincronizações com o G-Click. Restaure para voltarem a aparecer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto flex-1 -mx-6 px-6">
+            {loadingIgnored ? (
+              <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+            ) : ignoredList.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <EyeOff className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                Nenhum cliente desconsiderado.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>CNPJ/CPF</TableHead>
+                    <TableHead>Desconsiderado por</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="w-24"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ignoredList.map(item => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.nome || '—'}</TableCell>
+                      <TableCell className="font-mono text-sm">{item.inscricao || '—'}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{item.ignored_by || '—'}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRestoreIgnored(item.gclick_id)}
+                          className="gap-1"
+                        >
+                          <RotateCcw className="h-3 w-3" /> Restaurar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIgnoredDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
