@@ -325,9 +325,6 @@ export default function GClickSync() {
            <h1 className="text-2xl font-bold text-foreground">Sincronização G-Click</h1>
            <p className="text-sm text-muted-foreground">Visualize e aprove os dados antes de importar</p>
          </div>
-           <h1 className="text-2xl font-bold text-foreground">Sincronização G-Click</h1>
-           <p className="text-sm text-muted-foreground">Visualize e aprove os dados antes de importar</p>
-         </div>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as SyncTab)}>
           <div className="flex items-center justify-between mb-4">
