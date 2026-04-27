@@ -192,8 +192,11 @@ export default function InternalUsersRegistration() {
               <Input value={form.name} onChange={e => updateField('name', e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} />
+              <Label>Email {!selectedId && '*'}</Label>
+              <Input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} disabled={!!selectedId} />
+              {!selectedId && (
+                <p className="text-xs text-muted-foreground">Uma senha temporária será gerada automaticamente para o primeiro acesso.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Perfil de Acesso</Label>
@@ -211,8 +214,41 @@ export default function InternalUsersRegistration() {
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{selectedId ? 'Salvar' : 'Criar'}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'Salvando...' : selectedId ? 'Salvar' : 'Criar e gerar senha'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={credentialsDialog.open} onOpenChange={(o) => setCredentialsDialog(s => ({ ...s, open: o }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" /> Credenciais de acesso</DialogTitle>
+            <DialogDescription>
+              Compartilhe estes dados com o colaborador. Esta senha será exibida apenas <strong>uma vez</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <div className="rounded-md border bg-muted/30 px-3 py-2 font-mono text-sm">{credentialsDialog.email}</div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Senha temporária</Label>
+              <div className="rounded-md border bg-muted/30 px-3 py-2 font-mono text-sm tracking-wider">{credentialsDialog.password}</div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Recomende ao colaborador trocar a senha no primeiro acesso, em "Esqueci minha senha".
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={copyCredentials} className="gap-2">
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? 'Copiado!' : 'Copiar credenciais'}
+            </Button>
+            <Button onClick={() => setCredentialsDialog(s => ({ ...s, open: false }))}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
