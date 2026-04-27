@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
 import {
-  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, ChevronDown, ChevronUp, FileText, Target
+  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, ChevronDown, ChevronUp, FileText, Target, Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -177,9 +177,14 @@ export default function ClientDetail() {
                 <ProfileInfoCard label="Tributação" value={client.taxation ? TAXATION_LABELS[client.taxation as TaxationType] || client.taxation : 'Não definida'} />
               </div>
             </div>
-            <Button onClick={() => setInteractionOpen(true)} className="gap-2 shrink-0 shadow-md">
-              <Plus className="h-4 w-4" /> Nova Interação
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" onClick={() => navigate(`/cadastro/clientes/${client.id}/editar`)} className="gap-2 shadow-sm">
+                <Pencil className="h-4 w-4" /> Editar Cadastro
+              </Button>
+              <Button onClick={() => setInteractionOpen(true)} className="gap-2 shadow-md">
+                <Plus className="h-4 w-4" /> Nova Interação
+              </Button>
+            </div>
           </div>
         </div>
       </header>
