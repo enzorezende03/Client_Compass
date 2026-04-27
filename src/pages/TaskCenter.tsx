@@ -211,11 +211,30 @@ export default function TaskCenter() {
               <User className="h-3 w-3" />
               {task.responsible || 'Sem responsável'}
             </span>
-            <span className={`inline-flex items-center gap-1 text-xs ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-              <CalendarClock className="h-3 w-3" />
-              {new Date(task.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
-              {task.scheduled_time && ` às ${task.scheduled_time.slice(0, 5)}`}
-            </span>
+          </div>
+          <div className="flex flex-col gap-0.5 mt-1">
+            {(task as any).internal_due_date && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <CalendarClock className="h-3 w-3" />
+                <span className="font-medium">Interno:</span>
+                {new Date((task as any).internal_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+              </span>
+            )}
+            {(task as any).client_due_date && (
+              <span className={`inline-flex items-center gap-1 text-xs ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                <CalendarClock className="h-3 w-3" />
+                <span className="font-medium">Cliente:</span>
+                {new Date((task as any).client_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                {task.scheduled_time && ` às ${task.scheduled_time.slice(0, 5)}`}
+              </span>
+            )}
+            {!(task as any).internal_due_date && !(task as any).client_due_date && (
+              <span className={`inline-flex items-center gap-1 text-xs ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                <CalendarClock className="h-3 w-3" />
+                {new Date(task.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                {task.scheduled_time && ` às ${task.scheduled_time.slice(0, 5)}`}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1 mt-2 ml-6">
