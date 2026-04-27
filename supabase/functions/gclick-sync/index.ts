@@ -347,7 +347,8 @@ Deno.serve(async (req) => {
 
       let tasks: any[] = [];
       // G-Click /tarefas requires `categoria` (OBRIGACAO, SERVICO, AVULSA...). Try the main ones.
-      const categorias = ["OBRIGACAO", "SERVICO", "AVULSA"];
+      // G-Click TarefaCategoria enum (PascalCase). Tentamos todas para descobrir as válidas.
+      const categorias = ["Obrigacao", "Servico", "Avulsa", "Tarefa", "Processo", "Honorario"];
       const taskEndpoints: string[] = [];
       for (const cat of categorias) {
         taskEndpoints.push(`/tarefas?departamentoId=${deptId}&categoria=${cat}&size=100`);
