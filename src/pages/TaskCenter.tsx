@@ -116,6 +116,8 @@ export default function TaskCenter() {
       description: task.description,
       responsible_id: task.responsible_id || '',
       due_date: task.due_date,
+      internal_due_date: (task as any).internal_due_date || '',
+      client_due_date: (task as any).client_due_date || '',
       scheduled_time: task.scheduled_time || '',
       status: task.status,
       reminder_minutes: (task as any).reminder_minutes?.toString() || '',
