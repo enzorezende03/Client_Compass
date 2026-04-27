@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Copy, Check, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +39,9 @@ export default function InternalUsersRegistration() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<UserForm>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string }>({ open: false, email: '', password: '' });
+  const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
   const fetchUsers = async () => {
@@ -70,17 +73,38 @@ export default function InternalUsersRegistration() {
       toast({ title: 'Erro', description: 'Nome é obrigatório.', variant: 'destructive' });
       return;
     }
+    setSaving(true);
     if (selectedId) {
       const { error } = await supabase.from('internal_users' as any).update(form as any).eq('id', selectedId);
+      setSaving(false);
       if (error) { toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' }); return; }
       toast({ title: 'Usuário atualizado!' });
+      setDialogOpen(false);
+      fetchUsers();
     } else {
-      const { error } = await supabase.from('internal_users' as any).insert(form as any);
-      if (error) { toast({ title: 'Erro ao criar', description: error.message, variant: 'destructive' }); return; }
-      toast({ title: 'Usuário criado!' });
+      if (!form.email.trim()) {
+        setSaving(false);
+        toast({ title: 'Erro', description: 'Email é obrigatório para criar a conta de acesso.', variant: 'destructive' });
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke('create-internal-user', { body: form });
+      setSaving(false);
+      if (error || data?.error) {
+        toast({ title: 'Erro ao criar', description: data?.error || error?.message || 'Falha ao criar usuário', variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Usuário criado!', description: 'Conta de acesso gerada com sucesso.' });
+      setDialogOpen(false);
+      setCredentialsDialog({ open: true, email: data.email, password: data.tempPassword });
+      fetchUsers();
     }
-    setDialogOpen(false);
-    fetchUsers();
+  };
+
+  const copyCredentials = async () => {
+    const text = `Email: ${credentialsDialog.email}\nSenha temporária: ${credentialsDialog.password}`;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDelete = async () => {
