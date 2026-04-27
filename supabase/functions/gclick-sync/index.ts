@@ -408,7 +408,7 @@ Deno.serve(async (req) => {
       if (selectedIds.length === 0) return json({ success: false, error: "Nenhum ID selecionado" }, 400);
 
       const token = await getAccessToken();
-      const deptId = parseInt(url.searchParams.get("departamentoId") || "16");
+      const deptId = parseInt(url.searchParams.get("departamentoId") || "25");
 
       let tasks: any[] = [];
       const taskEndpoints = [
