@@ -342,7 +342,8 @@ Deno.serve(async (req) => {
     // ── PREVIEW TASKS ──
     if (action === "preview-tasks") {
       const token = await getAccessToken();
-      const deptId = parseInt(url.searchParams.get("departamentoId") || "16");
+      // Default: department 25 = "6. Sucesso do Cliente" (Atendimento ao Cliente / CS)
+      const deptId = parseInt(url.searchParams.get("departamentoId") || "25");
 
       let tasks: any[] = [];
       const taskEndpoints = [
@@ -358,6 +359,8 @@ Deno.serve(async (req) => {
           console.log(`Tasks endpoint ${ep}: ${e.message}`);
         }
       }
+
+      console.log(`[preview-tasks] dept=${deptId} total tasks from G-Click: ${tasks.length}`);
 
       const { data: linkedClients } = await supabase
         .from("clients")
