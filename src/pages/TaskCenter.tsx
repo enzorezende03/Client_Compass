@@ -347,13 +347,27 @@ export default function TaskCenter() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Data do Retorno</Label>
-                <Input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
+                <Label>Prazo Interno (Time CS)</Label>
+                <Input
+                  type="date"
+                  value={form.internal_due_date}
+                  onChange={e => setForm(f => ({ ...f, internal_due_date: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Controle interno do time</p>
               </div>
               <div>
-                <Label>Horário</Label>
-                <Input type="time" value={form.scheduled_time} onChange={e => setForm(f => ({ ...f, scheduled_time: e.target.value }))} />
+                <Label>Prazo com o Cliente</Label>
+                <Input
+                  type="date"
+                  value={form.client_due_date}
+                  onChange={e => setForm(f => ({ ...f, client_due_date: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Acordado com o cliente</p>
               </div>
+            </div>
+            <div>
+              <Label>Horário</Label>
+              <Input type="time" value={form.scheduled_time} onChange={e => setForm(f => ({ ...f, scheduled_time: e.target.value }))} />
             </div>
             <div>
               <Label>🔔 Lembrete</Label>
