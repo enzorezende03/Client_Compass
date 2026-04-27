@@ -47,6 +47,8 @@ const emptyForm = {
   description: '',
   responsible_id: '',
   due_date: new Date().toISOString().split('T')[0],
+  internal_due_date: '',
+  client_due_date: '',
   scheduled_time: '',
   status: 'pending',
   reminder_minutes: '60',
@@ -114,6 +116,8 @@ export default function TaskCenter() {
       description: task.description,
       responsible_id: task.responsible_id || '',
       due_date: task.due_date,
+      internal_due_date: (task as any).internal_due_date || '',
+      client_due_date: (task as any).client_due_date || '',
       scheduled_time: task.scheduled_time || '',
       status: task.status,
       reminder_minutes: (task as any).reminder_minutes?.toString() || '',
@@ -134,7 +138,9 @@ export default function TaskCenter() {
       description: form.description,
       responsible: selectedUser?.name || '',
       responsible_id: form.responsible_id || null,
-      due_date: form.due_date,
+      due_date: form.client_due_date || form.internal_due_date || form.due_date,
+      internal_due_date: form.internal_due_date || null,
+      client_due_date: form.client_due_date || null,
       scheduled_time: form.scheduled_time || null,
       status: form.status,
       reminder_minutes: form.reminder_minutes && form.reminder_minutes !== 'none' ? parseInt(form.reminder_minutes) : null,
@@ -205,11 +211,30 @@ export default function TaskCenter() {
               <User className="h-3 w-3" />
               {task.responsible || 'Sem responsável'}
             </span>
-            <span className={`inline-flex items-center gap-1 text-xs ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-              <CalendarClock className="h-3 w-3" />
-              {new Date(task.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
-              {task.scheduled_time && ` às ${task.scheduled_time.slice(0, 5)}`}
-            </span>
+          </div>
+          <div className="flex flex-col gap-0.5 mt-1">
+            {(task as any).internal_due_date && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <CalendarClock className="h-3 w-3" />
+                <span className="font-medium">Interno:</span>
+                {new Date((task as any).internal_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+              </span>
+            )}
+            {(task as any).client_due_date && (
+              <span className={`inline-flex items-center gap-1 text-xs ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                <CalendarClock className="h-3 w-3" />
+                <span className="font-medium">Cliente:</span>
+                {new Date((task as any).client_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                {task.scheduled_time && ` às ${task.scheduled_time.slice(0, 5)}`}
+              </span>
+            )}
+            {!(task as any).internal_due_date && !(task as any).client_due_date && (
+              <span className={`inline-flex items-center gap-1 text-xs ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                <CalendarClock className="h-3 w-3" />
+                {new Date(task.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                {task.scheduled_time && ` às ${task.scheduled_time.slice(0, 5)}`}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1 mt-2 ml-6">
@@ -341,13 +366,27 @@ export default function TaskCenter() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Data do Retorno</Label>
-                <Input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
+                <Label>Prazo Interno (Time CS)</Label>
+                <Input
+                  type="date"
+                  value={form.internal_due_date}
+                  onChange={e => setForm(f => ({ ...f, internal_due_date: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Controle interno do time</p>
               </div>
               <div>
-                <Label>Horário</Label>
-                <Input type="time" value={form.scheduled_time} onChange={e => setForm(f => ({ ...f, scheduled_time: e.target.value }))} />
+                <Label>Prazo com o Cliente</Label>
+                <Input
+                  type="date"
+                  value={form.client_due_date}
+                  onChange={e => setForm(f => ({ ...f, client_due_date: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Acordado com o cliente</p>
               </div>
+            </div>
+            <div>
+              <Label>Horário</Label>
+              <Input type="time" value={form.scheduled_time} onChange={e => setForm(f => ({ ...f, scheduled_time: e.target.value }))} />
             </div>
             <div>
               <Label>🔔 Lembrete</Label>
