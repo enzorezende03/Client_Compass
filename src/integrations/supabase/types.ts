@@ -438,11 +438,13 @@ export type Database = {
       }
       tasks: {
         Row: {
+          client_due_date: string | null
           client_id: string
           created_at: string
           description: string
           due_date: string
           id: string
+          internal_due_date: string | null
           reminder_minutes: number | null
           responsible: string
           responsible_id: string | null
@@ -451,11 +453,13 @@ export type Database = {
           title: string
         }
         Insert: {
+          client_due_date?: string | null
           client_id: string
           created_at?: string
           description?: string
           due_date?: string
           id?: string
+          internal_due_date?: string | null
           reminder_minutes?: number | null
           responsible?: string
           responsible_id?: string | null
@@ -464,11 +468,13 @@ export type Database = {
           title: string
         }
         Update: {
+          client_due_date?: string | null
           client_id?: string
           created_at?: string
           description?: string
           due_date?: string
           id?: string
+          internal_due_date?: string | null
           reminder_minutes?: number | null
           responsible?: string
           responsible_id?: string | null
