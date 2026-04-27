@@ -346,15 +346,22 @@ Deno.serve(async (req) => {
       const deptId = parseInt(url.searchParams.get("departamentoId") || "25");
 
       let tasks: any[] = [];
-      const taskEndpoints = [
-        `/tarefas?departamentoId=${deptId}&size=100`,
-        `/departamentos/${deptId}/tarefas?size=100`,
-      ];
+      // G-Click /tarefas requires `categoria` (OBRIGACAO, SERVICO, AVULSA...). Try the main ones.
+      const categorias = ["OBRIGACAO", "SERVICO", "AVULSA"];
+      const taskEndpoints: string[] = [];
+      for (const cat of categorias) {
+        taskEndpoints.push(`/tarefas?departamentoId=${deptId}&categoria=${cat}&size=100`);
+      }
+      taskEndpoints.push(`/departamentos/${deptId}/tarefas?size=100`);
+
       for (const ep of taskEndpoints) {
         try {
           const data = await gclickGet(token, ep);
-          tasks = data.content || data || [];
-          if (tasks.length > 0) break;
+          const list = data.content || data || [];
+          console.log(`[preview-tasks] ${ep} -> ${Array.isArray(list) ? list.length : 0} tarefas`);
+          if (Array.isArray(list) && list.length > 0) {
+            tasks.push(...list);
+          }
         } catch (e: any) {
           console.log(`Tasks endpoint ${ep}: ${e.message}`);
         }
