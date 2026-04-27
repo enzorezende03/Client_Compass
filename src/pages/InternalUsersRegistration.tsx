@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Copy, Check, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +39,9 @@ export default function InternalUsersRegistration() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<UserForm>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string }>({ open: false, email: '', password: '' });
+  const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
   const fetchUsers = async () => {
@@ -70,17 +73,38 @@ export default function InternalUsersRegistration() {
       toast({ title: 'Erro', description: 'Nome é obrigatório.', variant: 'destructive' });
       return;
     }
+    setSaving(true);
     if (selectedId) {
       const { error } = await supabase.from('internal_users' as any).update(form as any).eq('id', selectedId);
+      setSaving(false);
       if (error) { toast({ title: 'Erro ao atualizar', description: error.message, variant: 'destructive' }); return; }
       toast({ title: 'Usuário atualizado!' });
+      setDialogOpen(false);
+      fetchUsers();
     } else {
-      const { error } = await supabase.from('internal_users' as any).insert(form as any);
-      if (error) { toast({ title: 'Erro ao criar', description: error.message, variant: 'destructive' }); return; }
-      toast({ title: 'Usuário criado!' });
+      if (!form.email.trim()) {
+        setSaving(false);
+        toast({ title: 'Erro', description: 'Email é obrigatório para criar a conta de acesso.', variant: 'destructive' });
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke('create-internal-user', { body: form });
+      setSaving(false);
+      if (error || data?.error) {
+        toast({ title: 'Erro ao criar', description: data?.error || error?.message || 'Falha ao criar usuário', variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Usuário criado!', description: 'Conta de acesso gerada com sucesso.' });
+      setDialogOpen(false);
+      setCredentialsDialog({ open: true, email: data.email, password: data.tempPassword });
+      fetchUsers();
     }
-    setDialogOpen(false);
-    fetchUsers();
+  };
+
+  const copyCredentials = async () => {
+    const text = `Email: ${credentialsDialog.email}\nSenha temporária: ${credentialsDialog.password}`;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDelete = async () => {
@@ -168,8 +192,11 @@ export default function InternalUsersRegistration() {
               <Input value={form.name} onChange={e => updateField('name', e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} />
+              <Label>Email {!selectedId && '*'}</Label>
+              <Input type="email" value={form.email} onChange={e => updateField('email', e.target.value)} disabled={!!selectedId} />
+              {!selectedId && (
+                <p className="text-xs text-muted-foreground">Uma senha temporária será gerada automaticamente para o primeiro acesso.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Perfil de Acesso</Label>
@@ -187,8 +214,41 @@ export default function InternalUsersRegistration() {
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{selectedId ? 'Salvar' : 'Criar'}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'Salvando...' : selectedId ? 'Salvar' : 'Criar e gerar senha'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={credentialsDialog.open} onOpenChange={(o) => setCredentialsDialog(s => ({ ...s, open: o }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" /> Credenciais de acesso</DialogTitle>
+            <DialogDescription>
+              Compartilhe estes dados com o colaborador. Esta senha será exibida apenas <strong>uma vez</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <div className="rounded-md border bg-muted/30 px-3 py-2 font-mono text-sm">{credentialsDialog.email}</div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Senha temporária</Label>
+              <div className="rounded-md border bg-muted/30 px-3 py-2 font-mono text-sm tracking-wider">{credentialsDialog.password}</div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Recomende ao colaborador trocar a senha no primeiro acesso, em "Esqueci minha senha".
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={copyCredentials} className="gap-2">
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? 'Copiado!' : 'Copiar credenciais'}
+            </Button>
+            <Button onClick={() => setCredentialsDialog(s => ({ ...s, open: false }))}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

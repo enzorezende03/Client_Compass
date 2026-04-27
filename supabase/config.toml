@@ -1,1 +1,4 @@
 project_id = "qwmycxikbqyldhsdadwp"
+
+[functions.create-internal-user]
+verify_jwt = true
