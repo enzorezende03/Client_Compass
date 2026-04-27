@@ -342,22 +342,33 @@ Deno.serve(async (req) => {
     // ── PREVIEW TASKS ──
     if (action === "preview-tasks") {
       const token = await getAccessToken();
-      const deptId = parseInt(url.searchParams.get("departamentoId") || "16");
+      // Default: department 25 = "6. Sucesso do Cliente" (Atendimento ao Cliente / CS)
+      const deptId = parseInt(url.searchParams.get("departamentoId") || "25");
 
       let tasks: any[] = [];
-      const taskEndpoints = [
-        `/tarefas?departamentoId=${deptId}&size=100`,
-        `/departamentos/${deptId}/tarefas?size=100`,
-      ];
+      // G-Click /tarefas requires `categoria` (OBRIGACAO, SERVICO, AVULSA...). Try the main ones.
+      // G-Click TarefaCategoria enum (PascalCase). Tentamos todas para descobrir as válidas.
+      const categorias = ["Obrigacao", "Servico", "Avulsa", "Tarefa", "Processo", "Honorario"];
+      const taskEndpoints: string[] = [];
+      for (const cat of categorias) {
+        taskEndpoints.push(`/tarefas?departamentoId=${deptId}&categoria=${cat}&size=100`);
+      }
+      taskEndpoints.push(`/departamentos/${deptId}/tarefas?size=100`);
+
       for (const ep of taskEndpoints) {
         try {
           const data = await gclickGet(token, ep);
-          tasks = data.content || data || [];
-          if (tasks.length > 0) break;
+          const list = data.content || data || [];
+          console.log(`[preview-tasks] ${ep} -> ${Array.isArray(list) ? list.length : 0} tarefas`);
+          if (Array.isArray(list) && list.length > 0) {
+            tasks.push(...list);
+          }
         } catch (e: any) {
           console.log(`Tasks endpoint ${ep}: ${e.message}`);
         }
       }
+
+      console.log(`[preview-tasks] dept=${deptId} total tasks from G-Click: ${tasks.length}`);
 
       const { data: linkedClients } = await supabase
         .from("clients")
@@ -405,18 +416,20 @@ Deno.serve(async (req) => {
       if (selectedIds.length === 0) return json({ success: false, error: "Nenhum ID selecionado" }, 400);
 
       const token = await getAccessToken();
-      const deptId = parseInt(url.searchParams.get("departamentoId") || "16");
+      const deptId = parseInt(url.searchParams.get("departamentoId") || "25");
 
       let tasks: any[] = [];
-      const taskEndpoints = [
-        `/tarefas?departamentoId=${deptId}&size=100`,
-        `/departamentos/${deptId}/tarefas?size=100`,
-      ];
+      const categorias = ["OBRIGACAO", "SERVICO", "AVULSA"];
+      const taskEndpoints: string[] = [];
+      for (const cat of categorias) {
+        taskEndpoints.push(`/tarefas?departamentoId=${deptId}&categoria=${cat}&size=100`);
+      }
+      taskEndpoints.push(`/departamentos/${deptId}/tarefas?size=100`);
       for (const ep of taskEndpoints) {
         try {
           const data = await gclickGet(token, ep);
-          tasks = data.content || data || [];
-          if (tasks.length > 0) break;
+          const list = data.content || data || [];
+          if (Array.isArray(list) && list.length > 0) tasks.push(...list);
         } catch (e: any) { console.log(`Tasks endpoint ${ep}: ${e.message}`); }
       }
 
