@@ -47,6 +47,8 @@ const emptyForm = {
   description: '',
   responsible_id: '',
   due_date: new Date().toISOString().split('T')[0],
+  internal_due_date: '',
+  client_due_date: '',
   scheduled_time: '',
   status: 'pending',
   reminder_minutes: '60',
