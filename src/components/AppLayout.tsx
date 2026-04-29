@@ -1,5 +1,6 @@
 import { NavLink } from '@/components/NavLink';
 import { NotificationBell } from '@/components/NotificationBell';
+import { UrgentTaskAlert } from '@/components/UrgentTaskAlert';
 import { Users, Building2, LayoutDashboard, CalendarClock, LogOut, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -69,6 +70,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       {children}
+      <UrgentTaskAlert />
     </div>
   );
 }
