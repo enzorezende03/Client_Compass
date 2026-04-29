@@ -201,10 +201,52 @@ export default function ClientList() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard icon={Building2} label="Clientes Ativos" value={stats.total} />
-            <StatCard icon={AlertTriangle} label="Em Risco / Crítico" value={stats.atRisk} variant="danger" />
-            <StatCard icon={TrendingUp} label="Financeiro Suspenso" value={stats.suspended} variant="warning" />
-            <StatCard icon={Archive} label="Arquivados" value={stats.archived} />
+            <StatCard
+              icon={Building2}
+              label="Clientes Ativos"
+              value={stats.total}
+              onClick={() => {
+                setShowArchived(false);
+                setSearch('');
+                setFinancialFilter('all');
+                setComplexityFilter('all');
+                setHealthFilter('all');
+                setResponsibleFilter('all');
+                setProfileFilter('all');
+              }}
+              active={!showArchived && financialFilter === 'all' && healthFilter === 'all'}
+            />
+            <StatCard
+              icon={AlertTriangle}
+              label="Em Risco / Crítico"
+              value={stats.atRisk}
+              variant="danger"
+              onClick={() => {
+                setShowArchived(false);
+                setHealthFilter('critical');
+                setFinancialFilter('all');
+              }}
+              active={!showArchived && healthFilter === 'critical'}
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Financeiro Suspenso"
+              value={stats.suspended}
+              variant="warning"
+              onClick={() => {
+                setShowArchived(false);
+                setFinancialFilter('suspended');
+                setHealthFilter('all');
+              }}
+              active={!showArchived && financialFilter === 'suspended'}
+            />
+            <StatCard
+              icon={Archive}
+              label="Arquivados"
+              value={stats.archived}
+              onClick={() => setShowArchived(true)}
+              active={showArchived}
+            />
           </div>
         </div>
       </header>
