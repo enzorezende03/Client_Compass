@@ -100,7 +100,7 @@ export function NotificationBell() {
                   {!n.read && <span className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />}
                   <div className={`flex-1 ${n.read ? 'ml-4' : ''}`}>
                     <p className="text-sm font-medium text-foreground">{n.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message.replace(/\[deadline:[^\]]+\]\s*/g, '')}</p>
                     <p className="text-[10px] text-muted-foreground mt-1">{formatTime(n.created_at)}</p>
                   </div>
                 </div>

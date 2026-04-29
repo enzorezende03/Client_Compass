@@ -5,6 +5,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Janelas de notificação por proximidade do prazo (em dias)
+// Cada janela gera uma notificação única (deduplicada por task_id + window key)
+const DEADLINE_WINDOWS = [
+  { key: 'overdue', daysFrom: -3650, daysTo: -1, label: 'atrasada', emoji: '🚨', urgent: true },
+  { key: 'today', daysFrom: 0, daysTo: 0, label: 'vence hoje', emoji: '⏰', urgent: true },
+  { key: 'd1', daysFrom: 1, daysTo: 1, label: 'vence amanhã', emoji: '⚠️', urgent: false },
+  { key: 'd2', daysFrom: 2, daysTo: 2, label: 'vence em 2 dias', emoji: '🔔', urgent: false },
+];
+
+function diffInDays(target: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const t = new Date(target + 'T12:00:00');
+  t.setHours(0, 0, 0, 0);
+  return Math.round((t.getTime() - today.getTime()) / 86400000);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -15,126 +32,103 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get current time and 1 hour from now
     const now = new Date();
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-
-    // Format dates for comparison
     const todayStr = now.toISOString().split("T")[0];
 
-    // Fetch pending tasks with a responsible_id, due today, that have a scheduled_time and reminder
-    const { data: tasks, error: tasksError } = await supabase
+    let totalNotified = 0;
+
+    // ===== PARTE 1: Lembretes baseados em horário (scheduled_time + reminder_minutes) =====
+    const { data: scheduledTasks } = await supabase
       .from("tasks")
-      .select("id, title, client_id, responsible_id, responsible, due_date, scheduled_time, status, reminder_minutes")
+      .select("id, title, client_id, responsible_id, due_date, scheduled_time, reminder_minutes")
       .eq("status", "pending")
       .eq("due_date", todayStr)
       .not("scheduled_time", "is", null)
       .not("responsible_id", "is", null)
       .not("reminder_minutes", "is", null);
 
-    if (tasksError) {
-      console.error("Error fetching tasks:", tasksError);
-      return new Response(JSON.stringify({ error: tasksError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (!tasks || tasks.length === 0) {
-      return new Response(JSON.stringify({ message: "No tasks to process", notified: 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    let notifiedCount = 0;
-
-    for (const task of tasks) {
-      // Use task-specific reminder_minutes
+    for (const task of scheduledTasks || []) {
       const reminderMinutes = task.reminder_minutes || 60;
       const taskDateTime = new Date(`${task.due_date}T${task.scheduled_time}`);
-      const diffMs = taskDateTime.getTime() - now.getTime();
-      const diffMinutes = diffMs / 60000;
+      const diffMinutes = (taskDateTime.getTime() - now.getTime()) / 60000;
 
-      // Check if we're within the reminder window (±5 min tolerance)
       if (diffMinutes <= reminderMinutes + 5 && diffMinutes > -5) {
-        // Check if notification already exists for this task (avoid duplicates)
         const { data: existing } = await supabase
           .from("notifications")
           .select("id")
           .eq("task_id", task.id)
-          .eq("type", "reminder");
-
+          .eq("type", "reminder")
+          .like("message", "%agendada para%");
         if (existing && existing.length > 0) continue;
 
-        // Get client name
-        const { data: client } = await supabase
-          .from("clients")
-          .select("name")
-          .eq("id", task.client_id)
-          .single();
-
+        const { data: client } = await supabase.from("clients").select("name").eq("id", task.client_id).single();
         const clientName = client?.name || "Cliente";
         const timeStr = task.scheduled_time?.slice(0, 5) || "";
 
-        // Create in-app notification
         await supabase.from("notifications").insert({
           user_id: task.responsible_id,
           task_id: task.id,
           title: "⏰ Lembrete de tarefa",
-          message: `A tarefa "${task.title}" para ${clientName} está agendada para ${timeStr}. Prepare-se para o retorno!`,
+          message: `A tarefa "${task.title}" para ${clientName} está agendada para ${timeStr}.`,
           type: "reminder",
         });
-
-        // Get user email for sending email notification
-        const { data: user } = await supabase
-          .from("internal_users")
-          .select("name, email")
-          .eq("id", task.responsible_id)
-          .single();
-
-        if (user?.email) {
-          // Send email via Lovable AI Gateway
-          const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-          if (lovableApiKey) {
-            try {
-              const emailHtml = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <div style="background: #1a365d; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-                    <h1 style="margin: 0; font-size: 20px;">⏰ Lembrete de Tarefa</h1>
-                  </div>
-                  <div style="background: #ffffff; padding: 24px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
-                    <p style="color: #2d3748; font-size: 16px;">Olá, <strong>${user.name}</strong>!</p>
-                    <p style="color: #4a5568; font-size: 14px;">Você tem uma tarefa agendada para daqui a aproximadamente <strong>1 hora</strong>:</p>
-                    <div style="background: #f7fafc; border-left: 4px solid #1a365d; padding: 16px; margin: 16px 0; border-radius: 0 4px 4px 0;">
-                      <p style="margin: 0 0 8px; font-weight: bold; color: #2d3748;">${task.title}</p>
-                      <p style="margin: 0 0 4px; color: #718096; font-size: 13px;">📋 Cliente: ${clientName}</p>
-                      <p style="margin: 0; color: #718096; font-size: 13px;">🕐 Horário: ${timeStr}</p>
-                    </div>
-                    <p style="color: #718096; font-size: 13px; margin-top: 24px;">— Equipe CS</p>
-                  </div>
-                </div>
-              `;
-
-              // Use Supabase built-in email or a simple approach
-              console.log(`Email reminder would be sent to ${user.email} for task ${task.id}`);
-              // For now, log the email. Full email integration can be added later.
-            } catch (emailError) {
-              console.error("Error sending email:", emailError);
-            }
-          }
-        }
-
-        notifiedCount++;
+        totalNotified++;
       }
     }
 
+    // ===== PARTE 2: Notificações por proximidade de prazo (D-2, D-1, hoje, atrasadas) =====
+    // Considera o prazo do cliente se houver, senão prazo interno, senão due_date
+    const { data: pendingTasks } = await supabase
+      .from("tasks")
+      .select("id, title, client_id, responsible_id, due_date, internal_due_date, client_due_date")
+      .eq("status", "pending")
+      .not("responsible_id", "is", null);
+
+    for (const task of pendingTasks || []) {
+      const effectiveDate: string =
+        (task as any).client_due_date || (task as any).internal_due_date || task.due_date;
+      if (!effectiveDate) continue;
+
+      const days = diffInDays(effectiveDate);
+      const window = DEADLINE_WINDOWS.find((w) => days >= w.daysFrom && days <= w.daysTo);
+      if (!window) continue;
+
+      // Dedup: uma notificação por janela por tarefa
+      const dedupTag = `[deadline:${window.key}]`;
+      const { data: existing } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("task_id", task.id)
+        .eq("type", "deadline")
+        .like("message", `%${dedupTag}%`);
+      if (existing && existing.length > 0) continue;
+
+      const { data: client } = await supabase.from("clients").select("name").eq("id", task.client_id).single();
+      const clientName = client?.name || "Cliente";
+
+      const dateLabel = new Date(effectiveDate + "T12:00:00").toLocaleDateString("pt-BR");
+      const detail =
+        window.key === "overdue"
+          ? `está atrasada desde ${dateLabel} (${Math.abs(days)} dia(s))`
+          : `${window.label} (${dateLabel})`;
+
+      await supabase.from("notifications").insert({
+        user_id: task.responsible_id,
+        task_id: task.id,
+        title: `${window.emoji} Prazo de tarefa`,
+        message: `${dedupTag} A tarefa "${task.title}" para ${clientName} ${detail}.`,
+        type: "deadline",
+      });
+      totalNotified++;
+    }
+
     return new Response(
-      JSON.stringify({ message: `Processed ${tasks.length} tasks, notified ${notifiedCount}` }),
+      JSON.stringify({ message: `Notificações criadas: ${totalNotified}` }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
