@@ -70,6 +70,9 @@ export default function TaskCenter() {
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+
+  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   const fetchData = async () => {
     setLoading(true);
