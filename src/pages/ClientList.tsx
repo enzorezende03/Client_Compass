@@ -464,16 +464,26 @@ export default function ClientList() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, variant }: {
+function StatCard({ icon: Icon, label, value, variant, onClick, active }: {
   icon: typeof Building2; label: string; value: number; variant?: 'warning' | 'danger' | 'success';
+  onClick?: () => void; active?: boolean;
 }) {
   const colors = {
     warning: 'text-health-attention',
     danger: 'text-health-critical',
     success: 'text-health-healthy',
   };
+  const interactive = !!onClick;
   return (
-    <div className="rounded-lg border bg-card p-4 shadow-card">
+    <div
+      onClick={onClick}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
+      className={`rounded-lg border bg-card p-4 shadow-card transition-all ${
+        interactive ? 'cursor-pointer hover:shadow-card-hover hover:border-primary/30' : ''
+      } ${active ? 'border-primary ring-2 ring-primary/20' : ''}`}
+    >
       <div className="flex items-center gap-2 mb-1">
         <Icon className={`h-4 w-4 ${variant ? colors[variant] : 'text-muted-foreground'}`} />
         <span className="text-xs text-muted-foreground">{label}</span>
