@@ -310,7 +310,7 @@ export default function TaskCenter() {
           <Badge variant="secondary" className="text-xs ml-auto">{colTasks.length}</Badge>
         </div>
         <div className="flex-1 p-3 space-y-2 overflow-y-auto max-h-[calc(100vh-320px)]">
-          {colTasks.map(t => <KanbanCard key={t.id} task={t} />)}
+          {colTasks.map(t => <KanbanCard key={t.id} task={t} compact={dropStatus === 'completed'} />)}
           {colTasks.length === 0 && (
             <div className="text-center py-8 text-xs text-muted-foreground">Nenhuma tarefa</div>
           )}
