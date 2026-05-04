@@ -194,8 +194,29 @@ export default function TaskCenter() {
     setDraggedTaskId(null);
   };
 
-  const KanbanCard = ({ task }: { task: TaskRow }) => {
-    const isOverdue = task.status === 'pending' && task.due_date < today;
+  const KanbanCard = ({ task, compact }: { task: TaskRow; compact?: boolean }) => {
+    const isOverdue = task.status === 'pending' && getDeadline(task) < today;
+    if (compact) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          draggable
+          onDragStart={() => handleDragStart(task.id)}
+          className="rounded-md border p-2 bg-card shadow-sm cursor-grab active:cursor-grabbing hover:shadow transition-all flex items-center gap-2"
+        >
+          <GripVertical className="h-3 w-3 text-muted-foreground shrink-0" />
+          <button
+            onClick={() => navigate(`/client/${task.client_id}`)}
+            className="text-xs font-medium text-primary hover:underline truncate flex-1 text-left"
+            title={`${task.client_name} — ${task.title}`}
+          >
+            {task.client_name}
+          </button>
+          <Button variant="ghost" size="sm" onClick={() => openEdit(task)} className="h-5 px-1.5 text-[10px]">Editar</Button>
+        </motion.div>
+      );
+    }
     return (
       <motion.div
         initial={{ opacity: 0, y: 4 }}
@@ -229,14 +250,14 @@ export default function TaskCenter() {
           </div>
           <div className="flex flex-col gap-0.5 mt-1">
             {(task as any).internal_due_date && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <span className={`inline-flex items-center gap-1 text-xs ${deadlineView === 'internal' && isOverdue ? 'text-destructive font-medium' : deadlineView === 'internal' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                 <CalendarClock className="h-3 w-3" />
                 <span className="font-medium">Interno:</span>
                 {new Date((task as any).internal_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
               </span>
             )}
             {(task as any).client_due_date && (
-              <span className={`inline-flex items-center gap-1 text-xs ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+              <span className={`inline-flex items-center gap-1 text-xs ${deadlineView === 'client' && isOverdue ? 'text-destructive font-medium' : deadlineView === 'client' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                 <CalendarClock className="h-3 w-3" />
                 <span className="font-medium">Cliente:</span>
                 {new Date((task as any).client_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
