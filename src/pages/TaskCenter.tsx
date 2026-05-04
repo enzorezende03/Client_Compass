@@ -110,7 +110,6 @@ export default function TaskCenter() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const today = new Date().toISOString().split('T')[0];
 
   const getDeadline = (t: TaskRow) => {
     if (deadlineView === 'internal') {
