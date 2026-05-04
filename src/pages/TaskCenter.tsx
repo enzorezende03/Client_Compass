@@ -110,9 +110,18 @@ export default function TaskCenter() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const overdueTasks = filtered.filter(t => t.status === 'pending' && t.due_date < today);
-  const todayTasks = filtered.filter(t => t.status === 'pending' && t.due_date === today);
-  const upcomingTasks = filtered.filter(t => t.status === 'pending' && t.due_date > today);
+  const today = new Date().toISOString().split('T')[0];
+
+  const getDeadline = (t: TaskRow) => {
+    if (deadlineView === 'internal') {
+      return (t as any).internal_due_date || (t as any).client_due_date || t.due_date;
+    }
+    return (t as any).client_due_date || (t as any).internal_due_date || t.due_date;
+  };
+
+  const overdueTasks = filtered.filter(t => t.status === 'pending' && getDeadline(t) < today);
+  const todayTasks = filtered.filter(t => t.status === 'pending' && getDeadline(t) === today);
+  const upcomingTasks = filtered.filter(t => t.status === 'pending' && getDeadline(t) > today);
   const completedTasks = filtered.filter(t => t.status === 'completed');
 
   const openNew = () => { setForm(emptyForm); setEditId(null); setDialogOpen(true); };
