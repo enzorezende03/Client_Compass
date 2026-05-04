@@ -348,6 +348,20 @@ export default function TaskCenter() {
               {internalUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
             </SelectContent>
           </Select>
+          <div className="inline-flex rounded-md border bg-muted p-1">
+            <button
+              onClick={() => setDeadlineView('client')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${deadlineView === 'client' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Prazo Cliente
+            </button>
+            <button
+              onClick={() => setDeadlineView('internal')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${deadlineView === 'internal' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Prazo Interno
+            </button>
+          </div>
         </div>
 
         {loading ? (
