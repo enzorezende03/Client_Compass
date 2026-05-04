@@ -71,6 +71,7 @@ export default function TaskCenter() {
   const [editId, setEditId] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+  const [deadlineView, setDeadlineView] = useState<'client' | 'internal'>('client');
 
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
