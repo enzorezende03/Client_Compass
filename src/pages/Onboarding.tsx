@@ -108,7 +108,7 @@ export default function Onboarding() {
     // also fetch concluded (last 30 days) for the "Concluído" column
     const { data: doneRes } = await supabase
       .from('clients')
-      .select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at')
+      .select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type')
       .eq('onboarding_status', 'concluido');
     setClients([...cls, ...((doneRes || []) as ClientRow[])]);
     setItems(its);
