@@ -220,8 +220,9 @@ export default function Onboarding() {
     if (!selectedData) return;
     setAdvancing(true);
     try {
-      await advanceStage(selectedData.client.id, selectedData.stage, selectedData.client.name);
-      const isFinal = selectedData.stage === 'etapa_4';
+      const cType = (selectedData.client.onboarding_type || 'empresa_existente') as OnboardingType;
+      await advanceStage(selectedData.client.id, selectedData.stage, selectedData.client.name, cType);
+      const isFinal = selectedData.stage === 'etapa_4' || selectedData.stage === 'etapa_3_nova';
       toast({
         title: isFinal ? 'Onboarding concluído!' : 'Etapa avançada',
         description: isFinal
