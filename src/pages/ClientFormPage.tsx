@@ -43,6 +43,8 @@ export default function ClientFormPage() {
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
+  const [onboardingStatus, setOnboardingStatus] = useState<string>('pendente');
+  const [startingOnboarding, setStartingOnboarding] = useState(false);
   const { toast } = useToast();
 
   // Load existing client when editing
@@ -65,6 +67,7 @@ export default function ClientFormPage() {
           risk_identified_date: client.risk_identified_date ?? '', action_plan: client.action_plan ?? '',
           taxation: client.taxation ?? '',
         });
+        setOnboardingStatus((client as any).onboarding_status || 'pendente');
       }
       const { data: cts } = await supabase.from('client_contacts').select('*').eq('client_id', id);
       if (cts) {
@@ -209,12 +212,41 @@ export default function ClientFormPage() {
                 Preencha as informações em etapas — você pode navegar entre elas livremente.
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-xs text-muted-foreground mb-1">Completude do cadastro</div>
-              <div className={cn('text-2xl font-bold tabular-nums', tone.badgeClass.split(' ').filter(c => c.startsWith('text-')).join(' '))}>
-                {completeness}%
+            <div className="flex items-end gap-4">
+              {isEdit && onboardingStatus === 'pendente' && (
+                <Button
+                  variant="default"
+                  disabled={startingOnboarding || !id}
+                  onClick={async () => {
+                    if (!id) return;
+                    setStartingOnboarding(true);
+                    try {
+                      await startOnboarding(id, form.name);
+                      toast({ title: 'Onboarding iniciado!', description: 'Redirecionando para o pipeline...' });
+                      navigate('/onboarding');
+                    } catch (e: any) {
+                      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
+                      setStartingOnboarding(false);
+                    }
+                  }}
+                  className="gap-2 shadow-md"
+                >
+                  {startingOnboarding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                  Iniciar Onboarding
+                </Button>
+              )}
+              {isEdit && onboardingStatus !== 'pendente' && (
+                <span className="text-xs px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">
+                  Onboarding: {onboardingStatus === 'em_andamento' ? 'em andamento' : 'concluído'}
+                </span>
+              )}
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground mb-1">Completude do cadastro</div>
+                <div className={cn('text-2xl font-bold tabular-nums', tone.badgeClass.split(' ').filter(c => c.startsWith('text-')).join(' '))}>
+                  {completeness}%
+                </div>
+                <div className="text-xs text-muted-foreground">{tone.label}</div>
               </div>
-              <div className="text-xs text-muted-foreground">{tone.label}</div>
             </div>
           </div>
 
