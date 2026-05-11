@@ -289,8 +289,8 @@ export default function Onboarding() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-            {STAGES.map(stage => {
-              const list = byStage[stage];
+            {activeStages.map(stage => {
+              const list = byStage[stage] || [];
               return (
                 <div key={stage} className="bg-muted/40 rounded-lg border border-border/60 flex flex-col min-h-[400px]">
                   <div className="px-3 py-2.5 border-b border-border/60 flex items-center justify-between sticky top-0 bg-muted/60 backdrop-blur rounded-t-lg">
@@ -305,15 +305,19 @@ export default function Onboarding() {
                       const days = daysSince(client.onboarding_started_at);
                       const isDone = client.onboarding_status === 'concluido';
                       const pct = total ? Math.round((completed / total) * 100) : 0;
+                      const cType = (client.onboarding_type || 'empresa_existente') as OnboardingType;
                       return (
                         <motion.button
                           key={client.id}
                           layout
                           whileHover={{ y: -2 }}
                           onClick={() => setSelectedClient(client)}
-                          className="w-full text-left bg-card hover:bg-card/80 border border-border rounded-lg p-3 shadow-sm transition-all"
+                          className="w-full text-left bg-card hover:bg-card/80 border border-border rounded-lg p-3 shadow-sm transition-all relative"
                         >
-                          <div className="font-semibold text-sm text-foreground line-clamp-2">{client.name}</div>
+                          <Badge variant="outline" className={cn('absolute top-2 right-2 text-[9px] px-1.5 py-0', ONBOARDING_TYPE_BADGE[cType])}>
+                            {ONBOARDING_TYPE_LABELS[cType]}
+                          </Badge>
+                          <div className="font-semibold text-sm text-foreground line-clamp-2 pr-24">{client.name}</div>
                           <div className="flex items-center justify-between mt-1.5 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{days}d na etapa</span>
                             {!isDone && (
