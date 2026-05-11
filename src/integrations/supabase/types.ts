@@ -458,6 +458,39 @@ export type Database = {
         }
         Relationships: []
       }
+      message_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          moment: string
+          onboarding_type: string
+          stage: string
+          title: string
+          variables: Json
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          moment: string
+          onboarding_type: string
+          stage: string
+          title: string
+          variables?: Json
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          moment?: string
+          onboarding_type?: string
+          stage?: string
+          title?: string
+          variables?: Json
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
