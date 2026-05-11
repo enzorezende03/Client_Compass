@@ -429,6 +429,43 @@ export default function Onboarding() {
                 </div>
               </section>
 
+              {/* Convert constituição → empresa nova */}
+              {selectedData.client.onboarding_type === 'em_constituicao' && (() => {
+                const cnpjItem = selectedData.stageProg.find(p => /CNPJ/i.test(p.item.title) && /receb/i.test(p.item.title));
+                const ready = cnpjItem?.status === 'concluido';
+                return (
+                  <section className="mt-6">
+                    <div className={cn(
+                      'border-2 rounded-lg p-4 transition-colors',
+                      ready ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-dashed border-border bg-muted/30'
+                    )}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                            <ArrowRightCircle className="h-4 w-4 text-emerald-600" />
+                            Conversão para Empresa Nova
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {ready
+                              ? 'CNPJ recebido. Confirme para iniciar o onboarding de Empresa Nova.'
+                              : 'Marque o item "Registrar recebimento de CNPJ" para liberar a conversão.'}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={!ready}
+                          onClick={() => setConvertOpen(true)}
+                          className="gap-1.5 shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white border-0 disabled:bg-muted disabled:text-muted-foreground"
+                        >
+                          <ArrowRightCircle className="h-3.5 w-3.5" />
+                          Converter para Empresa Nova
+                        </Button>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
+
               {/* Handoff form (only on Etapa 2) */}
               {selectedData.stage === 'etapa_2' && (() => {
                 const handoffProg = selectedData.stageProg.find(p => /repasse/i.test(p.item.title));
