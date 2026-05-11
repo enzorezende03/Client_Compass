@@ -216,22 +216,11 @@ export default function ClientFormPage() {
               {isEdit && onboardingStatus === 'pendente' && (
                 <Button
                   variant="default"
-                  disabled={startingOnboarding || !id}
-                  onClick={async () => {
-                    if (!id) return;
-                    setStartingOnboarding(true);
-                    try {
-                      await startOnboarding(id, form.name);
-                      toast({ title: 'Onboarding iniciado!', description: 'Redirecionando para o pipeline...' });
-                      navigate('/onboarding');
-                    } catch (e: any) {
-                      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
-                      setStartingOnboarding(false);
-                    }
-                  }}
+                  disabled={!id}
+                  onClick={() => setStartingOnboarding(true)}
                   className="gap-2 shadow-md"
                 >
-                  {startingOnboarding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                  <Rocket className="h-4 w-4" />
                   Iniciar Onboarding
                 </Button>
               )}
