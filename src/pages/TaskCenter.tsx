@@ -30,7 +30,21 @@ interface TaskRow {
   status: string;
   created_at: string;
   client_name?: string;
+  category?: string;
+  onboarding_stage?: string | null;
 }
+
+const STAGE_LABEL: Record<string, string> = {
+  etapa_1: 'Etapa 1',
+  etapa_2: 'Etapa 2',
+  etapa_3: 'Etapa 3',
+  etapa_4: 'Etapa 4',
+  constituicao: 'Constituição',
+  etapa_1_nova: 'Etapa 1 (Nova)',
+  etapa_2_nova: 'Etapa 2 (Nova)',
+  etapa_3_nova: 'Etapa 3 (Nova)',
+  concluido: 'Concluído',
+};
 
 interface ClientOption { id: string; name: string; }
 interface InternalUser { id: string; name: string; email: string; active: boolean; }
