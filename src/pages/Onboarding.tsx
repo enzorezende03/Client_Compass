@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
+import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
 import { AppLayout } from '@/components/AppLayout';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +77,9 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
   const [handoffOpen, setHandoffOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportsByClient, setReportsByClient] = useState<Record<string, ReportRow[]>>({});
+  const [viewReport, setViewReport] = useState<ReportRow | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -111,6 +115,22 @@ export default function Onboarding() {
       .order('date', { ascending: false }).limit(5)
       .then(({ data }) => setTimelineByClient(prev => ({ ...prev, [selectedClient.id]: data || [] })));
   }, [selectedClient]);
+
+  const loadReports = useCallback(async (clientId: string) => {
+    const { data } = await supabase
+      .from('operational_monthly_reports')
+      .select('*').eq('client_id', clientId)
+      .order('submitted_at', { ascending: false });
+    setReportsByClient(prev => ({ ...prev, [clientId]: (data || []) as ReportRow[] }));
+  }, []);
+
+  // Load monthly reports when opening a client on Etapa 4
+  useEffect(() => {
+    if (!selectedClient) return;
+    if (selectedClient.onboarding_stage === 'etapa_4' || selectedClient.onboarding_status === 'concluido') {
+      loadReports(selectedClient.id);
+    }
+  }, [selectedClient, loadReports]);
 
   const responsibles = useMemo(() => {
     const set = new Set(clients.map(c => c.cs_responsible).filter(Boolean));
@@ -385,6 +405,49 @@ export default function Onboarding() {
                 );
               })()}
 
+              {/* Monthly Reports (only on Etapa 4 / concluido) */}
+              {(selectedData.stage === 'etapa_4' || selectedData.client.onboarding_status === 'concluido') && (
+                <section className="mt-6">
+                  <div className="border border-border rounded-lg p-4 bg-card">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          <FileBarChart className="h-4 w-4 text-primary" />
+                          Relatórios Mensais Recebidos
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Relatórios enviados pelo Operacional / Coordenador.
+                        </p>
+                      </div>
+                      <Button size="sm" onClick={() => setReportOpen(true)} className="gap-1.5 shrink-0">
+                        <FileBarChart className="h-3.5 w-3.5" /> Enviar Relatório Mensal
+                      </Button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {(reportsByClient[selectedData.client.id] || []).map(r => (
+                        <div key={r.id} className="flex items-center justify-between gap-2 border border-border/60 rounded-md px-3 py-2 bg-background">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-sm font-medium text-foreground">{r.reference_month}</span>
+                            <Badge variant="outline" className={cn('text-[10px]', STATUS_BADGE[r.overall_status as keyof typeof STATUS_BADGE])}>
+                              {r.overall_status}
+                            </Badge>
+                            <span className="text-[11px] text-muted-foreground truncate">
+                              {new Date(r.submitted_at).toLocaleDateString('pt-BR')}
+                            </span>
+                          </div>
+                          <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={() => setViewReport(r)}>
+                            <Eye className="h-3 w-3" /> Ver
+                          </Button>
+                        </div>
+                      ))}
+                      {!reportsByClient[selectedData.client.id]?.length && (
+                        <p className="text-xs text-muted-foreground text-center py-3">Nenhum relatório enviado ainda.</p>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* Templates */}
               {MESSAGE_TEMPLATES[selectedData.stage]?.length > 0 && (
                 <section className="mt-6">
@@ -459,6 +522,33 @@ export default function Onboarding() {
           onSaved={fetchAll}
         />
       )}
+
+      {selectedClient && (
+        <OnboardingMonthlyReportDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name}
+          csResponsibleName={selectedClient.cs_responsible}
+          monthlyProgressId={
+            progress.find(p =>
+              p.client_id === selectedClient.id
+              && p.item.stage === 'etapa_4'
+              && p.status !== 'concluido'
+              && /relat[óo]rio|mensal|fechamento/i.test(p.item.title)
+            )?.id
+          }
+          onSaved={() => { loadReports(selectedClient.id); fetchAll(); }}
+        />
+      )}
+
+      <OnboardingMonthlyReportDialog
+        open={!!viewReport}
+        onOpenChange={(o) => !o && setViewReport(null)}
+        clientId={viewReport?.client_id || ''}
+        clientName={selectedClient?.name || ''}
+        viewReport={viewReport}
+      />
     </AppLayout>
   );
 }
