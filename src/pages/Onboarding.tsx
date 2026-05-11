@@ -120,6 +120,13 @@ export default function Onboarding() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  // Load all message templates once
+  useEffect(() => {
+    supabase.from('message_templates' as any).select('*').then(({ data }) => {
+      setDbTemplates((data || []) as unknown as MessageTemplate[]);
+    });
+  }, []);
+
   // Load timeline lazily per selected client
   useEffect(() => {
     if (!selectedClient) return;
