@@ -227,7 +227,80 @@ export default function TaskCenter() {
     fetchData();
   };
 
-  const handleDragStart = (taskId: string) => setDraggedTaskId(taskId);
+  const openReschedule = (task: TaskRow) => {
+    setRescheduleTask(task);
+    setRescheduleReason('');
+    const hasClient = !!task.client_due_date;
+    const hasInternal = !!task.internal_due_date;
+    setRescheduleField(hasClient ? 'client' : hasInternal ? 'internal' : 'client');
+    const today = new Date();
+    today.setDate(today.getDate() + 1);
+    setRescheduleNewDate(today.toISOString().split('T')[0]);
+  };
+
+  const submitReschedule = async () => {
+    if (!rescheduleTask) return;
+    if (!rescheduleReason.trim()) {
+      toast({ title: 'Informe a justificativa', variant: 'destructive' });
+      return;
+    }
+    if (!rescheduleNewDate) {
+      toast({ title: 'Selecione a nova data', variant: 'destructive' });
+      return;
+    }
+    const previous = getDeadline(rescheduleTask);
+    // Identify current user
+    const { data: authData } = await supabase.auth.getUser();
+    const me = internalUsers.find(u => u.email === authData.user?.email);
+    const updates: any = {
+      reschedule_count: (rescheduleTask.reschedule_count || 0) + 1,
+      last_reschedule_reason: rescheduleReason.trim(),
+      last_rescheduled_at: new Date().toISOString(),
+    };
+    if (rescheduleField === 'client') {
+      updates.client_due_date = rescheduleNewDate;
+    } else {
+      updates.internal_due_date = rescheduleNewDate;
+    }
+    // Always sync due_date to the chosen new date as well so kanban reflects
+    updates.due_date = rescheduleNewDate;
+
+    const { error: upErr } = await supabase.from('tasks').update(updates).eq('id', rescheduleTask.id);
+    if (upErr) { toast({ title: 'Erro ao remanejar', description: upErr.message, variant: 'destructive' }); return; }
+
+    const { error: insErr } = await supabase.from('task_reschedules').insert({
+      task_id: rescheduleTask.id,
+      client_id: rescheduleTask.client_id,
+      previous_due_date: previous,
+      new_due_date: rescheduleNewDate,
+      reason: rescheduleReason.trim(),
+      rescheduled_by: me?.id || null,
+      rescheduled_by_name: me?.name || authData.user?.email || 'Desconhecido',
+    });
+    if (insErr) { toast({ title: 'Erro ao registrar histórico', description: insErr.message, variant: 'destructive' }); return; }
+
+    toast({ title: 'Tarefa remanejada', description: `Nova data: ${new Date(rescheduleNewDate + 'T12:00:00').toLocaleDateString('pt-BR')}` });
+    setRescheduleTask(null);
+    fetchData();
+  };
+
+  const openHistory = async () => {
+    setHistoryOpen(true);
+    const { data, error } = await supabase
+      .from('task_reschedules')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (error) { toast({ title: 'Erro ao carregar histórico', description: error.message, variant: 'destructive' }); return; }
+    const taskMap = Object.fromEntries(tasks.map(t => [t.id, t.title]));
+    const clientMap = Object.fromEntries(clients.map(c => [c.id, c.name]));
+    setReschedules((data || []).map((r: any) => ({
+      ...r,
+      task_title: taskMap[r.task_id] || '—',
+      client_name: clientMap[r.client_id] || '—',
+    })));
+  };
+
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
   const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
     e.preventDefault();
