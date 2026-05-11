@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown
+  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -32,6 +32,24 @@ interface TaskRow {
   client_name?: string;
   category?: string;
   onboarding_stage?: string | null;
+  reschedule_count?: number;
+  last_reschedule_reason?: string | null;
+  last_rescheduled_at?: string | null;
+  internal_due_date?: string | null;
+  client_due_date?: string | null;
+}
+
+interface RescheduleRow {
+  id: string;
+  task_id: string;
+  client_id: string;
+  previous_due_date: string;
+  new_due_date: string;
+  reason: string;
+  rescheduled_by_name: string;
+  created_at: string;
+  task_title?: string;
+  client_name?: string;
 }
 
 const STAGE_LABEL: Record<string, string> = {
@@ -87,6 +105,14 @@ export default function TaskCenter() {
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [deadlineView, setDeadlineView] = useState<'client' | 'internal'>('client');
   const [activeTab, setActiveTab] = useState<'regular' | 'onboarding'>('regular');
+
+  // Reschedule
+  const [rescheduleTask, setRescheduleTask] = useState<TaskRow | null>(null);
+  const [rescheduleReason, setRescheduleReason] = useState('');
+  const [rescheduleNewDate, setRescheduleNewDate] = useState('');
+  const [rescheduleField, setRescheduleField] = useState<'client' | 'internal'>('client');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [reschedules, setReschedules] = useState<RescheduleRow[]>([]);
 
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -201,6 +227,80 @@ export default function TaskCenter() {
     fetchData();
   };
 
+  const openReschedule = (task: TaskRow) => {
+    setRescheduleTask(task);
+    setRescheduleReason('');
+    const hasClient = !!task.client_due_date;
+    const hasInternal = !!task.internal_due_date;
+    setRescheduleField(hasClient ? 'client' : hasInternal ? 'internal' : 'client');
+    const today = new Date();
+    today.setDate(today.getDate() + 1);
+    setRescheduleNewDate(today.toISOString().split('T')[0]);
+  };
+
+  const submitReschedule = async () => {
+    if (!rescheduleTask) return;
+    if (!rescheduleReason.trim()) {
+      toast({ title: 'Informe a justificativa', variant: 'destructive' });
+      return;
+    }
+    if (!rescheduleNewDate) {
+      toast({ title: 'Selecione a nova data', variant: 'destructive' });
+      return;
+    }
+    const previous = getDeadline(rescheduleTask);
+    // Identify current user
+    const { data: authData } = await supabase.auth.getUser();
+    const me = internalUsers.find(u => u.email === authData.user?.email);
+    const updates: any = {
+      reschedule_count: (rescheduleTask.reschedule_count || 0) + 1,
+      last_reschedule_reason: rescheduleReason.trim(),
+      last_rescheduled_at: new Date().toISOString(),
+    };
+    if (rescheduleField === 'client') {
+      updates.client_due_date = rescheduleNewDate;
+    } else {
+      updates.internal_due_date = rescheduleNewDate;
+    }
+    // Always sync due_date to the chosen new date as well so kanban reflects
+    updates.due_date = rescheduleNewDate;
+
+    const { error: upErr } = await supabase.from('tasks').update(updates).eq('id', rescheduleTask.id);
+    if (upErr) { toast({ title: 'Erro ao remanejar', description: upErr.message, variant: 'destructive' }); return; }
+
+    const { error: insErr } = await supabase.from('task_reschedules').insert({
+      task_id: rescheduleTask.id,
+      client_id: rescheduleTask.client_id,
+      previous_due_date: previous,
+      new_due_date: rescheduleNewDate,
+      reason: rescheduleReason.trim(),
+      rescheduled_by: me?.id || null,
+      rescheduled_by_name: me?.name || authData.user?.email || 'Desconhecido',
+    });
+    if (insErr) { toast({ title: 'Erro ao registrar histórico', description: insErr.message, variant: 'destructive' }); return; }
+
+    toast({ title: 'Tarefa remanejada', description: `Nova data: ${new Date(rescheduleNewDate + 'T12:00:00').toLocaleDateString('pt-BR')}` });
+    setRescheduleTask(null);
+    fetchData();
+  };
+
+  const openHistory = async () => {
+    setHistoryOpen(true);
+    const { data, error } = await supabase
+      .from('task_reschedules')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (error) { toast({ title: 'Erro ao carregar histórico', description: error.message, variant: 'destructive' }); return; }
+    const taskMap = Object.fromEntries(tasks.map(t => [t.id, t.title]));
+    const clientMap = Object.fromEntries(clients.map(c => [c.id, c.name]));
+    setReschedules((data || []).map((r: any) => ({
+      ...r,
+      task_title: taskMap[r.task_id] || '—',
+      client_name: clientMap[r.client_id] || '—',
+    })));
+  };
+
   const handleDragStart = (taskId: string) => setDraggedTaskId(taskId);
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
   const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
@@ -297,8 +397,19 @@ export default function TaskCenter() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1 mt-2 ml-6">
+        {(task.reschedule_count || 0) > 0 && (
+          <div className="ml-6 mt-2 flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400">
+            <History className="h-3 w-3" />
+            Remanejada {task.reschedule_count}× — última: {task.last_reschedule_reason || '—'}
+          </div>
+        )}
+        <div className="flex items-center gap-1 mt-2 ml-6 flex-wrap">
           <Button variant="ghost" size="sm" onClick={() => openEdit(task)} className="h-6 px-2 text-xs">Editar</Button>
+          {isOverdue && (
+            <Button variant="outline" size="sm" onClick={() => openReschedule(task)} className="h-6 px-2 text-xs gap-1 border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10">
+              <CalendarPlus className="h-3 w-3" /> Remanejar
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => deleteTask(task.id)} className="h-6 px-2 text-xs text-destructive hover:text-destructive">Remover</Button>
         </div>
       </motion.div>
@@ -351,12 +462,18 @@ export default function TaskCenter() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Central de Tarefas</h1>
             <p className="text-sm text-muted-foreground">Arraste as tarefas entre as colunas para atualizar o status</p>
           </div>
-          {activeTab === 'regular' && (
-            <Button onClick={openNew} className="gap-2 shadow-md">
-              <Plus className="h-4 w-4" />
-              Nova Tarefa
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={openHistory} className="gap-2">
+              <History className="h-4 w-4" />
+              Remanejamentos
             </Button>
-          )}
+            {activeTab === 'regular' && (
+              <Button onClick={openNew} className="gap-2 shadow-md">
+                <Plus className="h-4 w-4" />
+                Nova Tarefa
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="inline-flex rounded-md border bg-muted p-1 mb-4">
@@ -530,6 +647,100 @@ export default function TaskCenter() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave}>{editId ? 'Salvar' : 'Criar Tarefa'}</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!rescheduleTask} onOpenChange={(o) => !o && setRescheduleTask(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remanejar tarefa</DialogTitle>
+            <DialogDescription>
+              {rescheduleTask?.title} — {rescheduleTask?.client_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+              Prazo atual: {rescheduleTask ? new Date(getDeadline(rescheduleTask) + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}
+              {(rescheduleTask?.reschedule_count || 0) > 0 && (
+                <div className="mt-1 text-amber-700 dark:text-amber-400">
+                  Já remanejada {rescheduleTask?.reschedule_count}× anteriormente
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>Aplicar em</Label>
+              <Select value={rescheduleField} onValueChange={(v: 'client' | 'internal') => setRescheduleField(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Prazo com o Cliente</SelectItem>
+                  <SelectItem value="internal">Prazo Interno</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Nova data de acompanhamento *</Label>
+              <Input type="date" value={rescheduleNewDate} onChange={e => setRescheduleNewDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>Justificativa *</Label>
+              <Textarea
+                rows={3}
+                value={rescheduleReason}
+                onChange={e => setRescheduleReason(e.target.value)}
+                placeholder="Por que a tarefa precisa ser remanejada?"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRescheduleTask(null)}>Cancelar</Button>
+            <Button onClick={submitReschedule}>Remanejar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Controle de Remanejamentos</DialogTitle>
+            <DialogDescription>Histórico de tarefas remanejadas (últimos 200 registros)</DialogDescription>
+          </DialogHeader>
+          {reschedules.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">Nenhum remanejamento registrado.</div>
+          ) : (
+            <div className="space-y-2">
+              {reschedules.map(r => (
+                <div key={r.id} className="rounded-lg border p-3 bg-card">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => { setHistoryOpen(false); navigate(`/client/${r.client_id}`); }}
+                        className="text-sm font-medium text-primary hover:underline text-left"
+                      >
+                        {r.task_title}
+                      </button>
+                      <div className="text-xs text-muted-foreground">{r.client_name}</div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px]">
+                      {new Date(r.created_at).toLocaleString('pt-BR')}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 text-xs flex items-center gap-2 flex-wrap">
+                    <span className="text-muted-foreground line-through">
+                      {new Date(r.previous_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </span>
+                    <span>→</span>
+                    <span className="font-medium">
+                      {new Date(r.new_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </span>
+                    <span className="text-muted-foreground ml-auto">por {r.rescheduled_by_name}</span>
+                  </div>
+                  {r.reason && (
+                    <p className="mt-2 text-xs text-foreground bg-muted/40 rounded p-2">{r.reason}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>
