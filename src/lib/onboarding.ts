@@ -128,10 +128,11 @@ export function aggregateSlaTone(progress: { created_at: string; completed_at: s
   return worst;
 }
 
-export function nextStage(stage: string | null | undefined): OnboardingStage | null {
-  const idx = STAGES.indexOf((stage || 'etapa_1') as OnboardingStage);
-  if (idx < 0 || idx >= STAGES.length - 1) return null;
-  return STAGES[idx + 1];
+export function nextStage(stage: string | null | undefined, type: OnboardingType = 'empresa_existente'): OnboardingStage | null {
+  const list = stagesForType(type);
+  const idx = list.indexOf((stage || list[0]) as OnboardingStage);
+  if (idx < 0 || idx >= list.length - 1) return null;
+  return list[idx + 1];
 }
 
 async function getCurrentInternalUserId(): Promise<string | null> {
