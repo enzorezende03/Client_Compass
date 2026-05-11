@@ -106,6 +106,14 @@ export default function TaskCenter() {
   const [deadlineView, setDeadlineView] = useState<'client' | 'internal'>('client');
   const [activeTab, setActiveTab] = useState<'regular' | 'onboarding'>('regular');
 
+  // Reschedule
+  const [rescheduleTask, setRescheduleTask] = useState<TaskRow | null>(null);
+  const [rescheduleReason, setRescheduleReason] = useState('');
+  const [rescheduleNewDate, setRescheduleNewDate] = useState('');
+  const [rescheduleField, setRescheduleField] = useState<'client' | 'internal'>('client');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [reschedules, setReschedules] = useState<RescheduleRow[]>([]);
+
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   const fetchData = async () => {
