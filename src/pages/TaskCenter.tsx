@@ -344,10 +344,27 @@ export default function TaskCenter() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Central de Tarefas</h1>
             <p className="text-sm text-muted-foreground">Arraste as tarefas entre as colunas para atualizar o status</p>
           </div>
-          <Button onClick={openNew} className="gap-2 shadow-md">
-            <Plus className="h-4 w-4" />
-            Nova Tarefa
-          </Button>
+          {activeTab === 'regular' && (
+            <Button onClick={openNew} className="gap-2 shadow-md">
+              <Plus className="h-4 w-4" />
+              Nova Tarefa
+            </Button>
+          )}
+        </div>
+
+        <div className="inline-flex rounded-md border bg-muted p-1 mb-4">
+          <button
+            onClick={() => setActiveTab('regular')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'regular' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Tarefas do dia a dia
+          </button>
+          <button
+            onClick={() => setActiveTab('onboarding')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'onboarding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Tarefas de Onboarding
+          </button>
         </div>
 
         <div className="flex items-center gap-3 mb-6 flex-wrap">
