@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket } from 'lucide-react';
+import { startOnboarding } from '@/lib/onboarding';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
