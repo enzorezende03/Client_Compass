@@ -715,6 +715,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          category: string
           client_due_date: string | null
           client_id: string
           created_at: string
@@ -722,6 +723,7 @@ export type Database = {
           due_date: string
           id: string
           internal_due_date: string | null
+          onboarding_stage: string | null
           reminder_minutes: number | null
           responsible: string
           responsible_id: string | null
@@ -730,6 +732,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          category?: string
           client_due_date?: string | null
           client_id: string
           created_at?: string
@@ -737,6 +740,7 @@ export type Database = {
           due_date?: string
           id?: string
           internal_due_date?: string | null
+          onboarding_stage?: string | null
           reminder_minutes?: number | null
           responsible?: string
           responsible_id?: string | null
@@ -745,6 +749,7 @@ export type Database = {
           title: string
         }
         Update: {
+          category?: string
           client_due_date?: string | null
           client_id?: string
           created_at?: string
@@ -752,6 +757,7 @@ export type Database = {
           due_date?: string
           id?: string
           internal_due_date?: string | null
+          onboarding_stage?: string | null
           reminder_minutes?: number | null
           responsible?: string
           responsible_id?: string | null
