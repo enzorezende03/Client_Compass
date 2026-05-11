@@ -23,6 +23,7 @@ import {
   STAGES_EXISTING, STAGES_NOVA, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
   ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
   slaTone, aggregateSlaTone, advanceStage, toggleChecklistItem, updateProgressNotes,
+  applyTemplateVars, MessageTemplate,
 } from '@/lib/onboarding';
 
 interface ClientRow {
