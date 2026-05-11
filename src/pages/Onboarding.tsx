@@ -260,8 +260,26 @@ export default function Onboarding() {
             <Badge variant="secondary" className="text-sm py-1.5 px-3 gap-1.5">
               <Clock className="h-3.5 w-3.5" /> {totalActive} em andamento
             </Badge>
+            <Button
+              onClick={() => setConstInfoOpen(true)}
+              className="gap-2 bg-amber-500 hover:bg-amber-600 text-white border-0"
+              size="sm"
+            >
+              <FileBadge2 className="h-4 w-4" />
+              Iniciar Acompanhamento de Constituição
+            </Button>
           </div>
         </div>
+
+        {/* Type tabs */}
+        <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="all">Todos</TabsTrigger>
+            <TabsTrigger value="empresa_existente">Empresa Existente</TabsTrigger>
+            <TabsTrigger value="empresa_nova">Empresa Nova</TabsTrigger>
+            <TabsTrigger value="em_constituicao">Em Constituição</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
