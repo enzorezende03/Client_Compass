@@ -713,6 +713,42 @@ export type Database = {
           },
         ]
       }
+      task_reschedules: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          new_due_date: string
+          previous_due_date: string
+          reason: string
+          rescheduled_by: string | null
+          rescheduled_by_name: string
+          task_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          new_due_date: string
+          previous_due_date: string
+          reason?: string
+          rescheduled_by?: string | null
+          rescheduled_by_name?: string
+          task_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          new_due_date?: string
+          previous_due_date?: string
+          reason?: string
+          rescheduled_by?: string | null
+          rescheduled_by_name?: string
+          task_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           category: string
@@ -723,8 +759,11 @@ export type Database = {
           due_date: string
           id: string
           internal_due_date: string | null
+          last_reschedule_reason: string | null
+          last_rescheduled_at: string | null
           onboarding_stage: string | null
           reminder_minutes: number | null
+          reschedule_count: number
           responsible: string
           responsible_id: string | null
           scheduled_time: string | null
@@ -740,8 +779,11 @@ export type Database = {
           due_date?: string
           id?: string
           internal_due_date?: string | null
+          last_reschedule_reason?: string | null
+          last_rescheduled_at?: string | null
           onboarding_stage?: string | null
           reminder_minutes?: number | null
+          reschedule_count?: number
           responsible?: string
           responsible_id?: string | null
           scheduled_time?: string | null
@@ -757,8 +799,11 @@ export type Database = {
           due_date?: string
           id?: string
           internal_due_date?: string | null
+          last_reschedule_reason?: string | null
+          last_rescheduled_at?: string | null
           onboarding_stage?: string | null
           reminder_minutes?: number | null
+          reschedule_count?: number
           responsible?: string
           responsible_id?: string | null
           scheduled_time?: string | null
