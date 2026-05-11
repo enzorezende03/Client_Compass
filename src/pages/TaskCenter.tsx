@@ -649,6 +649,100 @@ export default function TaskCenter() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!rescheduleTask} onOpenChange={(o) => !o && setRescheduleTask(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remanejar tarefa</DialogTitle>
+            <DialogDescription>
+              {rescheduleTask?.title} — {rescheduleTask?.client_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+              Prazo atual: {rescheduleTask ? new Date(getDeadline(rescheduleTask) + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}
+              {(rescheduleTask?.reschedule_count || 0) > 0 && (
+                <div className="mt-1 text-amber-700 dark:text-amber-400">
+                  Já remanejada {rescheduleTask?.reschedule_count}× anteriormente
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>Aplicar em</Label>
+              <Select value={rescheduleField} onValueChange={(v: 'client' | 'internal') => setRescheduleField(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Prazo com o Cliente</SelectItem>
+                  <SelectItem value="internal">Prazo Interno</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Nova data de acompanhamento *</Label>
+              <Input type="date" value={rescheduleNewDate} onChange={e => setRescheduleNewDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>Justificativa *</Label>
+              <Textarea
+                rows={3}
+                value={rescheduleReason}
+                onChange={e => setRescheduleReason(e.target.value)}
+                placeholder="Por que a tarefa precisa ser remanejada?"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRescheduleTask(null)}>Cancelar</Button>
+            <Button onClick={submitReschedule}>Remanejar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Controle de Remanejamentos</DialogTitle>
+            <DialogDescription>Histórico de tarefas remanejadas (últimos 200 registros)</DialogDescription>
+          </DialogHeader>
+          {reschedules.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">Nenhum remanejamento registrado.</div>
+          ) : (
+            <div className="space-y-2">
+              {reschedules.map(r => (
+                <div key={r.id} className="rounded-lg border p-3 bg-card">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => { setHistoryOpen(false); navigate(`/client/${r.client_id}`); }}
+                        className="text-sm font-medium text-primary hover:underline text-left"
+                      >
+                        {r.task_title}
+                      </button>
+                      <div className="text-xs text-muted-foreground">{r.client_name}</div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px]">
+                      {new Date(r.created_at).toLocaleString('pt-BR')}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 text-xs flex items-center gap-2 flex-wrap">
+                    <span className="text-muted-foreground line-through">
+                      {new Date(r.previous_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </span>
+                    <span>→</span>
+                    <span className="font-medium">
+                      {new Date(r.new_due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </span>
+                    <span className="text-muted-foreground ml-auto">por {r.rescheduled_by_name}</span>
+                  </div>
+                  {r.reason && (
+                    <p className="mt-2 text-xs text-foreground bg-muted/40 rounded p-2">{r.reason}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
