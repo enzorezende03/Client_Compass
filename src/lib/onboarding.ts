@@ -210,6 +210,8 @@ async function seedStage(clientId: string, stage: OnboardingStage, clientName: s
       due_date: due.toISOString().split('T')[0],
       internal_due_date: due.toISOString().split('T')[0],
       status: 'pending',
+      category: 'onboarding',
+      onboarding_stage: stage,
     };
   });
   if (taskRows.length) await supabase.from('tasks').insert(taskRows);

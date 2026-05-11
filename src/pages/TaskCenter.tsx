@@ -30,7 +30,21 @@ interface TaskRow {
   status: string;
   created_at: string;
   client_name?: string;
+  category?: string;
+  onboarding_stage?: string | null;
 }
+
+const STAGE_LABEL: Record<string, string> = {
+  etapa_1: 'Etapa 1',
+  etapa_2: 'Etapa 2',
+  etapa_3: 'Etapa 3',
+  etapa_4: 'Etapa 4',
+  constituicao: 'Constituição',
+  etapa_1_nova: 'Etapa 1 (Nova)',
+  etapa_2_nova: 'Etapa 2 (Nova)',
+  etapa_3_nova: 'Etapa 3 (Nova)',
+  concluido: 'Concluído',
+};
 
 interface ClientOption { id: string; name: string; }
 interface InternalUser { id: string; name: string; email: string; active: boolean; }
@@ -72,6 +86,7 @@ export default function TaskCenter() {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [deadlineView, setDeadlineView] = useState<'client' | 'internal'>('client');
+  const [activeTab, setActiveTab] = useState<'regular' | 'onboarding'>('regular');
 
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -102,11 +117,13 @@ export default function TaskCenter() {
 
   const filtered = useMemo(() => {
     return tasks.filter(t => {
+      const cat = (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'regular';
+      if (cat !== activeTab) return false;
       const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
       const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
       return matchSearch && matchResp;
     });
-  }, [tasks, search, filterResponsible]);
+  }, [tasks, search, filterResponsible, activeTab]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -227,9 +244,16 @@ export default function TaskCenter() {
       >
         <div className="flex items-start gap-2 mb-2">
           <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-          <p className={`text-sm font-medium flex-1 ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-            {task.title}
-          </p>
+          <div className="flex-1">
+            <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+              {task.title}
+            </p>
+            {task.category === 'onboarding' && task.onboarding_stage && (
+              <Badge variant="outline" className="mt-1 text-[10px] border-primary/40 text-primary">
+                {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
+              </Badge>
+            )}
+          </div>
         </div>
         {task.description && (
           <p className="text-xs text-muted-foreground mb-2 ml-6 line-clamp-2">{task.description}</p>
@@ -327,10 +351,27 @@ export default function TaskCenter() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Central de Tarefas</h1>
             <p className="text-sm text-muted-foreground">Arraste as tarefas entre as colunas para atualizar o status</p>
           </div>
-          <Button onClick={openNew} className="gap-2 shadow-md">
-            <Plus className="h-4 w-4" />
-            Nova Tarefa
-          </Button>
+          {activeTab === 'regular' && (
+            <Button onClick={openNew} className="gap-2 shadow-md">
+              <Plus className="h-4 w-4" />
+              Nova Tarefa
+            </Button>
+          )}
+        </div>
+
+        <div className="inline-flex rounded-md border bg-muted p-1 mb-4">
+          <button
+            onClick={() => setActiveTab('regular')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'regular' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Tarefas do dia a dia
+          </button>
+          <button
+            onClick={() => setActiveTab('onboarding')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'onboarding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Tarefas de Onboarding
+          </button>
         </div>
 
         <div className="flex items-center gap-3 mb-6 flex-wrap">
