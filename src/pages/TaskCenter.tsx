@@ -244,9 +244,16 @@ export default function TaskCenter() {
       >
         <div className="flex items-start gap-2 mb-2">
           <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-          <p className={`text-sm font-medium flex-1 ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-            {task.title}
-          </p>
+          <div className="flex-1">
+            <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+              {task.title}
+            </p>
+            {task.category === 'onboarding' && task.onboarding_stage && (
+              <Badge variant="outline" className="mt-1 text-[10px] border-primary/40 text-primary">
+                {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
+              </Badge>
+            )}
+          </div>
         </div>
         {task.description && (
           <p className="text-xs text-muted-foreground mb-2 ml-6 line-clamp-2">{task.description}</p>
