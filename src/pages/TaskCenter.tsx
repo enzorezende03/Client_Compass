@@ -32,6 +32,24 @@ interface TaskRow {
   client_name?: string;
   category?: string;
   onboarding_stage?: string | null;
+  reschedule_count?: number;
+  last_reschedule_reason?: string | null;
+  last_rescheduled_at?: string | null;
+  internal_due_date?: string | null;
+  client_due_date?: string | null;
+}
+
+interface RescheduleRow {
+  id: string;
+  task_id: string;
+  client_id: string;
+  previous_due_date: string;
+  new_due_date: string;
+  reason: string;
+  rescheduled_by_name: string;
+  created_at: string;
+  task_title?: string;
+  client_name?: string;
 }
 
 const STAGE_LABEL: Record<string, string> = {
