@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2 } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText } from 'lucide-react';
+import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { AppLayout } from '@/components/AppLayout';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +75,7 @@ export default function Onboarding() {
   const [selectedClient, setSelectedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
+  const [handoffOpen, setHandoffOpen] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
