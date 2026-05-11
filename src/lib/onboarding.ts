@@ -276,8 +276,13 @@ export async function convertConstitutionToNewCompany(
   }
 }
 
-export async function advanceStage(clientId: string, currentStage: OnboardingStage, clientName: string) {
-  const next = nextStage(currentStage);
+export async function advanceStage(
+  clientId: string,
+  currentStage: OnboardingStage,
+  clientName: string,
+  type: OnboardingType = 'empresa_existente',
+) {
+  const next = nextStage(currentStage, type);
   if (!next) return;
   if (next === 'concluido') {
     await supabase.from('clients').update({
@@ -300,11 +305,10 @@ export async function advanceStage(clientId: string, currentStage: OnboardingSta
   }
   await supabase.from('clients').update({ onboarding_stage: next }).eq('id', clientId);
   await seedStage(clientId, next, clientName);
-  const stageNum = (s: string) => Number(s.replace('etapa_', ''));
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',
-    description: `[Onboarding] Etapa ${stageNum(currentStage)} concluída → avançou para Etapa ${stageNum(next)}`,
+    description: `[Onboarding] ${STAGE_LABELS[currentStage]} concluída → ${STAGE_LABELS[next]}`,
     responsible: 'CS',
     sector: 'commercial',
     origin: 'internal',
