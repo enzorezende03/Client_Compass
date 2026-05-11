@@ -116,6 +116,22 @@ export default function Onboarding() {
       .then(({ data }) => setTimelineByClient(prev => ({ ...prev, [selectedClient.id]: data || [] })));
   }, [selectedClient]);
 
+  const loadReports = useCallback(async (clientId: string) => {
+    const { data } = await supabase
+      .from('operational_monthly_reports')
+      .select('*').eq('client_id', clientId)
+      .order('submitted_at', { ascending: false });
+    setReportsByClient(prev => ({ ...prev, [clientId]: (data || []) as ReportRow[] }));
+  }, []);
+
+  // Load monthly reports when opening a client on Etapa 4
+  useEffect(() => {
+    if (!selectedClient) return;
+    if (selectedClient.onboarding_stage === 'etapa_4' || selectedClient.onboarding_status === 'concluido') {
+      loadReports(selectedClient.id);
+    }
+  }, [selectedClient, loadReports]);
+
   const responsibles = useMemo(() => {
     const set = new Set(clients.map(c => c.cs_responsible).filter(Boolean));
     return Array.from(set);
