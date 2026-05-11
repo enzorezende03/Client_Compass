@@ -235,6 +235,7 @@ export type Database = {
           onboarding_stage: string | null
           onboarding_started_at: string | null
           onboarding_status: string
+          onboarding_type: string | null
           pain_points: string
           profile: string
           recurring_issues: string
@@ -271,6 +272,7 @@ export type Database = {
           onboarding_stage?: string | null
           onboarding_started_at?: string | null
           onboarding_status?: string
+          onboarding_type?: string | null
           pain_points?: string
           profile?: string
           recurring_issues?: string
@@ -307,6 +309,7 @@ export type Database = {
           onboarding_stage?: string | null
           onboarding_started_at?: string | null
           onboarding_status?: string
+          onboarding_type?: string | null
           pain_points?: string
           profile?: string
           recurring_issues?: string
@@ -506,28 +509,37 @@ export type Database = {
       onboarding_checklist_items: {
         Row: {
           created_at: string
+          description: string
           id: string
           is_required: boolean
           order_index: number
-          sla_hours: number
+          responsible_role: string
+          sla_days: number | null
+          sla_hours: number | null
           stage: string
           title: string
         }
         Insert: {
           created_at?: string
+          description?: string
           id?: string
           is_required?: boolean
           order_index: number
-          sla_hours: number
+          responsible_role?: string
+          sla_days?: number | null
+          sla_hours?: number | null
           stage: string
           title: string
         }
         Update: {
           created_at?: string
+          description?: string
           id?: string
           is_required?: boolean
           order_index?: number
-          sla_hours?: number
+          responsible_role?: string
+          sla_days?: number | null
+          sla_hours?: number | null
           stage?: string
           title?: string
         }
