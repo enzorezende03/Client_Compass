@@ -341,6 +341,16 @@ export default function ClientFormPage() {
           </main>
         </div>
       </div>
+
+      {isEdit && id && (
+        <StartOnboardingDialog
+          open={startingOnboarding}
+          onOpenChange={setStartingOnboarding}
+          clientId={id}
+          clientName={form.name}
+          onStarted={() => navigate('/onboarding')}
+        />
+      )}
     </AppLayout>
   );
 }
