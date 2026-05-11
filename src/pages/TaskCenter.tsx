@@ -117,11 +117,13 @@ export default function TaskCenter() {
 
   const filtered = useMemo(() => {
     return tasks.filter(t => {
+      const cat = (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'regular';
+      if (cat !== activeTab) return false;
       const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
       const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
       return matchSearch && matchResp;
     });
-  }, [tasks, search, filterResponsible]);
+  }, [tasks, search, filterResponsible, activeTab]);
 
   const today = new Date().toISOString().split('T')[0];
 
