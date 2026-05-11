@@ -639,6 +639,45 @@ export default function Onboarding() {
         clientName={selectedClient?.name || ''}
         viewReport={viewReport}
       />
+
+      {selectedClient && (
+        <ConvertToNewCompanyDialog
+          open={convertOpen}
+          onOpenChange={setConvertOpen}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name}
+          onConverted={() => { setSelectedClient(null); fetchAll(); }}
+        />
+      )}
+
+      {/* Constituição info dialog */}
+      <Dialog open={constInfoOpen} onOpenChange={setConstInfoOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileBadge2 className="h-5 w-5 text-amber-500" />
+              Acompanhamento de Constituição
+            </DialogTitle>
+            <DialogDescription>
+              Para iniciar o acompanhamento de uma empresa em constituição, primeiro cadastre o cliente
+              com o <strong>CPF do sócio principal</strong> (CNPJ ainda não emitido). Em seguida, ao
+              clicar em <strong>Iniciar Onboarding</strong> no cadastro, escolha a opção
+              <span className="mx-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-xs font-medium">
+                Em Constituição
+              </span>.
+              <br /><br />
+              Quando o CNPJ for emitido, o cliente poderá ser <strong>convertido</strong> automaticamente
+              para o fluxo de Empresa Nova diretamente no painel lateral.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConstInfoOpen(false)}>Fechar</Button>
+            <Button onClick={() => { setConstInfoOpen(false); navigate('/cadastro/clientes/novo'); }} className="gap-2 bg-amber-500 hover:bg-amber-600 text-white border-0">
+              <FileBadge2 className="h-4 w-4" /> Cadastrar Cliente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
