@@ -72,12 +72,14 @@ function daysSince(iso?: string | null) {
 
 export default function Onboarding() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [progress, setProgress] = useState<ProgressFull[]>([]);
   const [timelineByClient, setTimelineByClient] = useState<Record<string, any[]>>({});
   const [responsibleFilter, setResponsibleFilter] = useState('all');
   const [slaFilter, setSlaFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | OnboardingType>('all');
   const [search, setSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,11 +88,13 @@ export default function Onboarding() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportsByClient, setReportsByClient] = useState<Record<string, ReportRow[]>>({});
   const [viewReport, setViewReport] = useState<ReportRow | null>(null);
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [constInfoOpen, setConstInfoOpen] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [clientsRes, itemsRes, progRes] = await Promise.all([
-      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at').eq('onboarding_status', 'em_andamento'),
+      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type').eq('onboarding_status', 'em_andamento'),
       supabase.from('onboarding_checklist_items').select('*').order('order_index'),
       supabase.from('client_onboarding_progress').select('*'),
     ]);
