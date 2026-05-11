@@ -301,6 +301,7 @@ export default function TaskCenter() {
     })));
   };
 
+  const handleDragStart = (taskId: string) => setDraggedTaskId(taskId);
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
   const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
     e.preventDefault();
