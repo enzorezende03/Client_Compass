@@ -91,6 +91,7 @@ export default function Onboarding() {
   const [viewReport, setViewReport] = useState<ReportRow | null>(null);
   const [convertOpen, setConvertOpen] = useState(false);
   const [constInfoOpen, setConstInfoOpen] = useState(false);
+  const [dbTemplates, setDbTemplates] = useState<MessageTemplate[]>([]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
