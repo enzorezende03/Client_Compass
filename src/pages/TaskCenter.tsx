@@ -462,12 +462,18 @@ export default function TaskCenter() {
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Central de Tarefas</h1>
             <p className="text-sm text-muted-foreground">Arraste as tarefas entre as colunas para atualizar o status</p>
           </div>
-          {activeTab === 'regular' && (
-            <Button onClick={openNew} className="gap-2 shadow-md">
-              <Plus className="h-4 w-4" />
-              Nova Tarefa
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={openHistory} className="gap-2">
+              <History className="h-4 w-4" />
+              Remanejamentos
             </Button>
-          )}
+            {activeTab === 'regular' && (
+              <Button onClick={openNew} className="gap-2 shadow-md">
+                <Plus className="h-4 w-4" />
+                Nova Tarefa
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="inline-flex rounded-md border bg-muted p-1 mb-4">
