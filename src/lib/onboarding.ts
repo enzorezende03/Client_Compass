@@ -73,6 +73,24 @@ export interface ProgressRow {
   created_at: string;
 }
 
+export interface MessageTemplate {
+  id: string;
+  onboarding_type: string;
+  stage: string;
+  moment: string;
+  title: string;
+  content: string;
+  variables: string[];
+}
+
+/** Replace [VAR] placeholders with values from the provided map; missing keys remain as [VAR]. */
+export function applyTemplateVars(text: string, vars: Record<string, string | undefined | null>): string {
+  return text.replace(/\[([A-Z0-9_\/]+)\]/g, (full, key) => {
+    const v = vars[key];
+    return v != null && v !== '' ? String(v) : full;
+  });
+}
+
 export const MESSAGE_TEMPLATES: Record<string, { title: string; text: string }[]> = {
   etapa_1: [
     {

@@ -23,6 +23,7 @@ import {
   STAGES_EXISTING, STAGES_NOVA, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
   ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
   slaTone, aggregateSlaTone, advanceStage, toggleChecklistItem, updateProgressNotes,
+  applyTemplateVars, MessageTemplate,
 } from '@/lib/onboarding';
 
 interface ClientRow {
@@ -90,6 +91,7 @@ export default function Onboarding() {
   const [viewReport, setViewReport] = useState<ReportRow | null>(null);
   const [convertOpen, setConvertOpen] = useState(false);
   const [constInfoOpen, setConstInfoOpen] = useState(false);
+  const [dbTemplates, setDbTemplates] = useState<MessageTemplate[]>([]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -117,6 +119,13 @@ export default function Onboarding() {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Load all message templates once
+  useEffect(() => {
+    supabase.from('message_templates' as any).select('*').then(({ data }) => {
+      setDbTemplates((data || []) as unknown as MessageTemplate[]);
+    });
+  }, []);
 
   // Load timeline lazily per selected client
   useEffect(() => {
@@ -538,25 +547,59 @@ export default function Onboarding() {
                 </section>
               )}
 
-              {/* Templates */}
-              {MESSAGE_TEMPLATES[selectedData.stage]?.length > 0 && (
-                <section className="mt-6">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Templates de mensagem</h3>
-                  <div className="space-y-2">
-                    {MESSAGE_TEMPLATES[selectedData.stage].map((tpl, i) => (
-                      <div key={i} className="border border-border rounded-lg p-3 bg-card">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-semibold text-foreground">{tpl.title}</span>
-                          <Button size="sm" variant="ghost" onClick={() => copyTemplate(tpl.text)} className="h-7 gap-1.5 text-xs">
-                            <Copy className="h-3 w-3" /> Copiar
-                          </Button>
+              {/* Templates — DB-backed, filtered by onboarding_type + stage */}
+              {(() => {
+                const cType = (selectedData.client.onboarding_type || 'empresa_existente') as OnboardingType;
+                const stageTpls = dbTemplates.filter(t => t.onboarding_type === cType && t.stage === selectedData.stage);
+                const legacy = MESSAGE_TEMPLATES[selectedData.stage] || [];
+                if (stageTpls.length === 0 && legacy.length === 0) return null;
+
+                // Determine "2M Saúde" or "2M Contabilidade" from segment hints (fallback Saúde)
+                const isSaude = /sa[uú]de|cl[íi]nic|m[ée]dic|odont|hospital|farm[áa]c/i
+                  .test(`${(selectedData.client as any).segment || ''} ${selectedData.client.name}`);
+                const vars: Record<string, string> = {
+                  NOME_CLIENTE: selectedData.client.name,
+                  NOME_CS: selectedData.client.cs_responsible || '',
+                  'SAUDE/CONTABILIDADE': isSaude ? 'Saúde' : 'Contabilidade',
+                  CNPJ_EMPRESA: '',
+                  STATUS_CONSTITUICAO: '',
+                  DESCRICAO_STATUS: '',
+                  PRAZO_ESTIMADO: '',
+                };
+
+                return (
+                  <section className="mt-6">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Templates de mensagem</h3>
+                    <div className="space-y-2">
+                      {stageTpls.map(tpl => {
+                        const filled = applyTemplateVars(tpl.content, vars);
+                        return (
+                          <div key={tpl.id} className="border border-border rounded-lg p-3 bg-card">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-semibold text-foreground">{tpl.title}</span>
+                              <Button size="sm" variant="ghost" onClick={() => copyTemplate(filled)} className="h-7 gap-1.5 text-xs">
+                                <Copy className="h-3 w-3" /> Copiar mensagem
+                              </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{filled}</p>
+                          </div>
+                        );
+                      })}
+                      {legacy.map((tpl, i) => (
+                        <div key={`legacy-${i}`} className="border border-border rounded-lg p-3 bg-card">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-semibold text-foreground">{tpl.title}</span>
+                            <Button size="sm" variant="ghost" onClick={() => copyTemplate(tpl.text)} className="h-7 gap-1.5 text-xs">
+                              <Copy className="h-3 w-3" /> Copiar
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{tpl.text}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{tpl.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
+                      ))}
+                    </div>
+                  </section>
+                );
+              })()}
 
               {/* Timeline */}
               <section className="mt-6">
