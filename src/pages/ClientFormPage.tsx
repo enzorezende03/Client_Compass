@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket } from 'lucide-react';
-import { startOnboarding } from '@/lib/onboarding';
+import { StartOnboardingDialog } from '@/components/StartOnboardingDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -216,22 +216,11 @@ export default function ClientFormPage() {
               {isEdit && onboardingStatus === 'pendente' && (
                 <Button
                   variant="default"
-                  disabled={startingOnboarding || !id}
-                  onClick={async () => {
-                    if (!id) return;
-                    setStartingOnboarding(true);
-                    try {
-                      await startOnboarding(id, form.name);
-                      toast({ title: 'Onboarding iniciado!', description: 'Redirecionando para o pipeline...' });
-                      navigate('/onboarding');
-                    } catch (e: any) {
-                      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
-                      setStartingOnboarding(false);
-                    }
-                  }}
+                  disabled={!id}
+                  onClick={() => setStartingOnboarding(true)}
                   className="gap-2 shadow-md"
                 >
-                  {startingOnboarding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                  <Rocket className="h-4 w-4" />
                   Iniciar Onboarding
                 </Button>
               )}
@@ -352,6 +341,16 @@ export default function ClientFormPage() {
           </main>
         </div>
       </div>
+
+      {isEdit && id && (
+        <StartOnboardingDialog
+          open={startingOnboarding}
+          onOpenChange={setStartingOnboarding}
+          clientId={id}
+          clientName={form.name}
+          onStarted={() => navigate('/onboarding')}
+        />
+      )}
     </AppLayout>
   );
 }

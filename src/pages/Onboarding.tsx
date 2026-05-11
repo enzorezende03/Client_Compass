@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
+import { ConvertToNewCompanyDialog } from '@/components/ConvertToNewCompanyDialog';
 import { AppLayout } from '@/components/AppLayout';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,12 +12,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
-  STAGES, STAGE_LABELS, STAGE_SHORT, OnboardingStage, ChecklistItem, MESSAGE_TEMPLATES,
+  STAGES_EXISTING, STAGES_NOVA, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
+  ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
   slaTone, aggregateSlaTone, advanceStage, toggleChecklistItem, updateProgressNotes,
 } from '@/lib/onboarding';
 
@@ -27,6 +32,7 @@ interface ClientRow {
   onboarding_status: string;
   onboarding_stage: string | null;
   onboarding_started_at: string | null;
+  onboarding_type: OnboardingType | null;
 }
 
 interface ProgressFull {
@@ -66,12 +72,14 @@ function daysSince(iso?: string | null) {
 
 export default function Onboarding() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [progress, setProgress] = useState<ProgressFull[]>([]);
   const [timelineByClient, setTimelineByClient] = useState<Record<string, any[]>>({});
   const [responsibleFilter, setResponsibleFilter] = useState('all');
   const [slaFilter, setSlaFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | OnboardingType>('all');
   const [search, setSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,11 +88,13 @@ export default function Onboarding() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportsByClient, setReportsByClient] = useState<Record<string, ReportRow[]>>({});
   const [viewReport, setViewReport] = useState<ReportRow | null>(null);
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [constInfoOpen, setConstInfoOpen] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [clientsRes, itemsRes, progRes] = await Promise.all([
-      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at').eq('onboarding_status', 'em_andamento'),
+      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type').eq('onboarding_status', 'em_andamento'),
       supabase.from('onboarding_checklist_items').select('*').order('order_index'),
       supabase.from('client_onboarding_progress').select('*'),
     ]);
@@ -98,7 +108,7 @@ export default function Onboarding() {
     // also fetch concluded (last 30 days) for the "Concluído" column
     const { data: doneRes } = await supabase
       .from('clients')
-      .select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at')
+      .select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type')
       .eq('onboarding_status', 'concluido');
     setClients([...cls, ...((doneRes || []) as ClientRow[])]);
     setItems(its);
@@ -152,19 +162,39 @@ export default function Onboarding() {
     if (responsibleFilter !== 'all' && client.cs_responsible !== responsibleFilter) return false;
     if (slaFilter !== 'all' && sla !== slaFilter && client.onboarding_status !== 'concluido') return false;
     if (search && !client.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (typeFilter !== 'all') {
+      const t = (client.onboarding_type || 'empresa_existente') as OnboardingType;
+      if (t !== typeFilter) return false;
+    }
     return true;
-  }), [enriched, responsibleFilter, slaFilter, search]);
+  }), [enriched, responsibleFilter, slaFilter, search, typeFilter]);
+
+  // Choose columns based on the active type filter
+  const activeStages: OnboardingStage[] = useMemo(() => {
+    if (typeFilter === 'empresa_nova' || typeFilter === 'em_constituicao') return STAGES_NOVA;
+    if (typeFilter === 'empresa_existente') return STAGES_EXISTING;
+    // 'all' → use the existing-company columns and bucket new-flow stages into the closest match
+    return STAGES_EXISTING;
+  }, [typeFilter]);
 
   const byStage = useMemo(() => {
-    const map: Record<OnboardingStage, typeof enriched> = {
-      etapa_1: [], etapa_2: [], etapa_3: [], etapa_4: [], concluido: [],
+    const map = {} as Record<OnboardingStage, typeof enriched>;
+    for (const s of activeStages) map[s] = [];
+    const novaToExisting: Partial<Record<OnboardingStage, OnboardingStage>> = {
+      constituicao: 'etapa_1', etapa_1_nova: 'etapa_1', etapa_2_nova: 'etapa_2', etapa_3_nova: 'etapa_3',
     };
     for (const e of visible) {
-      const s = (e.client.onboarding_status === 'concluido' ? 'concluido' : e.stage) as OnboardingStage;
+      let s: OnboardingStage = e.client.onboarding_status === 'concluido' ? 'concluido' : e.stage;
+      if (!map[s]) {
+        // unify new-flow stages into existing columns when "Todos" is selected
+        const fallback = novaToExisting[s];
+        if (fallback && map[fallback]) s = fallback;
+        else continue;
+      }
       map[s].push(e);
     }
     return map;
-  }, [visible]);
+  }, [visible, activeStages]);
 
   const totalActive = clients.filter(c => c.onboarding_status === 'em_andamento').length;
 
@@ -190,8 +220,9 @@ export default function Onboarding() {
     if (!selectedData) return;
     setAdvancing(true);
     try {
-      await advanceStage(selectedData.client.id, selectedData.stage, selectedData.client.name);
-      const isFinal = selectedData.stage === 'etapa_4';
+      const cType = (selectedData.client.onboarding_type || 'empresa_existente') as OnboardingType;
+      await advanceStage(selectedData.client.id, selectedData.stage, selectedData.client.name, cType);
+      const isFinal = selectedData.stage === 'etapa_4' || selectedData.stage === 'etapa_3_nova';
       toast({
         title: isFinal ? 'Onboarding concluído!' : 'Etapa avançada',
         description: isFinal
@@ -229,8 +260,26 @@ export default function Onboarding() {
             <Badge variant="secondary" className="text-sm py-1.5 px-3 gap-1.5">
               <Clock className="h-3.5 w-3.5" /> {totalActive} em andamento
             </Badge>
+            <Button
+              onClick={() => setConstInfoOpen(true)}
+              className="gap-2 bg-amber-500 hover:bg-amber-600 text-white border-0"
+              size="sm"
+            >
+              <FileBadge2 className="h-4 w-4" />
+              Iniciar Acompanhamento de Constituição
+            </Button>
           </div>
         </div>
+
+        {/* Type tabs */}
+        <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="all">Todos</TabsTrigger>
+            <TabsTrigger value="empresa_existente">Empresa Existente</TabsTrigger>
+            <TabsTrigger value="empresa_nova">Empresa Nova</TabsTrigger>
+            <TabsTrigger value="em_constituicao">Em Constituição</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -259,8 +308,8 @@ export default function Onboarding() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-            {STAGES.map(stage => {
-              const list = byStage[stage];
+            {activeStages.map(stage => {
+              const list = byStage[stage] || [];
               return (
                 <div key={stage} className="bg-muted/40 rounded-lg border border-border/60 flex flex-col min-h-[400px]">
                   <div className="px-3 py-2.5 border-b border-border/60 flex items-center justify-between sticky top-0 bg-muted/60 backdrop-blur rounded-t-lg">
@@ -275,15 +324,19 @@ export default function Onboarding() {
                       const days = daysSince(client.onboarding_started_at);
                       const isDone = client.onboarding_status === 'concluido';
                       const pct = total ? Math.round((completed / total) * 100) : 0;
+                      const cType = (client.onboarding_type || 'empresa_existente') as OnboardingType;
                       return (
                         <motion.button
                           key={client.id}
                           layout
                           whileHover={{ y: -2 }}
                           onClick={() => setSelectedClient(client)}
-                          className="w-full text-left bg-card hover:bg-card/80 border border-border rounded-lg p-3 shadow-sm transition-all"
+                          className="w-full text-left bg-card hover:bg-card/80 border border-border rounded-lg p-3 shadow-sm transition-all relative"
                         >
-                          <div className="font-semibold text-sm text-foreground line-clamp-2">{client.name}</div>
+                          <Badge variant="outline" className={cn('absolute top-2 right-2 text-[9px] px-1.5 py-0', ONBOARDING_TYPE_BADGE[cType])}>
+                            {ONBOARDING_TYPE_LABELS[cType]}
+                          </Badge>
+                          <div className="font-semibold text-sm text-foreground line-clamp-2 pr-24">{client.name}</div>
                           <div className="flex items-center justify-between mt-1.5 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{days}d na etapa</span>
                             {!isDone && (
@@ -375,6 +428,43 @@ export default function Onboarding() {
                   )}
                 </div>
               </section>
+
+              {/* Convert constituição → empresa nova */}
+              {selectedData.client.onboarding_type === 'em_constituicao' && (() => {
+                const cnpjItem = selectedData.stageProg.find(p => /CNPJ/i.test(p.item.title) && /receb/i.test(p.item.title));
+                const ready = cnpjItem?.status === 'concluido';
+                return (
+                  <section className="mt-6">
+                    <div className={cn(
+                      'border-2 rounded-lg p-4 transition-colors',
+                      ready ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-dashed border-border bg-muted/30'
+                    )}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                            <ArrowRightCircle className="h-4 w-4 text-emerald-600" />
+                            Conversão para Empresa Nova
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {ready
+                              ? 'CNPJ recebido. Confirme para iniciar o onboarding de Empresa Nova.'
+                              : 'Marque o item "Registrar recebimento de CNPJ" para liberar a conversão.'}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={!ready}
+                          onClick={() => setConvertOpen(true)}
+                          className="gap-1.5 shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white border-0 disabled:bg-muted disabled:text-muted-foreground"
+                        >
+                          <ArrowRightCircle className="h-3.5 w-3.5" />
+                          Converter para Empresa Nova
+                        </Button>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
 
               {/* Handoff form (only on Etapa 2) */}
               {selectedData.stage === 'etapa_2' && (() => {
@@ -549,6 +639,45 @@ export default function Onboarding() {
         clientName={selectedClient?.name || ''}
         viewReport={viewReport}
       />
+
+      {selectedClient && (
+        <ConvertToNewCompanyDialog
+          open={convertOpen}
+          onOpenChange={setConvertOpen}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name}
+          onConverted={() => { setSelectedClient(null); fetchAll(); }}
+        />
+      )}
+
+      {/* Constituição info dialog */}
+      <Dialog open={constInfoOpen} onOpenChange={setConstInfoOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileBadge2 className="h-5 w-5 text-amber-500" />
+              Acompanhamento de Constituição
+            </DialogTitle>
+            <DialogDescription>
+              Para iniciar o acompanhamento de uma empresa em constituição, primeiro cadastre o cliente
+              com o <strong>CPF do sócio principal</strong> (CNPJ ainda não emitido). Em seguida, ao
+              clicar em <strong>Iniciar Onboarding</strong> no cadastro, escolha a opção
+              <span className="mx-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-xs font-medium">
+                Em Constituição
+              </span>.
+              <br /><br />
+              Quando o CNPJ for emitido, o cliente poderá ser <strong>convertido</strong> automaticamente
+              para o fluxo de Empresa Nova diretamente no painel lateral.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConstInfoOpen(false)}>Fechar</Button>
+            <Button onClick={() => { setConstInfoOpen(false); navigate('/cadastro/clientes/novo'); }} className="gap-2 bg-amber-500 hover:bg-amber-600 text-white border-0">
+              <FileBadge2 className="h-4 w-4" /> Cadastrar Cliente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
