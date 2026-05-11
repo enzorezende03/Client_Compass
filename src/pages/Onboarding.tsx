@@ -162,19 +162,39 @@ export default function Onboarding() {
     if (responsibleFilter !== 'all' && client.cs_responsible !== responsibleFilter) return false;
     if (slaFilter !== 'all' && sla !== slaFilter && client.onboarding_status !== 'concluido') return false;
     if (search && !client.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (typeFilter !== 'all') {
+      const t = (client.onboarding_type || 'empresa_existente') as OnboardingType;
+      if (t !== typeFilter) return false;
+    }
     return true;
-  }), [enriched, responsibleFilter, slaFilter, search]);
+  }), [enriched, responsibleFilter, slaFilter, search, typeFilter]);
+
+  // Choose columns based on the active type filter
+  const activeStages: OnboardingStage[] = useMemo(() => {
+    if (typeFilter === 'empresa_nova' || typeFilter === 'em_constituicao') return STAGES_NOVA;
+    if (typeFilter === 'empresa_existente') return STAGES_EXISTING;
+    // 'all' → use the existing-company columns and bucket new-flow stages into the closest match
+    return STAGES_EXISTING;
+  }, [typeFilter]);
 
   const byStage = useMemo(() => {
-    const map: Record<OnboardingStage, typeof enriched> = {
-      etapa_1: [], etapa_2: [], etapa_3: [], etapa_4: [], concluido: [],
+    const map = {} as Record<OnboardingStage, typeof enriched>;
+    for (const s of activeStages) map[s] = [];
+    const novaToExisting: Partial<Record<OnboardingStage, OnboardingStage>> = {
+      constituicao: 'etapa_1', etapa_1_nova: 'etapa_1', etapa_2_nova: 'etapa_2', etapa_3_nova: 'etapa_3',
     };
     for (const e of visible) {
-      const s = (e.client.onboarding_status === 'concluido' ? 'concluido' : e.stage) as OnboardingStage;
+      let s: OnboardingStage = e.client.onboarding_status === 'concluido' ? 'concluido' : e.stage;
+      if (!map[s]) {
+        // unify new-flow stages into existing columns when "Todos" is selected
+        const fallback = novaToExisting[s];
+        if (fallback && map[fallback]) s = fallback;
+        else continue;
+      }
       map[s].push(e);
     }
     return map;
-  }, [visible]);
+  }, [visible, activeStages]);
 
   const totalActive = clients.filter(c => c.onboarding_status === 'em_andamento').length;
 
