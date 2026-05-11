@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2 } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText } from 'lucide-react';
+import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { AppLayout } from '@/components/AppLayout';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +75,7 @@ export default function Onboarding() {
   const [selectedClient, setSelectedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
+  const [handoffOpen, setHandoffOpen] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -354,6 +356,35 @@ export default function Onboarding() {
                 </div>
               </section>
 
+              {/* Handoff form (only on Etapa 2) */}
+              {selectedData.stage === 'etapa_2' && (() => {
+                const handoffProg = selectedData.stageProg.find(p => /repasse/i.test(p.item.title));
+                const handoffDone = handoffProg?.status === 'concluido';
+                return (
+                  <section className="mt-6">
+                    <div className="border border-border rounded-lg p-4 bg-card">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            Formulário de Repasse CS → Operacional
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {handoffDone
+                              ? 'Repasse já registrado. Você pode visualizar ou editar.'
+                              : 'Preencha os dados de repasse para liberar o avanço da etapa.'}
+                          </p>
+                        </div>
+                        <Button size="sm" onClick={() => setHandoffOpen(true)} className="gap-1.5 shrink-0">
+                          <FileText className="h-3.5 w-3.5" />
+                          {handoffDone ? 'Ver Formulário' : 'Preencher Formulário'}
+                        </Button>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
+
               {/* Templates */}
               {MESSAGE_TEMPLATES[selectedData.stage]?.length > 0 && (
                 <section className="mt-6">
@@ -416,6 +447,18 @@ export default function Onboarding() {
           )}
         </SheetContent>
       </Sheet>
+
+      {selectedClient && (
+        <OnboardingHandoffDialog
+          open={handoffOpen}
+          onOpenChange={setHandoffOpen}
+          clientId={selectedClient.id}
+          handoffProgressId={
+            progress.find(p => p.client_id === selectedClient.id && /repasse/i.test(p.item.title))?.id
+          }
+          onSaved={fetchAll}
+        />
+      )}
     </AppLayout>
   );
 }
