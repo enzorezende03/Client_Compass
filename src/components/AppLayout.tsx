@@ -1,7 +1,7 @@
 import { NavLink } from '@/components/NavLink';
 import { NotificationBell } from '@/components/NotificationBell';
 import { UrgentTaskAlert } from '@/components/UrgentTaskAlert';
-import { Users, Building2, LayoutDashboard, CalendarClock, LogOut, RefreshCw } from 'lucide-react';
+import { Users, Building2, LayoutDashboard, CalendarClock, LogOut, RefreshCw, Rocket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <CalendarClock className="h-4 w-4" />
             Tarefas
+          </NavLink>
+          <NavLink
+            to="/onboarding"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            activeClassName="text-foreground bg-accent"
+          >
+            <Rocket className="h-4 w-4" />
+            Onboarding
           </NavLink>
           <NavLink
             to="/cadastro/usuarios"
