@@ -155,6 +155,61 @@ export type Database = {
           },
         ]
       }
+      client_onboarding_progress: {
+        Row: {
+          checklist_item_id: string
+          client_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          status: string
+        }
+        Insert: {
+          checklist_item_id: string
+          client_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+        }
+        Update: {
+          checklist_item_id?: string
+          client_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_onboarding_progress_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_onboarding_progress_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_onboarding_progress_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           action_plan: string | null
@@ -176,6 +231,10 @@ export type Database = {
           health_score: string
           id: string
           name: string
+          onboarding_completed_at: string | null
+          onboarding_stage: string | null
+          onboarding_started_at: string | null
+          onboarding_status: string
           pain_points: string
           profile: string
           recurring_issues: string
@@ -208,6 +267,10 @@ export type Database = {
           health_score?: string
           id?: string
           name: string
+          onboarding_completed_at?: string | null
+          onboarding_stage?: string | null
+          onboarding_started_at?: string | null
+          onboarding_status?: string
           pain_points?: string
           profile?: string
           recurring_issues?: string
@@ -240,6 +303,10 @@ export type Database = {
           health_score?: string
           id?: string
           name?: string
+          onboarding_completed_at?: string | null
+          onboarding_stage?: string | null
+          onboarding_started_at?: string | null
+          onboarding_status?: string
           pain_points?: string
           profile?: string
           recurring_issues?: string
@@ -430,6 +497,171 @@ export type Database = {
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_checklist_items: {
+        Row: {
+          created_at: string
+          id: string
+          is_required: boolean
+          order_index: number
+          sla_hours: number
+          stage: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          order_index: number
+          sla_hours: number
+          stage: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          order_index?: number
+          sla_hours?: number
+          stage?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      onboarding_handoff_forms: {
+        Row: {
+          activity: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          employee_count: number | null
+          fiscal_issues: string
+          has_employees: boolean
+          has_fixed_assets: string
+          id: string
+          next_steps: string
+          nf_types: string
+          notes: string
+          organization_level: number | null
+          pending_docs: string
+          received_docs: string
+          start_competency: string
+          tax_regime: string
+        }
+        Insert: {
+          activity?: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_count?: number | null
+          fiscal_issues?: string
+          has_employees?: boolean
+          has_fixed_assets?: string
+          id?: string
+          next_steps?: string
+          nf_types?: string
+          notes?: string
+          organization_level?: number | null
+          pending_docs?: string
+          received_docs?: string
+          start_competency?: string
+          tax_regime?: string
+        }
+        Update: {
+          activity?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_count?: number | null
+          fiscal_issues?: string
+          has_employees?: boolean
+          has_fixed_assets?: string
+          id?: string
+          next_steps?: string
+          nf_types?: string
+          notes?: string
+          organization_level?: number | null
+          pending_docs?: string
+          received_docs?: string
+          start_competency?: string
+          tax_regime?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_handoff_forms_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_handoff_forms_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operational_monthly_reports: {
+        Row: {
+          client_id: string
+          completed_obligations: string
+          cs_attention_points: string
+          id: string
+          integration_progress: string
+          operational_difficulties: string
+          overall_status: string
+          pending_items: string
+          reference_month: string
+          submitted_at: string
+          submitted_by: string | null
+          upcoming_milestones: string
+        }
+        Insert: {
+          client_id: string
+          completed_obligations?: string
+          cs_attention_points?: string
+          id?: string
+          integration_progress?: string
+          operational_difficulties?: string
+          overall_status?: string
+          pending_items?: string
+          reference_month: string
+          submitted_at?: string
+          submitted_by?: string | null
+          upcoming_milestones?: string
+        }
+        Update: {
+          client_id?: string
+          completed_obligations?: string
+          cs_attention_points?: string
+          id?: string
+          integration_progress?: string
+          operational_difficulties?: string
+          overall_status?: string
+          pending_items?: string
+          reference_month?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          upcoming_milestones?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_monthly_reports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_monthly_reports_submitted_by_fkey"
+            columns: ["submitted_by"]
             isOneToOne: false
             referencedRelation: "internal_users"
             referencedColumns: ["id"]
