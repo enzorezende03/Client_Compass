@@ -522,6 +522,33 @@ export default function Onboarding() {
           onSaved={fetchAll}
         />
       )}
+
+      {selectedClient && (
+        <OnboardingMonthlyReportDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          clientId={selectedClient.id}
+          clientName={selectedClient.name}
+          csResponsibleName={selectedClient.cs_responsible}
+          monthlyProgressId={
+            progress.find(p =>
+              p.client_id === selectedClient.id
+              && p.item.stage === 'etapa_4'
+              && p.status !== 'concluido'
+              && /relat[óo]rio|mensal|fechamento/i.test(p.item.title)
+            )?.id
+          }
+          onSaved={() => { loadReports(selectedClient.id); fetchAll(); }}
+        />
+      )}
+
+      <OnboardingMonthlyReportDialog
+        open={!!viewReport}
+        onOpenChange={(o) => !o && setViewReport(null)}
+        clientId={viewReport?.client_id || ''}
+        clientName={selectedClient?.name || ''}
+        viewReport={viewReport}
+      />
     </AppLayout>
   );
 }
