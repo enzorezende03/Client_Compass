@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
 import {
-  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, ChevronDown, ChevronUp, FileText, Target, Pencil
+  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, ChevronDown, ChevronUp, FileText, Target, Pencil, Rocket
 } from 'lucide-react';
+import { startOnboarding } from '@/lib/onboarding';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -68,6 +69,8 @@ export default function ClientDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [client, setClient] = useState<Client | null>(null);
+  const [onboardingStatus, setOnboardingStatus] = useState<string>('pendente');
+  const [startingOnboarding, setStartingOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
   const [interactionOpen, setInteractionOpen] = useState(false);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
@@ -83,7 +86,10 @@ export default function ClientDetail() {
       supabase.from('timeline_entries').select('*').eq('client_id', id).order('date', { ascending: false }),
       supabase.from('tasks').select('*').eq('client_id', id).order('due_date'),
     ]).then(([clientRes, timelineRes, tasksRes]) => {
-      if (clientRes.data) setClient(mapClient(clientRes.data));
+      if (clientRes.data) {
+        setClient(mapClient(clientRes.data));
+        setOnboardingStatus((clientRes.data as any).onboarding_status || 'pendente');
+      }
       setTimeline((timelineRes.data || []).map(mapTimeline));
       setTasks((tasksRes.data || []).map(mapTask));
       setLoading(false);
@@ -178,6 +184,27 @@ export default function ClientDetail() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {onboardingStatus === 'pendente' && (
+                <Button
+                  variant="default"
+                  disabled={startingOnboarding}
+                  onClick={async () => {
+                    if (!client) return;
+                    setStartingOnboarding(true);
+                    try {
+                      await startOnboarding(client.id, client.name);
+                      toast({ title: 'Onboarding iniciado!', description: 'Redirecionando para o pipeline...' });
+                      navigate('/onboarding');
+                    } catch (e: any) {
+                      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
+                      setStartingOnboarding(false);
+                    }
+                  }}
+                  className="gap-2 shadow-md"
+                >
+                  <Rocket className="h-4 w-4" /> Iniciar Onboarding
+                </Button>
+              )}
               <Button variant="outline" onClick={() => navigate(`/cadastro/clientes/${client.id}/editar`)} className="gap-2 shadow-sm">
                 <Pencil className="h-4 w-4" /> Editar Cadastro
               </Button>
