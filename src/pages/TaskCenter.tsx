@@ -405,11 +405,9 @@ export default function TaskCenter() {
         )}
         <div className="flex items-center gap-1 mt-2 ml-6 flex-wrap">
           <Button variant="ghost" size="sm" onClick={() => openEdit(task)} className="h-6 px-2 text-xs">Editar</Button>
-          {isOverdue && (
-            <Button variant="outline" size="sm" onClick={() => openReschedule(task)} className="h-6 px-2 text-xs gap-1 border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10">
-              <CalendarPlus className="h-3 w-3" /> Remanejar
-            </Button>
-          )}
+          <Button variant="outline" size="sm" onClick={() => openReschedule(task)} className="h-6 px-2 text-xs gap-1 border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10">
+            <CalendarPlus className="h-3 w-3" /> Remanejar
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => deleteTask(task.id)} className="h-6 px-2 text-xs text-destructive hover:text-destructive">Remover</Button>
         </div>
       </motion.div>
