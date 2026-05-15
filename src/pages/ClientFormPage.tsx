@@ -159,10 +159,6 @@ export default function ClientFormPage() {
     try {
       const payload = {
         ...form,
-        risk_reason: form.risk_reason || null,
-        risk_type: form.risk_type || null,
-        risk_identified_date: form.risk_identified_date || null,
-        action_plan: form.action_plan || null,
         taxation: form.taxation || '',
       };
 
