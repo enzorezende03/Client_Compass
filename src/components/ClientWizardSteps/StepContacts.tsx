@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Users, Star, Mail, Phone, User as UserIcon, Briefcase } from 'lucide-react';
+import { Plus, Trash2, Users, Star, Mail, Phone, User as UserIcon, Briefcase, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 export interface ContactDraft {
   id?: string;
@@ -11,6 +12,7 @@ export interface ContactDraft {
   phone: string;
   email: string;
   isPrimary?: boolean;
+  isWhatsapp?: boolean;
 }
 
 interface Props {
