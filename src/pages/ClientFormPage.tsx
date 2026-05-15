@@ -360,13 +360,27 @@ export default function ClientFormPage() {
       </div>
 
       {isEdit && id && (
-        <StartOnboardingDialog
-          open={startingOnboarding}
-          onOpenChange={setStartingOnboarding}
-          clientId={id}
-          clientName={form.name}
-          onStarted={() => navigate('/onboarding')}
-        />
+        <>
+          <StartOnboardingDialog
+            open={startingOnboarding}
+            onOpenChange={setStartingOnboarding}
+            clientId={id}
+            clientName={form.name}
+            onStarted={() => navigate('/onboarding')}
+          />
+          <CommercialHandoffDialog
+            open={handoffOpen}
+            onOpenChange={setHandoffOpen}
+            clientId={id}
+            clientName={form.name}
+            onSaved={async () => {
+              setHasHandoff(true);
+              setOnboardingStatus('pending_onboarding');
+              // Auto-open Iniciar Onboarding right after the ficha is saved
+              setStartingOnboarding(true);
+            }}
+          />
+        </>
       )}
     </AppLayout>
   );
