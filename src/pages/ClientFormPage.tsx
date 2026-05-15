@@ -12,7 +12,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { StepIdentification } from '@/components/ClientWizardSteps/StepIdentification';
 import { StepContacts, ContactDraft } from '@/components/ClientWizardSteps/StepContacts';
 import { StepStrategic } from '@/components/ClientWizardSteps/StepStrategic';
-import { StepRisk } from '@/components/ClientWizardSteps/StepRisk';
+
 import { StepHandoff, HandoffDraft, emptyHandoff, HANDOFF_SERVICES } from '@/components/ClientWizardSteps/StepHandoff';
 
 const emptyForm = {
