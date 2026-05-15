@@ -43,7 +43,9 @@ export default function ClientFormPage() {
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
-  const [onboardingStatus, setOnboardingStatus] = useState<string>('pendente');
+  const [onboardingStatus, setOnboardingStatus] = useState<string>('pending_handoff');
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [hasHandoff, setHasHandoff] = useState(false);
   const [startingOnboarding, setStartingOnboarding] = useState(false);
   const { toast } = useToast();
 
@@ -67,7 +69,9 @@ export default function ClientFormPage() {
           risk_identified_date: client.risk_identified_date ?? '', action_plan: client.action_plan ?? '',
           taxation: client.taxation ?? '',
         });
-        setOnboardingStatus((client as any).onboarding_status || 'pendente');
+        setOnboardingStatus((client as any).onboarding_status || 'pending_handoff');
+        const { data: handoff } = await supabase.from('commercial_handoff' as any).select('id').eq('client_id', id).maybeSingle();
+        setHasHandoff(!!handoff);
       }
       const { data: cts } = await supabase.from('client_contacts').select('*').eq('client_id', id);
       if (cts) {
