@@ -21,7 +21,6 @@ const emptyForm = {
   financial_status: 'active_financial', health_score: 'healthy',
   pain_points: '', expectations: '', attention_points: '', recurring_issues: '',
   behavioral_profile: '', strategic_notes: '',
-  risk_reason: '', risk_type: '', risk_identified_date: '', action_plan: '',
   taxation: '',
 };
 
