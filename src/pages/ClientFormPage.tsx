@@ -72,14 +72,30 @@ export default function ClientFormPage() {
           taxation: client.taxation ?? '',
         });
         setOnboardingStatus((client as any).onboarding_status || 'pending_handoff');
-        const { data: handoff } = await supabase.from('commercial_handoff' as any).select('id').eq('client_id', id).maybeSingle();
-        setHasHandoff(!!handoff);
+        const { data: h } = await supabase.from('commercial_handoff' as any).select('*').eq('client_id', id).maybeSingle();
+        const hh = h as any;
+        if (hh) {
+          setHasHandoff(true);
+          const svcArr: string[] = Array.isArray(hh.services) ? hh.services : [];
+          const known = svcArr.filter(s => (HANDOFF_SERVICES as readonly string[]).includes(s));
+          const other = svcArr.find(s => !(HANDOFF_SERVICES as readonly string[]).includes(s));
+          setHandoff({
+            services: known,
+            otherService: other ?? '',
+            monthlyValue: hh.monthly_value != null ? String(hh.monthly_value) : '',
+            paymentMethod: hh.payment_method ?? '',
+            paymentDueDay: hh.payment_due_day != null ? String(hh.payment_due_day) : '',
+            dealClosedAt: hh.deal_closed_at ?? '',
+            salesperson: hh.salesperson ?? '',
+            commercialNotes: hh.commercial_notes ?? '',
+          });
+        }
       }
       const { data: cts } = await supabase.from('client_contacts').select('*').eq('client_id', id);
       if (cts) {
-        setContacts(cts.map((c, i) => ({
+        setContacts(cts.map((c: any, i: number) => ({
           id: c.id, name: c.name, role: c.role, phone: c.phone, email: c.email,
-          isPrimary: i === 0,
+          isPrimary: i === 0, isWhatsapp: c.is_whatsapp ?? true,
         })));
       }
       setLoading(false);
