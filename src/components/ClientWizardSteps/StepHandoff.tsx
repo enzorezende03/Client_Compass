@@ -61,6 +61,7 @@ export function parseServices(raw: any): HandoffServiceItem[] {
           label: found?.label ?? it.label ?? it.code,
           quantity: it.quantity ?? null,
           frequency: it.frequency ?? null,
+          details: it.details ?? null,
         };
       }
       return null;
