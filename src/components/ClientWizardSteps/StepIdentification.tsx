@@ -122,10 +122,6 @@ export function StepIdentification({ form, updateField, cnpjLoading, onDocumentC
             <FieldLabel icon={Calendar}>Início do Contrato</FieldLabel>
             <Input type="date" value={form.contract_start_date} onChange={e => updateField('contract_start_date', e.target.value)} />
           </div>
-          <div className="space-y-2">
-            <FieldLabel icon={User}>CS Responsável</FieldLabel>
-            <Input value={form.cs_responsible} onChange={e => updateField('cs_responsible', e.target.value)} placeholder="Nome do responsável" />
-          </div>
         </div>
       </div>
 
