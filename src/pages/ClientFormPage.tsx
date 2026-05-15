@@ -21,7 +21,6 @@ const emptyForm = {
   financial_status: 'active_financial', health_score: 'healthy',
   pain_points: '', expectations: '', attention_points: '', recurring_issues: '',
   behavioral_profile: '', strategic_notes: '',
-  risk_reason: '', risk_type: '', risk_identified_date: '', action_plan: '',
   taxation: '',
 };
 
@@ -66,8 +65,6 @@ export default function ClientFormPage() {
           pain_points: client.pain_points ?? '', expectations: client.expectations ?? '',
           attention_points: client.attention_points ?? '', recurring_issues: client.recurring_issues ?? '',
           behavioral_profile: client.behavioral_profile ?? '', strategic_notes: client.strategic_notes ?? '',
-          risk_reason: client.risk_reason ?? '', risk_type: client.risk_type ?? '',
-          risk_identified_date: client.risk_identified_date ?? '', action_plan: client.action_plan ?? '',
           taxation: client.taxation ?? '',
         });
         setOnboardingStatus((client as any).onboarding_status || 'pending_handoff');
@@ -162,10 +159,6 @@ export default function ClientFormPage() {
     try {
       const payload = {
         ...form,
-        risk_reason: form.risk_reason || null,
-        risk_type: form.risk_type || null,
-        risk_identified_date: form.risk_identified_date || null,
-        action_plan: form.action_plan || null,
         taxation: form.taxation || '',
       };
 
