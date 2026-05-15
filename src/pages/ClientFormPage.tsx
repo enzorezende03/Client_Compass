@@ -383,7 +383,7 @@ export default function ClientFormPage() {
                 {step === 1 && <StepContacts contacts={contacts} setContacts={handleContactsChange} />}
                 {step === 2 && <StepHandoff handoff={handoff} setHandoff={setHandoff} />}
                 {step === 3 && <StepStrategic form={form} updateField={updateField} />}
-                {step === 4 && <StepRisk form={form} updateField={updateField} />}
+                
               </motion.div>
             </AnimatePresence>
 
