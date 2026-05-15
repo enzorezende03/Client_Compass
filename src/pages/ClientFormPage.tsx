@@ -281,16 +281,10 @@ export default function ClientFormPage() {
               </p>
             </div>
             <div className="flex items-end gap-4">
-              {isEdit && (onboardingStatus === 'pending_handoff' || !hasHandoff) && (
-                <Button
-                  variant="outline"
-                  disabled={!id}
-                  onClick={() => setHandoffOpen(true)}
-                  className="gap-2 shadow-sm"
-                >
-                  <FileText className="h-4 w-4" />
-                  {hasHandoff ? 'Editar Ficha de Repasse' : 'Preencher Ficha de Repasse'}
-                </Button>
+              {isEdit && onboardingStatus === 'pending_handoff' && !hasHandoff && (
+                <span className="text-xs px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  Preencha o passo "Repasse Comercial" para liberar o onboarding
+                </span>
               )}
               {isEdit && (onboardingStatus === 'pending_handoff' || onboardingStatus === 'pending_onboarding') && (
                 <span title={!hasHandoff ? 'Preencha a Ficha de Repasse Comercial antes de iniciar o onboarding.' : undefined}>
