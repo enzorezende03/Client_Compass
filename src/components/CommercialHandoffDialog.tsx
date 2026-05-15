@@ -229,6 +229,15 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
                             placeholder="ex: 50" />
                         </div>
                       )}
+                      {checked && code === 'relatorios_personalizados' && (
+                        <div className="mt-2 ml-6 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Relatórios acordados:</Label>
+                          <Textarea rows={2} value={item?.details ?? ''}
+                            onChange={e => updateServiceField(code, { details: e.target.value })}
+                            placeholder="Ex: DRE gerencial mensal, fluxo de caixa por centro de custo, indicadores comerciais..."
+                            maxLength={500} />
+                        </div>
+                      )}
                       {checked && code === 'demonstracoes_contabeis' && (
                         <div className="mt-2 ml-6 flex items-center gap-2">
                           <Label className="text-xs text-muted-foreground whitespace-nowrap">Periodicidade:</Label>
