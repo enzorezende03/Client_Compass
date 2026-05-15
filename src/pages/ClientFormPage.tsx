@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket, Handshake } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ArrowLeft, Rocket, Handshake } from 'lucide-react';
 import { StartOnboardingDialog } from '@/components/StartOnboardingDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +12,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { StepIdentification } from '@/components/ClientWizardSteps/StepIdentification';
 import { StepContacts, ContactDraft } from '@/components/ClientWizardSteps/StepContacts';
 import { StepStrategic } from '@/components/ClientWizardSteps/StepStrategic';
-import { StepRisk } from '@/components/ClientWizardSteps/StepRisk';
+
 import { StepHandoff, HandoffDraft, emptyHandoff, HANDOFF_SERVICES } from '@/components/ClientWizardSteps/StepHandoff';
 
 const emptyForm = {
@@ -30,7 +30,6 @@ const STEPS = [
   { id: 1, label: 'Contatos', icon: Users, description: 'Pessoas-chave do cliente' },
   { id: 2, label: 'Repasse Comercial', icon: Handshake, description: 'Contrato, serviços e vendedor' },
   { id: 3, label: 'Visão Estratégica', icon: Sparkles, description: 'Dores, expectativas e perfil' },
-  { id: 4, label: 'Risco & Plano', icon: ShieldAlert, description: 'Sinais de alerta e ações' },
 ] as const;
 
 export default function ClientFormPage() {
@@ -384,7 +383,7 @@ export default function ClientFormPage() {
                 {step === 1 && <StepContacts contacts={contacts} setContacts={handleContactsChange} />}
                 {step === 2 && <StepHandoff handoff={handoff} setHandoff={setHandoff} />}
                 {step === 3 && <StepStrategic form={form} updateField={updateField} />}
-                {step === 4 && <StepRisk form={form} updateField={updateField} />}
+                
               </motion.div>
             </AnimatePresence>
 
