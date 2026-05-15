@@ -83,6 +83,16 @@ export default function ClientDetail() {
   const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
 
+  const reloadHandoff = useCallback(async () => {
+    if (!id) return;
+    const [{ data: h }, { data: cts }] = await Promise.all([
+      supabase.from('commercial_handoff' as any).select('*').eq('client_id', id).maybeSingle(),
+      supabase.from('client_contacts').select('*').eq('client_id', id),
+    ]);
+    setHandoff(h);
+    setContacts(cts || []);
+  }, [id]);
+
   useEffect(() => {
     if (!id) return;
     Promise.all([
@@ -98,7 +108,8 @@ export default function ClientDetail() {
       setTasks((tasksRes.data || []).map(mapTask));
       setLoading(false);
     });
-  }, [id]);
+    reloadHandoff();
+  }, [id, reloadHandoff]);
 
   const getOldValue = (fieldKey: string): string => {
     if (!client) return '';
