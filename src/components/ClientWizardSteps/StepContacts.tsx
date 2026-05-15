@@ -32,7 +32,7 @@ export function StepContacts({ contacts, setContacts }: Props) {
   const add = () => {
     setContacts([
       ...contacts,
-      { name: '', role: '', phone: '', email: '', isPrimary: contacts.length === 0 },
+      { name: '', role: '', phone: '', email: '', isPrimary: contacts.length === 0, isWhatsapp: true },
     ]);
   };
 
