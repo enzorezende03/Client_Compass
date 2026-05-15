@@ -320,7 +320,138 @@ export default function ClientDetail() {
       </div>
 
       <QuickInteractionModal open={interactionOpen} onOpenChange={setInteractionOpen} clientId={client.id} onSubmit={handleNewInteraction} />
+      <CommercialHandoffDialog
+        open={handoffOpen}
+        onOpenChange={setHandoffOpen}
+        clientId={client.id}
+        clientName={client.name}
+        onSaved={async () => {
+          await reloadHandoff();
+          setOnboardingStatus(prev => prev === 'pending_handoff' ? 'pending_onboarding' : prev);
+        }}
+      />
     </AppLayout>
+  );
+}
+
+function HandoffSummary({ handoff, contacts, onEdit, expanded, setExpanded }: {
+  handoff: any; contacts: any[]; onEdit: () => void;
+  expanded: boolean; setExpanded: (v: boolean) => void;
+}) {
+  const PAY_LABEL = Object.fromEntries(PAYMENT_METHODS.map(p => [p.value, p.label]));
+  const ROLE_LABEL = Object.fromEntries(CONTACT_ROLES.map(r => [r.value, r.label]));
+
+  if (!handoff) {
+    return (
+      <div className="rounded-lg border border-dashed border-border p-8 text-center">
+        <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+        <p className="text-sm text-muted-foreground mb-3">Nenhuma Ficha de Repasse Comercial preenchida.</p>
+        <Button onClick={onEdit} variant="outline" className="gap-2">
+          <Plus className="h-4 w-4" /> Preencher Ficha de Repasse
+        </Button>
+      </div>
+    );
+  }
+
+  const services: string[] = Array.isArray(handoff.services) ? handoff.services : [];
+  const monthly = handoff.monthly_value != null
+    ? Number(handoff.monthly_value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    : '—';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Ficha de Repasse Comercial</h3>
+        <Button size="sm" variant="outline" onClick={onEdit} className="gap-1.5">
+          <Pencil className="h-3.5 w-3.5" /> Editar Ficha
+        </Button>
+      </div>
+
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1.5">Serviços contratados</p>
+          <div className="flex flex-wrap gap-1.5">
+            {services.length === 0 && <span className="text-xs text-muted-foreground">Nenhum</span>}
+            {services.map(s => (
+              <span key={s} className="inline-flex items-center rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-xs font-medium">
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <InfoCell icon={DollarSign} label="Mensalidade" value={monthly} />
+          <InfoCell icon={FileText} label="Pagamento" value={`${PAY_LABEL[handoff.payment_method] ?? '—'}${handoff.payment_due_day ? ` (dia ${handoff.payment_due_day})` : ''}`} />
+          <InfoCell icon={Calendar} label="Fechamento" value={handoff.deal_closed_at ? new Date(handoff.deal_closed_at).toLocaleDateString('pt-BR') : '—'} />
+          <InfoCell icon={UserIcon} label="Vendedor" value={handoff.salesperson || '—'} />
+        </div>
+      </div>
+
+      <div className="rounded-lg border bg-card p-4">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Contatos ({contacts.length})</p>
+        {contacts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum contato cadastrado.</p>
+        ) : (
+          <div className="space-y-2">
+            {contacts.map(c => (
+              <div key={c.id} className="flex items-center gap-3 rounded-md border bg-background/60 px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-foreground">{c.name}</span>
+                    <span className="text-[10px] uppercase tracking-wider rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                      {ROLE_LABEL[c.role] ?? c.role ?? 'outro'}
+                    </span>
+                    {c.is_whatsapp && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5">
+                        <MessageCircle className="h-3 w-3" /> WhatsApp
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                    {c.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</span>}
+                    {c.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{c.email}</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-lg border bg-card">
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="w-full flex items-center justify-between p-4 text-left"
+        >
+          <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-primary" /> Observações Comerciais
+          </span>
+          {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+        {expanded && (
+          <div className="px-4 pb-4">
+            <p className="text-sm text-foreground whitespace-pre-wrap">
+              {handoff.commercial_notes || <span className="text-muted-foreground italic">Nenhuma observação registrada.</span>}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-2">🔒 Visível apenas para CS e Coordenador Geral.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InfoCell({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</p>
+        <p className="text-sm font-semibold text-foreground truncate">{value}</p>
+      </div>
+    </div>
   );
 }
 
