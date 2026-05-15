@@ -30,7 +30,6 @@ const STEPS = [
   { id: 1, label: 'Contatos', icon: Users, description: 'Pessoas-chave do cliente' },
   { id: 2, label: 'Repasse Comercial', icon: Handshake, description: 'Contrato, serviços e vendedor' },
   { id: 3, label: 'Visão Estratégica', icon: Sparkles, description: 'Dores, expectativas e perfil' },
-  { id: 4, label: 'Risco & Plano', icon: ShieldAlert, description: 'Sinais de alerta e ações' },
 ] as const;
 
 export default function ClientFormPage() {
