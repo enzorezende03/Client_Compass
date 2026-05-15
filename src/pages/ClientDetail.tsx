@@ -199,26 +199,33 @@ export default function ClientDetail() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {onboardingStatus === 'pendente' && (
-                <Button
-                  variant="default"
-                  disabled={startingOnboarding}
-                  onClick={async () => {
-                    if (!client) return;
-                    setStartingOnboarding(true);
-                    try {
-                      await startOnboarding(client.id, client.name);
-                      toast({ title: 'Onboarding iniciado!', description: 'Redirecionando para o pipeline...' });
-                      navigate('/onboarding');
-                    } catch (e: any) {
-                      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
-                      setStartingOnboarding(false);
-                    }
-                  }}
-                  className="gap-2 shadow-md"
-                >
-                  <Rocket className="h-4 w-4" /> Iniciar Onboarding
+              {(onboardingStatus === 'pending_handoff' || (onboardingStatus !== 'active' && onboardingStatus !== 'completed' && !handoff)) && (
+                <Button variant="outline" onClick={() => setHandoffOpen(true)} className="gap-2 shadow-sm">
+                  <FileText className="h-4 w-4" /> {handoff ? 'Editar Ficha de Repasse' : 'Preencher Ficha de Repasse'}
                 </Button>
+              )}
+              {(onboardingStatus === 'pending_handoff' || onboardingStatus === 'pending_onboarding') && (
+                <span title={!handoff ? 'Preencha a Ficha de Repasse Comercial antes de iniciar o onboarding.' : undefined}>
+                  <Button
+                    variant="default"
+                    disabled={startingOnboarding || !handoff}
+                    onClick={async () => {
+                      if (!client) return;
+                      setStartingOnboarding(true);
+                      try {
+                        await startOnboarding(client.id, client.name);
+                        toast({ title: 'Onboarding iniciado!', description: 'Redirecionando para o pipeline...' });
+                        navigate('/onboarding');
+                      } catch (e: any) {
+                        toast({ title: 'Erro', description: e.message, variant: 'destructive' });
+                        setStartingOnboarding(false);
+                      }
+                    }}
+                    className="gap-2 shadow-md"
+                  >
+                    <Rocket className="h-4 w-4" /> Iniciar Onboarding
+                  </Button>
+                </span>
               )}
               <Button variant="outline" onClick={() => navigate(`/cadastro/clientes/${client.id}/editar`)} className="gap-2 shadow-sm">
                 <Pencil className="h-4 w-4" /> Editar Cadastro
