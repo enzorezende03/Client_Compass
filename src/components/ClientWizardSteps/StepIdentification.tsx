@@ -136,11 +136,6 @@ export function StepIdentification({ form, updateField, cnpjLoading, onDocumentC
         </div>
 
         <div className="space-y-2">
-          <FieldLabel icon={Activity}>Status</FieldLabel>
-          <OptionButtons value={form.status} onChange={v => updateField('status', v)} options={STATUS_OPTS} columns={4} />
-        </div>
-
-        <div className="space-y-2">
           <FieldLabel icon={BadgeCheck} hint="Tier de atendimento: VIP, Premium, Standard ou Básico.">Perfil (Tier)</FieldLabel>
           <OptionButtons value={form.profile} onChange={v => updateField('profile', v)} options={PROFILE_OPTS} columns={4} />
         </div>
