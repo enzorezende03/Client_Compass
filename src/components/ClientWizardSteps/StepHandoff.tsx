@@ -13,6 +13,7 @@ export interface HandoffServiceItem {
   label: string;
   quantity?: number | null;
   frequency?: DemonstracoesPeriodicidade | null;
+  details?: string | null;
 }
 
 export const SERVICE_CATALOG: { code: ServiceCode; label: string }[] = [
