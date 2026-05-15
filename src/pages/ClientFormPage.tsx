@@ -382,8 +382,9 @@ export default function ClientFormPage() {
                   <StepIdentification form={form} updateField={updateField} cnpjLoading={cnpjLoading} onDocumentChange={onDocumentChange} />
                 )}
                 {step === 1 && <StepContacts contacts={contacts} setContacts={handleContactsChange} />}
-                {step === 2 && <StepStrategic form={form} updateField={updateField} />}
-                {step === 3 && <StepRisk form={form} updateField={updateField} />}
+                {step === 2 && <StepHandoff handoff={handoff} setHandoff={setHandoff} />}
+                {step === 3 && <StepStrategic form={form} updateField={updateField} />}
+                {step === 4 && <StepRisk form={form} updateField={updateField} />}
               </motion.div>
             </AnimatePresence>
 
