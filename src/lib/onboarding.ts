@@ -228,7 +228,7 @@ export async function startOnboarding(
     : type === 'em_constituicao' ? 'constituicao'
     : 'etapa_1';
   await supabase.from('clients').update({
-    onboarding_status: 'em_andamento',
+    onboarding_status: 'active',
     onboarding_stage: stage,
     onboarding_type: type,
     onboarding_started_at: now,
@@ -306,7 +306,7 @@ export async function advanceStage(
   if (!next) return;
   if (next === 'concluido') {
     await supabase.from('clients').update({
-      onboarding_status: 'concluido',
+      onboarding_status: 'completed',
       onboarding_stage: 'concluido',
       onboarding_completed_at: new Date().toISOString(),
     }).eq('id', clientId);
