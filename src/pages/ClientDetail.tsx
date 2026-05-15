@@ -338,8 +338,10 @@ function HandoffSummary({ handoff, contacts, onEdit, expanded, setExpanded }: {
   handoff: any; contacts: any[]; onEdit: () => void;
   expanded: boolean; setExpanded: (v: boolean) => void;
 }) {
-  const PAY_LABEL = Object.fromEntries(PAYMENT_METHODS.map(p => [p.value, p.label]));
   const ROLE_LABEL = Object.fromEntries(CONTACT_ROLES.map(r => [r.value, r.label]));
+  const PERIODICIDADE_LABEL: Record<string, string> = {
+    mensal: 'Mensal', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual',
+  };
 
   if (!handoff) {
     return (
@@ -353,7 +355,15 @@ function HandoffSummary({ handoff, contacts, onEdit, expanded, setExpanded }: {
     );
   }
 
-  const services: string[] = Array.isArray(handoff.services) ? handoff.services : [];
+  const rawServices: any[] = Array.isArray(handoff.services) ? handoff.services : [];
+  const services = rawServices.map((s: any) => {
+    if (typeof s === 'string') return { label: s };
+    return {
+      label: s.label ?? s.code ?? '—',
+      quantity: s.quantity,
+      frequency: s.frequency,
+    };
+  });
   const monthly = handoff.monthly_value != null
     ? Number(handoff.monthly_value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     : '—';
@@ -372,19 +382,21 @@ function HandoffSummary({ handoff, contacts, onEdit, expanded, setExpanded }: {
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1.5">Serviços contratados</p>
           <div className="flex flex-wrap gap-1.5">
             {services.length === 0 && <span className="text-xs text-muted-foreground">Nenhum</span>}
-            {services.map(s => (
-              <span key={s} className="inline-flex items-center rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-xs font-medium">
-                {s}
-              </span>
-            ))}
+            {services.map((s, i) => {
+              let extra = '';
+              if (s.quantity != null) extra = ` · ${s.quantity}/mês`;
+              else if (s.frequency) extra = ` · ${PERIODICIDADE_LABEL[s.frequency] ?? s.frequency}`;
+              return (
+                <span key={i} className="inline-flex items-center rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-xs font-medium">
+                  {s.label}{extra}
+                </span>
+              );
+            })}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <InfoCell icon={DollarSign} label="Mensalidade" value={monthly} />
-          <InfoCell icon={FileText} label="Pagamento" value={`${PAY_LABEL[handoff.payment_method] ?? '—'}${handoff.payment_due_day ? ` (dia ${handoff.payment_due_day})` : ''}`} />
-          <InfoCell icon={Calendar} label="Fechamento" value={handoff.deal_closed_at ? new Date(handoff.deal_closed_at).toLocaleDateString('pt-BR') : '—'} />
-          <InfoCell icon={UserIcon} label="Vendedor" value={handoff.salesperson || '—'} />
         </div>
       </div>
 
