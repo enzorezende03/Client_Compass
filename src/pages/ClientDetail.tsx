@@ -69,7 +69,11 @@ export default function ClientDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [client, setClient] = useState<Client | null>(null);
-  const [onboardingStatus, setOnboardingStatus] = useState<string>('pendente');
+  const [onboardingStatus, setOnboardingStatus] = useState<string>('pending_handoff');
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [handoff, setHandoff] = useState<any>(null);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [notesExpanded, setNotesExpanded] = useState(false);
   const [startingOnboarding, setStartingOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
   const [interactionOpen, setInteractionOpen] = useState(false);
@@ -88,7 +92,7 @@ export default function ClientDetail() {
     ]).then(([clientRes, timelineRes, tasksRes]) => {
       if (clientRes.data) {
         setClient(mapClient(clientRes.data));
-        setOnboardingStatus((clientRes.data as any).onboarding_status || 'pendente');
+        setOnboardingStatus((clientRes.data as any).onboarding_status || 'pending_handoff');
       }
       setTimeline((timelineRes.data || []).map(mapTimeline));
       setTasks((tasksRes.data || []).map(mapTask));
