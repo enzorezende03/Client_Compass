@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
 import {
-  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, ChevronDown, ChevronUp, FileText, Target, Pencil, Rocket
+  ArrowLeft, Plus, Brain, Clock, AlertTriangle, CheckSquare, ChevronDown, ChevronUp, FileText, Target, Pencil, Rocket, Briefcase, Phone, Mail, MessageCircle, Calendar, DollarSign, User as UserIcon
 } from 'lucide-react';
+import { CommercialHandoffDialog, HANDOFF_SERVICES, PAYMENT_METHODS, CONTACT_ROLES } from '@/components/CommercialHandoffDialog';
 import { startOnboarding } from '@/lib/onboarding';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
