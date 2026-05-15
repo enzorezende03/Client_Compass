@@ -127,6 +127,7 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
           label: s.label,
           ...(s.quantity != null ? { quantity: s.quantity } : {}),
           ...(s.frequency ? { frequency: s.frequency } : {}),
+          ...(s.details ? { details: s.details } : {}),
         })),
         ...(otherTrim ? [{ code: 'outros', label: otherTrim }] : []),
       ];
@@ -227,6 +228,15 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
                             value={item?.quantity ?? ''}
                             onChange={e => updateServiceField(code, { quantity: e.target.value === '' ? null : Number(e.target.value) })}
                             placeholder="ex: 50" />
+                        </div>
+                      )}
+                      {checked && code === 'relatorios_personalizados' && (
+                        <div className="mt-2 ml-6 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Relatórios acordados:</Label>
+                          <Textarea rows={2} value={item?.details ?? ''}
+                            onChange={e => updateServiceField(code, { details: e.target.value })}
+                            placeholder="Ex: DRE gerencial mensal, fluxo de caixa por centro de custo, indicadores comerciais..."
+                            maxLength={500} />
                         </div>
                       )}
                       {checked && code === 'demonstracoes_contabeis' && (

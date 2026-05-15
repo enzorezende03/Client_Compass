@@ -362,6 +362,7 @@ function HandoffSummary({ handoff, contacts, onEdit, expanded, setExpanded }: {
       label: s.label ?? s.code ?? '—',
       quantity: s.quantity,
       frequency: s.frequency,
+      details: s.details,
     };
   });
   const monthly = handoff.monthly_value != null
@@ -380,16 +381,21 @@ function HandoffSummary({ handoff, contacts, onEdit, expanded, setExpanded }: {
       <div className="rounded-lg border bg-card p-4 space-y-3">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1.5">Serviços contratados</p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-1.5">
             {services.length === 0 && <span className="text-xs text-muted-foreground">Nenhum</span>}
-            {services.map((s, i) => {
+            {services.map((s: any, i: number) => {
               let extra = '';
               if (s.quantity != null) extra = ` · ${s.quantity}/mês`;
               else if (s.frequency) extra = ` · ${PERIODICIDADE_LABEL[s.frequency] ?? s.frequency}`;
               return (
-                <span key={i} className="inline-flex items-center rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-xs font-medium">
-                  {s.label}{extra}
-                </span>
+                <div key={i} className="flex flex-col gap-0.5">
+                  <span className="inline-flex items-center self-start rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-xs font-medium">
+                    {s.label}{extra}
+                  </span>
+                  {s.details && (
+                    <p className="text-xs text-muted-foreground ml-2 whitespace-pre-wrap">{s.details}</p>
+                  )}
+                </div>
               );
             })}
           </div>

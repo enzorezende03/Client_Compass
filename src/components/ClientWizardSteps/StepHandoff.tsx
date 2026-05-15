@@ -13,6 +13,7 @@ export interface HandoffServiceItem {
   label: string;
   quantity?: number | null;
   frequency?: DemonstracoesPeriodicidade | null;
+  details?: string | null;
 }
 
 export const SERVICE_CATALOG: { code: ServiceCode; label: string }[] = [
@@ -60,6 +61,7 @@ export function parseServices(raw: any): HandoffServiceItem[] {
           label: found?.label ?? it.label ?? it.code,
           quantity: it.quantity ?? null,
           frequency: it.frequency ?? null,
+          details: it.details ?? null,
         };
       }
       return null;
@@ -140,6 +142,19 @@ export function StepHandoff({ handoff, setHandoff }: Props) {
                       value={item?.quantity ?? ''}
                       onChange={e => updateServiceField(code, { quantity: e.target.value === '' ? null : Number(e.target.value) })}
                       placeholder="ex: 50"
+                    />
+                  </div>
+                )}
+
+                {checked && code === 'relatorios_personalizados' && (
+                  <div className="mt-2 ml-6 space-y-1">
+                    <Label className="text-xs text-muted-foreground">Relatórios acordados:</Label>
+                    <Textarea
+                      rows={2}
+                      value={item?.details ?? ''}
+                      onChange={e => updateServiceField(code, { details: e.target.value })}
+                      placeholder="Ex: DRE gerencial mensal, fluxo de caixa por centro de custo, indicadores comerciais..."
+                      maxLength={500}
                     />
                   </div>
                 )}
