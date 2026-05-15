@@ -46,7 +46,7 @@ export default function ClientFormPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [onboardingStatus, setOnboardingStatus] = useState<string>('pending_handoff');
-  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [handoff, setHandoff] = useState<HandoffDraft>(emptyHandoff);
   const [hasHandoff, setHasHandoff] = useState(false);
   const [startingOnboarding, setStartingOnboarding] = useState(false);
   const { toast } = useToast();
