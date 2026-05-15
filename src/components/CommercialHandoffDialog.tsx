@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2, FileText, MessageSquare } from 'lucide-react';
+import { Loader2, Plus, Trash2, FileText, MessageSquare, DollarSign } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,17 +10,14 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import {
+  SERVICE_CATALOG, PERIODICIDADE_OPTS, parseServices, extractOtherService,
+  type HandoffServiceItem, type ServiceCode, type DemonstracoesPeriodicidade,
+} from '@/components/ClientWizardSteps/StepHandoff';
 
-export const HANDOFF_SERVICES = [
-  'Contabilidade', 'Folha de Pagamento', 'RH', 'BPO Financeiro',
-  'Fiscal', 'Societário', 'Saúde Ocupacional',
-] as const;
-
-export const PAYMENT_METHODS = [
-  { value: 'boleto', label: 'Boleto' },
-  { value: 'cartao', label: 'Cartão' },
-  { value: 'debito', label: 'Débito automático' },
-] as const;
+// Backward-compat exports (still imported by ClientDetail)
+export const HANDOFF_SERVICES = SERVICE_CATALOG.map(s => s.label);
+export const PAYMENT_METHODS = [] as { value: string; label: string }[];
 
 export const CONTACT_ROLES = [
   { value: 'socio', label: 'Sócio' },
@@ -44,7 +41,6 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   clientId: string;
   clientName: string;
-  /** Called after the handoff is saved; parent should refresh and optionally open the onboarding-type modal. */
   onSaved?: () => void;
 }
 
@@ -53,13 +49,9 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [services, setServices] = useState<string[]>([]);
+  const [services, setServices] = useState<HandoffServiceItem[]>([]);
   const [otherService, setOtherService] = useState('');
   const [monthlyValue, setMonthlyValue] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<string>('');
-  const [paymentDueDay, setPaymentDueDay] = useState('');
-  const [dealClosedAt, setDealClosedAt] = useState('');
-  const [salesperson, setSalesperson] = useState('');
   const [commercialNotes, setCommercialNotes] = useState('');
   const [contacts, setContacts] = useState<ContactRow[]>([]);
 
@@ -73,20 +65,12 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
       ]);
       const h = handoff as any;
       if (h) {
-        const svcArr: string[] = Array.isArray(h.services) ? h.services : [];
-        setServices(svcArr.filter((s: string) => (HANDOFF_SERVICES as readonly string[]).includes(s)));
-        const other = svcArr.find((s: string) => !(HANDOFF_SERVICES as readonly string[]).includes(s));
-        setOtherService(other ?? '');
+        setServices(parseServices(h.services));
+        setOtherService(extractOtherService(h.services));
         setMonthlyValue(h.monthly_value != null ? String(h.monthly_value) : '');
-        setPaymentMethod(h.payment_method ?? '');
-        setPaymentDueDay(h.payment_due_day != null ? String(h.payment_due_day) : '');
-        setDealClosedAt(h.deal_closed_at ?? '');
-        setSalesperson(h.salesperson ?? '');
         setCommercialNotes(h.commercial_notes ?? '');
       } else {
-        setServices([]); setOtherService(''); setMonthlyValue('');
-        setPaymentMethod(''); setPaymentDueDay(''); setDealClosedAt('');
-        setSalesperson(''); setCommercialNotes('');
+        setServices([]); setOtherService(''); setMonthlyValue(''); setCommercialNotes('');
       }
       const rows: ContactRow[] = (cts || []).map((c: any) => ({
         id: c.id,
@@ -102,8 +86,13 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
     })();
   }, [open, clientId]);
 
-  const toggleService = (s: string) => {
-    setServices(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  const isChecked = (code: ServiceCode) => services.some(s => s.code === code);
+  const getItem = (code: ServiceCode) => services.find(s => s.code === code);
+  const toggleService = (code: ServiceCode, label: string) => {
+    setServices(prev => isChecked(code) ? prev.filter(s => s.code !== code) : [...prev, { code, label }]);
+  };
+  const updateServiceField = (code: ServiceCode, patch: Partial<HandoffServiceItem>) => {
+    setServices(prev => prev.map(s => s.code === code ? { ...s, ...patch } : s));
   };
 
   const updateContact = (idx: number, patch: Partial<ContactRow>) => {
@@ -124,7 +113,6 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
     }
     setSaving(true);
     try {
-      // who is filling
       const { data: auth } = await supabase.auth.getUser();
       let filledBy: string | null = null;
       if (auth.user) {
@@ -132,15 +120,21 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
         filledBy = iu?.id ?? null;
       }
 
-      const allServices = [...services, ...(otherService.trim() ? [otherService.trim()] : [])];
+      const otherTrim = otherService.trim();
+      const servicesPayload: any[] = [
+        ...services.map(s => ({
+          code: s.code,
+          label: s.label,
+          ...(s.quantity != null ? { quantity: s.quantity } : {}),
+          ...(s.frequency ? { frequency: s.frequency } : {}),
+        })),
+        ...(otherTrim ? [{ code: 'outros', label: otherTrim }] : []),
+      ];
+
       const payload: any = {
         client_id: clientId,
-        services: allServices,
+        services: servicesPayload,
         monthly_value: monthlyValue ? Number(monthlyValue) : null,
-        payment_method: paymentMethod || null,
-        payment_due_day: paymentDueDay ? Number(paymentDueDay) : null,
-        deal_closed_at: dealClosedAt || null,
-        salesperson: salesperson || null,
         commercial_notes: commercialNotes || null,
         filled_by: filledBy,
       };
@@ -150,9 +144,7 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
         .upsert(payload, { onConflict: 'client_id' });
       if (upErr) throw upErr;
 
-      // Sync contacts (replace strategy: delete then insert)
       const existingIds = contacts.filter(c => c.id).map(c => c.id!);
-      // Delete contacts that were removed compared to DB
       const { data: dbContacts } = await supabase.from('client_contacts').select('id').eq('client_id', clientId);
       const toDelete = (dbContacts || []).map((d: any) => d.id).filter((dId: string) => !existingIds.includes(dId));
       if (toDelete.length) await supabase.from('client_contacts').delete().in('id', toDelete);
@@ -173,13 +165,11 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
         }
       }
 
-      // Move client to pending_onboarding (only if currently pending_handoff)
       await supabase.from('clients')
         .update({ onboarding_status: 'pending_onboarding' } as any)
         .eq('id', clientId)
         .eq('onboarding_status', 'pending_handoff');
 
-      // Timeline
       await supabase.from('timeline_entries').insert({
         client_id: clientId,
         type: 'service',
@@ -218,58 +208,54 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
           <div className="flex items-center justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : (
           <div className="space-y-6 py-2">
-            {/* Bloco 1 — Contrato */}
             <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Contrato</h3>
-              <div>
-                <Label className="text-xs">Serviços contratados</Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1.5">
-                  {HANDOFF_SERVICES.map(s => (
-                    <label key={s} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm cursor-pointer hover:bg-muted/40">
-                      <Checkbox checked={services.includes(s)} onCheckedChange={() => toggleService(s)} />
-                      <span>{s}</span>
-                    </label>
-                  ))}
-                </div>
-                <Input
-                  value={otherService}
-                  onChange={e => setOtherService(e.target.value)}
-                  placeholder="Outros (especifique)"
-                  className="mt-2"
-                  maxLength={120}
-                />
+              <h3 className="text-sm font-semibold text-foreground">Serviços Contratados</h3>
+              <div className="space-y-2">
+                {SERVICE_CATALOG.map(({ code, label }) => {
+                  const checked = isChecked(code);
+                  const item = getItem(code);
+                  return (
+                    <div key={code} className={`rounded-md border px-3 py-2.5 transition-colors ${checked ? 'border-primary/40 bg-primary/5' : 'border-border'}`}>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox checked={checked} onCheckedChange={() => toggleService(code, label)} />
+                        <span className="text-sm font-medium">{label}</span>
+                      </label>
+                      {checked && code === 'emissao_nf' && (
+                        <div className="mt-2 ml-6 flex items-center gap-2">
+                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Quantidade mensal:</Label>
+                          <Input type="number" min="0" step="1" className="h-8 w-28"
+                            value={item?.quantity ?? ''}
+                            onChange={e => updateServiceField(code, { quantity: e.target.value === '' ? null : Number(e.target.value) })}
+                            placeholder="ex: 50" />
+                        </div>
+                      )}
+                      {checked && code === 'demonstracoes_contabeis' && (
+                        <div className="mt-2 ml-6 flex items-center gap-2">
+                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Periodicidade:</Label>
+                          <Select value={item?.frequency ?? ''} onValueChange={(v) => updateServiceField(code, { frequency: v as DemonstracoesPeriodicidade })}>
+                            <SelectTrigger className="h-8 w-44"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                            <SelectContent>
+                              {PERIODICIDADE_OPTS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Valor da mensalidade (R$)</Label>
-                  <Input type="number" step="0.01" min="0" value={monthlyValue} onChange={e => setMonthlyValue(e.target.value)} placeholder="0,00" />
-                </div>
-                <div>
-                  <Label className="text-xs">Forma de pagamento</Label>
-                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Dia de vencimento (1–31)</Label>
-                  <Input type="number" min="1" max="31" value={paymentDueDay} onChange={e => setPaymentDueDay(e.target.value)} placeholder="10" />
-                </div>
-                <div>
-                  <Label className="text-xs">Data de fechamento</Label>
-                  <Input type="date" value={dealClosedAt} onChange={e => setDealClosedAt(e.target.value)} />
-                </div>
-                <div className="md:col-span-2">
-                  <Label className="text-xs">Vendedor responsável</Label>
-                  <Input value={salesperson} onChange={e => setSalesperson(e.target.value)} placeholder="Nome do vendedor" maxLength={120} />
-                </div>
+              <div>
+                <Label className="text-xs">Outros serviços (opcional)</Label>
+                <Input value={otherService} onChange={e => setOtherService(e.target.value)} placeholder="Especifique outros serviços contratados..." maxLength={200} />
+              </div>
+              <div>
+                <Label className="text-xs flex items-center gap-1.5">
+                  <DollarSign className="h-3.5 w-3.5 text-muted-foreground" /> Valor da mensalidade (R$)
+                </Label>
+                <Input type="number" step="0.01" min="0" value={monthlyValue} onChange={e => setMonthlyValue(e.target.value)} placeholder="0,00" />
               </div>
             </section>
 
-            {/* Bloco 2 — Contatos */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-foreground">Contatos</h3>
@@ -322,7 +308,6 @@ export function CommercialHandoffDialog({ open, onOpenChange, clientId, clientNa
               <p className="text-xs text-muted-foreground">Pelo menos 1 contato é obrigatório.</p>
             </section>
 
-            {/* Bloco 3 — Observações */}
             <section className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                 <MessageSquare className="h-4 w-4 text-primary" /> Observações Comerciais
