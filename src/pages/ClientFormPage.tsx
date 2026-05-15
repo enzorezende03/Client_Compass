@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket, FileText } from 'lucide-react';
 import { StartOnboardingDialog } from '@/components/StartOnboardingDialog';
+import { CommercialHandoffDialog } from '@/components/CommercialHandoffDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
