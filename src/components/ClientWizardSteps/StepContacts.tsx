@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Users, Star, Mail, Phone, User as UserIcon, Briefcase } from 'lucide-react';
+import { Plus, Trash2, Users, Star, Mail, Phone, User as UserIcon, Briefcase, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 export interface ContactDraft {
   id?: string;
@@ -11,6 +12,7 @@ export interface ContactDraft {
   phone: string;
   email: string;
   isPrimary?: boolean;
+  isWhatsapp?: boolean;
 }
 
 interface Props {
@@ -30,7 +32,7 @@ export function StepContacts({ contacts, setContacts }: Props) {
   const add = () => {
     setContacts([
       ...contacts,
-      { name: '', role: '', phone: '', email: '', isPrimary: contacts.length === 0 },
+      { name: '', role: '', phone: '', email: '', isPrimary: contacts.length === 0, isWhatsapp: true },
     ]);
   };
 
@@ -120,6 +122,16 @@ export function StepContacts({ contacts, setContacts }: Props) {
                 <div className="space-y-1.5">
                   <Label className="flex items-center gap-1.5 text-xs"><Mail className="h-3 w-3" /> E-mail</Label>
                   <Input type="email" value={c.email} onChange={e => update(idx, 'email', e.target.value)} placeholder="contato@empresa.com" />
+                </div>
+                <div className="md:col-span-2 flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2">
+                  <Label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                    Este telefone tem WhatsApp
+                  </Label>
+                  <Switch
+                    checked={c.isWhatsapp ?? true}
+                    onCheckedChange={(v) => update(idx, 'isWhatsapp', v)}
+                  />
                 </div>
               </div>
             </motion.div>

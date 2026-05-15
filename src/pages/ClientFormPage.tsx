@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket, FileText } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket, Handshake } from 'lucide-react';
 import { StartOnboardingDialog } from '@/components/StartOnboardingDialog';
-import { CommercialHandoffDialog } from '@/components/CommercialHandoffDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +13,7 @@ import { StepIdentification } from '@/components/ClientWizardSteps/StepIdentific
 import { StepContacts, ContactDraft } from '@/components/ClientWizardSteps/StepContacts';
 import { StepStrategic } from '@/components/ClientWizardSteps/StepStrategic';
 import { StepRisk } from '@/components/ClientWizardSteps/StepRisk';
+import { StepHandoff, HandoffDraft, emptyHandoff, HANDOFF_SERVICES } from '@/components/ClientWizardSteps/StepHandoff';
 
 const emptyForm = {
   name: '', document: '', segment: '', contract_start_date: new Date().toISOString().split('T')[0],
@@ -28,8 +28,9 @@ const emptyForm = {
 const STEPS = [
   { id: 0, label: 'Identificação', icon: Building2, description: 'Dados básicos e classificação' },
   { id: 1, label: 'Contatos', icon: Users, description: 'Pessoas-chave do cliente' },
-  { id: 2, label: 'Visão Estratégica', icon: Sparkles, description: 'Dores, expectativas e perfil' },
-  { id: 3, label: 'Risco & Plano', icon: ShieldAlert, description: 'Sinais de alerta e ações' },
+  { id: 2, label: 'Repasse Comercial', icon: Handshake, description: 'Contrato, serviços e vendedor' },
+  { id: 3, label: 'Visão Estratégica', icon: Sparkles, description: 'Dores, expectativas e perfil' },
+  { id: 4, label: 'Risco & Plano', icon: ShieldAlert, description: 'Sinais de alerta e ações' },
 ] as const;
 
 export default function ClientFormPage() {
@@ -45,7 +46,7 @@ export default function ClientFormPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [onboardingStatus, setOnboardingStatus] = useState<string>('pending_handoff');
-  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [handoff, setHandoff] = useState<HandoffDraft>(emptyHandoff);
   const [hasHandoff, setHasHandoff] = useState(false);
   const [startingOnboarding, setStartingOnboarding] = useState(false);
   const { toast } = useToast();
@@ -71,14 +72,30 @@ export default function ClientFormPage() {
           taxation: client.taxation ?? '',
         });
         setOnboardingStatus((client as any).onboarding_status || 'pending_handoff');
-        const { data: handoff } = await supabase.from('commercial_handoff' as any).select('id').eq('client_id', id).maybeSingle();
-        setHasHandoff(!!handoff);
+        const { data: h } = await supabase.from('commercial_handoff' as any).select('*').eq('client_id', id).maybeSingle();
+        const hh = h as any;
+        if (hh) {
+          setHasHandoff(true);
+          const svcArr: string[] = Array.isArray(hh.services) ? hh.services : [];
+          const known = svcArr.filter(s => (HANDOFF_SERVICES as readonly string[]).includes(s));
+          const other = svcArr.find(s => !(HANDOFF_SERVICES as readonly string[]).includes(s));
+          setHandoff({
+            services: known,
+            otherService: other ?? '',
+            monthlyValue: hh.monthly_value != null ? String(hh.monthly_value) : '',
+            paymentMethod: hh.payment_method ?? '',
+            paymentDueDay: hh.payment_due_day != null ? String(hh.payment_due_day) : '',
+            dealClosedAt: hh.deal_closed_at ?? '',
+            salesperson: hh.salesperson ?? '',
+            commercialNotes: hh.commercial_notes ?? '',
+          });
+        }
       }
       const { data: cts } = await supabase.from('client_contacts').select('*').eq('client_id', id);
       if (cts) {
-        setContacts(cts.map((c, i) => ({
+        setContacts(cts.map((c: any, i: number) => ({
           id: c.id, name: c.name, role: c.role, phone: c.phone, email: c.email,
-          isPrimary: i === 0,
+          isPrimary: i === 0, isWhatsapp: c.is_whatsapp ?? true,
         })));
       }
       setLoading(false);
@@ -171,13 +188,59 @@ export default function ClientFormPage() {
         for (const c of validContacts) {
           if (c.id) {
             await supabase.from('client_contacts').update({
-              name: c.name, role: c.role, phone: c.phone, email: c.email,
+              name: c.name, role: c.role, phone: c.phone, email: c.email, is_whatsapp: c.isWhatsapp ?? true,
             }).eq('id', c.id);
           } else {
             await supabase.from('client_contacts').insert({
-              client_id: savedId, name: c.name, role: c.role, phone: c.phone, email: c.email,
+              client_id: savedId, name: c.name, role: c.role, phone: c.phone, email: c.email, is_whatsapp: c.isWhatsapp ?? true,
             });
           }
+        }
+
+        // Persist commercial handoff if user filled at least services or value
+        const allServices = [...handoff.services, ...(handoff.otherService.trim() ? [handoff.otherService.trim()] : [])];
+        const handoffFilled = allServices.length > 0 || !!handoff.monthlyValue || !!handoff.salesperson || !!handoff.dealClosedAt;
+        if (handoffFilled) {
+          const { data: auth } = await supabase.auth.getUser();
+          let filledBy: string | null = null;
+          if (auth.user) {
+            const { data: iu } = await supabase.from('internal_users').select('id').eq('auth_user_id', auth.user.id).maybeSingle();
+            filledBy = iu?.id ?? null;
+          }
+          const { error: upErr } = await supabase.from('commercial_handoff' as any).upsert({
+            client_id: savedId,
+            services: allServices,
+            monthly_value: handoff.monthlyValue ? Number(handoff.monthlyValue) : null,
+            payment_method: handoff.paymentMethod || null,
+            payment_due_day: handoff.paymentDueDay ? Number(handoff.paymentDueDay) : null,
+            deal_closed_at: handoff.dealClosedAt || null,
+            salesperson: handoff.salesperson || null,
+            commercial_notes: handoff.commercialNotes || null,
+            filled_by: filledBy,
+          }, { onConflict: 'client_id' });
+          if (upErr) throw upErr;
+
+          // Move client out of pending_handoff once the ficha is filled
+          await supabase.from('clients')
+            .update({ onboarding_status: 'pending_onboarding' } as any)
+            .eq('id', savedId)
+            .eq('onboarding_status', 'pending_handoff');
+
+          if (!hasHandoff) {
+            await supabase.from('timeline_entries').insert({
+              client_id: savedId,
+              type: 'service',
+              description: '[Repasse Comercial] Ficha de repasse preenchida',
+              responsible: 'CS',
+              sector: 'commercial',
+              origin: 'internal',
+              demand_status: 'resolved',
+              is_relevant_event: true,
+              relevant_event_type: 'handoff',
+            });
+          }
+          setHasHandoff(true);
+          if (onboardingStatus === 'pending_handoff') setOnboardingStatus('pending_onboarding');
         }
       }
 
@@ -218,16 +281,10 @@ export default function ClientFormPage() {
               </p>
             </div>
             <div className="flex items-end gap-4">
-              {isEdit && (onboardingStatus === 'pending_handoff' || !hasHandoff) && (
-                <Button
-                  variant="outline"
-                  disabled={!id}
-                  onClick={() => setHandoffOpen(true)}
-                  className="gap-2 shadow-sm"
-                >
-                  <FileText className="h-4 w-4" />
-                  {hasHandoff ? 'Editar Ficha de Repasse' : 'Preencher Ficha de Repasse'}
-                </Button>
+              {isEdit && onboardingStatus === 'pending_handoff' && !hasHandoff && (
+                <span className="text-xs px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  Preencha o passo "Repasse Comercial" para liberar o onboarding
+                </span>
               )}
               {isEdit && (onboardingStatus === 'pending_handoff' || onboardingStatus === 'pending_onboarding') && (
                 <span title={!hasHandoff ? 'Preencha a Ficha de Repasse Comercial antes de iniciar o onboarding.' : undefined}>
@@ -325,8 +382,9 @@ export default function ClientFormPage() {
                   <StepIdentification form={form} updateField={updateField} cnpjLoading={cnpjLoading} onDocumentChange={onDocumentChange} />
                 )}
                 {step === 1 && <StepContacts contacts={contacts} setContacts={handleContactsChange} />}
-                {step === 2 && <StepStrategic form={form} updateField={updateField} />}
-                {step === 3 && <StepRisk form={form} updateField={updateField} />}
+                {step === 2 && <StepHandoff handoff={handoff} setHandoff={setHandoff} />}
+                {step === 3 && <StepStrategic form={form} updateField={updateField} />}
+                {step === 4 && <StepRisk form={form} updateField={updateField} />}
               </motion.div>
             </AnimatePresence>
 
@@ -361,27 +419,13 @@ export default function ClientFormPage() {
       </div>
 
       {isEdit && id && (
-        <>
-          <StartOnboardingDialog
-            open={startingOnboarding}
-            onOpenChange={setStartingOnboarding}
-            clientId={id}
-            clientName={form.name}
-            onStarted={() => navigate('/onboarding')}
-          />
-          <CommercialHandoffDialog
-            open={handoffOpen}
-            onOpenChange={setHandoffOpen}
-            clientId={id}
-            clientName={form.name}
-            onSaved={async () => {
-              setHasHandoff(true);
-              setOnboardingStatus('pending_onboarding');
-              // Auto-open Iniciar Onboarding right after the ficha is saved
-              setStartingOnboarding(true);
-            }}
-          />
-        </>
+        <StartOnboardingDialog
+          open={startingOnboarding}
+          onOpenChange={setStartingOnboarding}
+          clientId={id}
+          clientName={form.name}
+          onStarted={() => navigate('/onboarding')}
+        />
       )}
     </AppLayout>
   );
