@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket, FileText } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket, Handshake } from 'lucide-react';
 import { StartOnboardingDialog } from '@/components/StartOnboardingDialog';
-import { CommercialHandoffDialog } from '@/components/CommercialHandoffDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +13,7 @@ import { StepIdentification } from '@/components/ClientWizardSteps/StepIdentific
 import { StepContacts, ContactDraft } from '@/components/ClientWizardSteps/StepContacts';
 import { StepStrategic } from '@/components/ClientWizardSteps/StepStrategic';
 import { StepRisk } from '@/components/ClientWizardSteps/StepRisk';
+import { StepHandoff, HandoffDraft, emptyHandoff, HANDOFF_SERVICES } from '@/components/ClientWizardSteps/StepHandoff';
 
 const emptyForm = {
   name: '', document: '', segment: '', contract_start_date: new Date().toISOString().split('T')[0],
@@ -28,8 +28,9 @@ const emptyForm = {
 const STEPS = [
   { id: 0, label: 'Identificação', icon: Building2, description: 'Dados básicos e classificação' },
   { id: 1, label: 'Contatos', icon: Users, description: 'Pessoas-chave do cliente' },
-  { id: 2, label: 'Visão Estratégica', icon: Sparkles, description: 'Dores, expectativas e perfil' },
-  { id: 3, label: 'Risco & Plano', icon: ShieldAlert, description: 'Sinais de alerta e ações' },
+  { id: 2, label: 'Repasse Comercial', icon: Handshake, description: 'Contrato, serviços e vendedor' },
+  { id: 3, label: 'Visão Estratégica', icon: Sparkles, description: 'Dores, expectativas e perfil' },
+  { id: 4, label: 'Risco & Plano', icon: ShieldAlert, description: 'Sinais de alerta e ações' },
 ] as const;
 
 export default function ClientFormPage() {
