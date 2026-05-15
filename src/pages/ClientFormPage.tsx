@@ -190,6 +190,7 @@ export default function ClientFormPage() {
             label: s.label,
             ...(s.quantity != null ? { quantity: s.quantity } : {}),
             ...(s.frequency ? { frequency: s.frequency } : {}),
+            ...(s.details ? { details: s.details } : {}),
           })),
           ...(otherTrim ? [{ code: 'outros', label: otherTrim }] : []),
         ];
