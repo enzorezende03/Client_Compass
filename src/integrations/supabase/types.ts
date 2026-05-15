@@ -123,6 +123,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_whatsapp: boolean
           name: string
           phone: string
           role: string
@@ -132,6 +133,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_whatsapp?: boolean
           name?: string
           phone?: string
           role?: string
@@ -141,6 +143,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_whatsapp?: boolean
           name?: string
           phone?: string
           role?: string
@@ -323,6 +326,66 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      commercial_handoff: {
+        Row: {
+          client_id: string
+          commercial_notes: string | null
+          deal_closed_at: string | null
+          filled_at: string
+          filled_by: string | null
+          id: string
+          monthly_value: number | null
+          payment_due_day: number | null
+          payment_method: string | null
+          salesperson: string | null
+          services: Json
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          commercial_notes?: string | null
+          deal_closed_at?: string | null
+          filled_at?: string
+          filled_by?: string | null
+          id?: string
+          monthly_value?: number | null
+          payment_due_day?: number | null
+          payment_method?: string | null
+          salesperson?: string | null
+          services?: Json
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          commercial_notes?: string | null
+          deal_closed_at?: string | null
+          filled_at?: string
+          filled_by?: string | null
+          id?: string
+          monthly_value?: number | null
+          payment_due_day?: number | null
+          payment_method?: string | null
+          salesperson?: string | null
+          services?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_handoff_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_handoff_filled_by_fkey"
+            columns: ["filled_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       digisac_complaints: {
         Row: {

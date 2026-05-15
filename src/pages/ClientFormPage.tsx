@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket, FileText } from 'lucide-react';
 import { StartOnboardingDialog } from '@/components/StartOnboardingDialog';
+import { CommercialHandoffDialog } from '@/components/CommercialHandoffDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -43,7 +44,9 @@ export default function ClientFormPage() {
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
-  const [onboardingStatus, setOnboardingStatus] = useState<string>('pendente');
+  const [onboardingStatus, setOnboardingStatus] = useState<string>('pending_handoff');
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [hasHandoff, setHasHandoff] = useState(false);
   const [startingOnboarding, setStartingOnboarding] = useState(false);
   const { toast } = useToast();
 
@@ -67,7 +70,9 @@ export default function ClientFormPage() {
           risk_identified_date: client.risk_identified_date ?? '', action_plan: client.action_plan ?? '',
           taxation: client.taxation ?? '',
         });
-        setOnboardingStatus((client as any).onboarding_status || 'pendente');
+        setOnboardingStatus((client as any).onboarding_status || 'pending_handoff');
+        const { data: handoff } = await supabase.from('commercial_handoff' as any).select('id').eq('client_id', id).maybeSingle();
+        setHasHandoff(!!handoff);
       }
       const { data: cts } = await supabase.from('client_contacts').select('*').eq('client_id', id);
       if (cts) {
@@ -213,20 +218,33 @@ export default function ClientFormPage() {
               </p>
             </div>
             <div className="flex items-end gap-4">
-              {isEdit && onboardingStatus === 'pendente' && (
+              {isEdit && (onboardingStatus === 'pending_handoff' || !hasHandoff) && (
                 <Button
-                  variant="default"
+                  variant="outline"
                   disabled={!id}
-                  onClick={() => setStartingOnboarding(true)}
-                  className="gap-2 shadow-md"
+                  onClick={() => setHandoffOpen(true)}
+                  className="gap-2 shadow-sm"
                 >
-                  <Rocket className="h-4 w-4" />
-                  Iniciar Onboarding
+                  <FileText className="h-4 w-4" />
+                  {hasHandoff ? 'Editar Ficha de Repasse' : 'Preencher Ficha de Repasse'}
                 </Button>
               )}
-              {isEdit && onboardingStatus !== 'pendente' && (
+              {isEdit && (onboardingStatus === 'pending_handoff' || onboardingStatus === 'pending_onboarding') && (
+                <span title={!hasHandoff ? 'Preencha a Ficha de Repasse Comercial antes de iniciar o onboarding.' : undefined}>
+                  <Button
+                    variant="default"
+                    disabled={!id || !hasHandoff}
+                    onClick={() => setStartingOnboarding(true)}
+                    className="gap-2 shadow-md"
+                  >
+                    <Rocket className="h-4 w-4" />
+                    Iniciar Onboarding
+                  </Button>
+                </span>
+              )}
+              {isEdit && (onboardingStatus === 'active' || onboardingStatus === 'completed' || onboardingStatus === 'paused') && (
                 <span className="text-xs px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">
-                  Onboarding: {onboardingStatus === 'em_andamento' ? 'em andamento' : 'concluído'}
+                  Onboarding: {onboardingStatus === 'active' ? 'em andamento' : onboardingStatus === 'completed' ? 'concluído' : 'pausado'}
                 </span>
               )}
               <div className="text-right">
@@ -343,13 +361,27 @@ export default function ClientFormPage() {
       </div>
 
       {isEdit && id && (
-        <StartOnboardingDialog
-          open={startingOnboarding}
-          onOpenChange={setStartingOnboarding}
-          clientId={id}
-          clientName={form.name}
-          onStarted={() => navigate('/onboarding')}
-        />
+        <>
+          <StartOnboardingDialog
+            open={startingOnboarding}
+            onOpenChange={setStartingOnboarding}
+            clientId={id}
+            clientName={form.name}
+            onStarted={() => navigate('/onboarding')}
+          />
+          <CommercialHandoffDialog
+            open={handoffOpen}
+            onOpenChange={setHandoffOpen}
+            clientId={id}
+            clientName={form.name}
+            onSaved={async () => {
+              setHasHandoff(true);
+              setOnboardingStatus('pending_onboarding');
+              // Auto-open Iniciar Onboarding right after the ficha is saved
+              setStartingOnboarding(true);
+            }}
+          />
+        </>
       )}
     </AppLayout>
   );

@@ -96,7 +96,7 @@ export default function Onboarding() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [clientsRes, itemsRes, progRes] = await Promise.all([
-      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type').eq('onboarding_status', 'em_andamento'),
+      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type').eq('onboarding_status', 'active'),
       supabase.from('onboarding_checklist_items').select('*').order('order_index'),
       supabase.from('client_onboarding_progress').select('*'),
     ]);
@@ -111,7 +111,7 @@ export default function Onboarding() {
     const { data: doneRes } = await supabase
       .from('clients')
       .select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type')
-      .eq('onboarding_status', 'concluido');
+      .eq('onboarding_status', 'completed');
     setClients([...cls, ...((doneRes || []) as ClientRow[])]);
     setItems(its);
     setProgress(prog);
@@ -146,7 +146,7 @@ export default function Onboarding() {
   // Load monthly reports when opening a client on Etapa 4
   useEffect(() => {
     if (!selectedClient) return;
-    if (selectedClient.onboarding_stage === 'etapa_4' || selectedClient.onboarding_status === 'concluido') {
+    if (selectedClient.onboarding_stage === 'etapa_4' || selectedClient.onboarding_status === 'completed') {
       loadReports(selectedClient.id);
     }
   }, [selectedClient, loadReports]);
@@ -169,7 +169,7 @@ export default function Onboarding() {
 
   const visible = useMemo(() => enriched.filter(({ client, sla }) => {
     if (responsibleFilter !== 'all' && client.cs_responsible !== responsibleFilter) return false;
-    if (slaFilter !== 'all' && sla !== slaFilter && client.onboarding_status !== 'concluido') return false;
+    if (slaFilter !== 'all' && sla !== slaFilter && client.onboarding_status !== 'completed') return false;
     if (search && !client.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (typeFilter !== 'all') {
       const t = (client.onboarding_type || 'empresa_existente') as OnboardingType;
@@ -193,7 +193,7 @@ export default function Onboarding() {
       constituicao: 'etapa_1', etapa_1_nova: 'etapa_1', etapa_2_nova: 'etapa_2', etapa_3_nova: 'etapa_3',
     };
     for (const e of visible) {
-      let s: OnboardingStage = e.client.onboarding_status === 'concluido' ? 'concluido' : e.stage;
+      let s: OnboardingStage = e.client.onboarding_status === 'completed' ? 'concluido' : e.stage;
       if (!map[s]) {
         // unify new-flow stages into existing columns when "Todos" is selected
         const fallback = novaToExisting[s];
@@ -205,7 +205,7 @@ export default function Onboarding() {
     return map;
   }, [visible, activeStages]);
 
-  const totalActive = clients.filter(c => c.onboarding_status === 'em_andamento').length;
+  const totalActive = clients.filter(c => c.onboarding_status === 'active').length;
 
   const selectedData = useMemo(() => {
     if (!selectedClient) return null;
@@ -331,7 +331,7 @@ export default function Onboarding() {
                     )}
                     {list.map(({ client, total, completed, sla }) => {
                       const days = daysSince(client.onboarding_started_at);
-                      const isDone = client.onboarding_status === 'concluido';
+                      const isDone = client.onboarding_status === 'completed';
                       const pct = total ? Math.round((completed / total) * 100) : 0;
                       const cType = (client.onboarding_type || 'empresa_existente') as OnboardingType;
                       return (
@@ -505,7 +505,7 @@ export default function Onboarding() {
               })()}
 
               {/* Monthly Reports (only on Etapa 4 / concluido) */}
-              {(selectedData.stage === 'etapa_4' || selectedData.client.onboarding_status === 'concluido') && (
+              {(selectedData.stage === 'etapa_4' || selectedData.client.onboarding_status === 'completed') && (
                 <section className="mt-6">
                   <div className="border border-border rounded-lg p-4 bg-card">
                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -621,19 +621,19 @@ export default function Onboarding() {
               <div className="mt-8 pt-4 border-t border-border sticky bottom-0 bg-background pb-2">
                 <Button
                   onClick={handleAdvance}
-                  disabled={!selectedData.requiredDone || advancing || selectedData.client.onboarding_status === 'concluido'}
+                  disabled={!selectedData.requiredDone || advancing || selectedData.client.onboarding_status === 'completed'}
                   className="w-full gap-2"
                   size="lg"
                 >
                   {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> :
                     selectedData.stage === 'etapa_4' ? <CheckCircle2 className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
-                  {selectedData.client.onboarding_status === 'concluido'
+                  {selectedData.client.onboarding_status === 'completed'
                     ? 'Onboarding concluído'
                     : selectedData.stage === 'etapa_4'
                       ? 'Concluir Onboarding'
                       : 'Avançar para próxima etapa'}
                 </Button>
-                {!selectedData.requiredDone && selectedData.client.onboarding_status !== 'concluido' && (
+                {!selectedData.requiredDone && selectedData.client.onboarding_status !== 'completed' && (
                   <p className="text-[11px] text-muted-foreground text-center mt-2">
                     Complete todos os itens obrigatórios (*) para avançar.
                   </p>
