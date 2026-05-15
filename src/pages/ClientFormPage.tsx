@@ -217,20 +217,33 @@ export default function ClientFormPage() {
               </p>
             </div>
             <div className="flex items-end gap-4">
-              {isEdit && onboardingStatus === 'pendente' && (
+              {isEdit && (onboardingStatus === 'pending_handoff' || !hasHandoff) && (
                 <Button
-                  variant="default"
+                  variant="outline"
                   disabled={!id}
-                  onClick={() => setStartingOnboarding(true)}
-                  className="gap-2 shadow-md"
+                  onClick={() => setHandoffOpen(true)}
+                  className="gap-2 shadow-sm"
                 >
-                  <Rocket className="h-4 w-4" />
-                  Iniciar Onboarding
+                  <FileText className="h-4 w-4" />
+                  {hasHandoff ? 'Editar Ficha de Repasse' : 'Preencher Ficha de Repasse'}
                 </Button>
               )}
-              {isEdit && onboardingStatus !== 'pendente' && (
+              {isEdit && (onboardingStatus === 'pending_handoff' || onboardingStatus === 'pending_onboarding') && (
+                <span title={!hasHandoff ? 'Preencha a Ficha de Repasse Comercial antes de iniciar o onboarding.' : undefined}>
+                  <Button
+                    variant="default"
+                    disabled={!id || !hasHandoff}
+                    onClick={() => setStartingOnboarding(true)}
+                    className="gap-2 shadow-md"
+                  >
+                    <Rocket className="h-4 w-4" />
+                    Iniciar Onboarding
+                  </Button>
+                </span>
+              )}
+              {isEdit && (onboardingStatus === 'active' || onboardingStatus === 'completed' || onboardingStatus === 'paused') && (
                 <span className="text-xs px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">
-                  Onboarding: {onboardingStatus === 'em_andamento' ? 'em andamento' : 'concluído'}
+                  Onboarding: {onboardingStatus === 'active' ? 'em andamento' : onboardingStatus === 'completed' ? 'concluído' : 'pausado'}
                 </span>
               )}
               <div className="text-right">
