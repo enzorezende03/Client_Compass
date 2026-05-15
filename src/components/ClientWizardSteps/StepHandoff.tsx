@@ -1,36 +1,83 @@
-import { FileText, MessageSquare, Handshake } from 'lucide-react';
+import { FileText, MessageSquare, Handshake, DollarSign } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export const HANDOFF_SERVICES = [
-  'Contabilidade', 'Folha de Pagamento', 'RH', 'BPO Financeiro',
-  'Fiscal', 'Societário', 'Saúde Ocupacional',
-] as const;
+export type ServiceCode = 'contabilidade_completa' | 'emissao_nf' | 'relatorios_personalizados' | 'demonstracoes_contabeis';
+export type DemonstracoesPeriodicidade = 'mensal' | 'trimestral' | 'semestral' | 'anual';
 
-export const PAYMENT_METHODS = [
-  { value: 'boleto', label: 'Boleto' },
-  { value: 'cartao', label: 'Cartão' },
-  { value: 'debito', label: 'Débito automático' },
-] as const;
+export interface HandoffServiceItem {
+  code: ServiceCode;
+  label: string;
+  quantity?: number | null;
+  frequency?: DemonstracoesPeriodicidade | null;
+}
+
+export const SERVICE_CATALOG: { code: ServiceCode; label: string }[] = [
+  { code: 'contabilidade_completa', label: 'Contabilidade Completa' },
+  { code: 'emissao_nf', label: 'Emissão de Notas Fiscais' },
+  { code: 'relatorios_personalizados', label: 'Relatórios Personalizados' },
+  { code: 'demonstracoes_contabeis', label: 'Demonstrações Contábeis' },
+];
+
+export const PERIODICIDADE_OPTS: { value: DemonstracoesPeriodicidade; label: string }[] = [
+  { value: 'mensal', label: 'Mensal' },
+  { value: 'trimestral', label: 'Trimestral' },
+  { value: 'semestral', label: 'Semestral' },
+  { value: 'anual', label: 'Anual' },
+];
 
 export interface HandoffDraft {
-  services: string[];
+  services: HandoffServiceItem[];
   otherService: string;
   monthlyValue: string;
-  paymentMethod: string;
-  paymentDueDay: string;
-  dealClosedAt: string;
-  salesperson: string;
   commercialNotes: string;
 }
 
 export const emptyHandoff: HandoffDraft = {
-  services: [], otherService: '', monthlyValue: '', paymentMethod: '',
-  paymentDueDay: '', dealClosedAt: '', salesperson: '', commercialNotes: '',
+  services: [],
+  otherService: '',
+  monthlyValue: '',
+  commercialNotes: '',
 };
+
+// Backward-compat parser: accepts old string[] or new object[]
+export function parseServices(raw: any): HandoffServiceItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((it: any): HandoffServiceItem | null => {
+      if (typeof it === 'string') {
+        const found = SERVICE_CATALOG.find(s => s.label.toLowerCase() === it.toLowerCase());
+        if (found) return { code: found.code, label: found.label };
+        return null;
+      }
+      if (it && typeof it === 'object' && it.code) {
+        const found = SERVICE_CATALOG.find(s => s.code === it.code);
+        return {
+          code: it.code,
+          label: found?.label ?? it.label ?? it.code,
+          quantity: it.quantity ?? null,
+          frequency: it.frequency ?? null,
+        };
+      }
+      return null;
+    })
+    .filter((x): x is HandoffServiceItem => !!x);
+}
+
+export function extractOtherService(raw: any): string {
+  if (!Array.isArray(raw)) return '';
+  const codes = new Set(SERVICE_CATALOG.map(s => s.code));
+  for (const it of raw) {
+    if (typeof it === 'string') {
+      const isKnown = SERVICE_CATALOG.some(s => s.label.toLowerCase() === it.toLowerCase());
+      if (!isKnown) return it;
+    }
+  }
+  return '';
+}
 
 interface Props {
   handoff: HandoffDraft;
@@ -41,10 +88,20 @@ export function StepHandoff({ handoff, setHandoff }: Props) {
   const update = <K extends keyof HandoffDraft>(field: K, value: HandoffDraft[K]) => {
     setHandoff({ ...handoff, [field]: value });
   };
-  const toggleService = (s: string) => {
-    update('services', handoff.services.includes(s)
-      ? handoff.services.filter(x => x !== s)
-      : [...handoff.services, s]);
+
+  const isChecked = (code: ServiceCode) => handoff.services.some(s => s.code === code);
+  const getItem = (code: ServiceCode) => handoff.services.find(s => s.code === code);
+
+  const toggleService = (code: ServiceCode, label: string) => {
+    if (isChecked(code)) {
+      update('services', handoff.services.filter(s => s.code !== code));
+    } else {
+      update('services', [...handoff.services, { code, label }]);
+    }
+  };
+
+  const updateServiceField = (code: ServiceCode, patch: Partial<HandoffServiceItem>) => {
+    update('services', handoff.services.map(s => s.code === code ? { ...s, ...patch } : s));
   };
 
   return (
@@ -58,61 +115,72 @@ export function StepHandoff({ handoff, setHandoff }: Props) {
         </p>
       </div>
 
-      {/* Contrato */}
-      <section className="space-y-3 rounded-lg border bg-card p-4">
+      <section className="space-y-4 rounded-lg border bg-card p-4">
         <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-          <FileText className="h-3.5 w-3.5 text-primary" /> Contrato
+          <FileText className="h-3.5 w-3.5 text-primary" /> Serviços Contratados
         </h4>
 
+        <div className="space-y-2">
+          {SERVICE_CATALOG.map(({ code, label }) => {
+            const checked = isChecked(code);
+            const item = getItem(code);
+            return (
+              <div key={code} className={`rounded-md border px-3 py-2.5 transition-colors ${checked ? 'border-primary/40 bg-primary/5' : 'border-border'}`}>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox checked={checked} onCheckedChange={() => toggleService(code, label)} />
+                  <span className="text-sm font-medium">{label}</span>
+                </label>
+
+                {checked && code === 'emissao_nf' && (
+                  <div className="mt-2 ml-6 flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Quantidade mensal:</Label>
+                    <Input
+                      type="number" min="0" step="1"
+                      className="h-8 w-28"
+                      value={item?.quantity ?? ''}
+                      onChange={e => updateServiceField(code, { quantity: e.target.value === '' ? null : Number(e.target.value) })}
+                      placeholder="ex: 50"
+                    />
+                  </div>
+                )}
+
+                {checked && code === 'demonstracoes_contabeis' && (
+                  <div className="mt-2 ml-6 flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Periodicidade:</Label>
+                    <Select
+                      value={item?.frequency ?? ''}
+                      onValueChange={(v) => updateServiceField(code, { frequency: v as DemonstracoesPeriodicidade })}
+                    >
+                      <SelectTrigger className="h-8 w-44"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        {PERIODICIDADE_OPTS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
         <div>
-          <Label className="text-xs">Serviços contratados</Label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1.5">
-            {HANDOFF_SERVICES.map(s => (
-              <label key={s} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm cursor-pointer hover:bg-muted/40">
-                <Checkbox checked={handoff.services.includes(s)} onCheckedChange={() => toggleService(s)} />
-                <span>{s}</span>
-              </label>
-            ))}
-          </div>
+          <Label className="text-xs">Outros serviços (opcional)</Label>
           <Input
             value={handoff.otherService}
             onChange={e => update('otherService', e.target.value)}
-            placeholder="Outros (especifique)"
-            className="mt-2"
-            maxLength={120}
+            placeholder="Especifique outros serviços contratados..."
+            maxLength={200}
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs">Valor da mensalidade (R$)</Label>
-            <Input type="number" step="0.01" min="0" value={handoff.monthlyValue} onChange={e => update('monthlyValue', e.target.value)} placeholder="0,00" />
-          </div>
-          <div>
-            <Label className="text-xs">Forma de pagamento</Label>
-            <Select value={handoff.paymentMethod} onValueChange={(v) => update('paymentMethod', v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Dia de vencimento (1–31)</Label>
-            <Input type="number" min="1" max="31" value={handoff.paymentDueDay} onChange={e => update('paymentDueDay', e.target.value)} placeholder="10" />
-          </div>
-          <div>
-            <Label className="text-xs">Data de fechamento</Label>
-            <Input type="date" value={handoff.dealClosedAt} onChange={e => update('dealClosedAt', e.target.value)} />
-          </div>
-          <div className="md:col-span-2">
-            <Label className="text-xs">Vendedor responsável</Label>
-            <Input value={handoff.salesperson} onChange={e => update('salesperson', e.target.value)} placeholder="Nome do vendedor" maxLength={120} />
-          </div>
+        <div>
+          <Label className="text-xs flex items-center gap-1.5">
+            <DollarSign className="h-3.5 w-3.5 text-muted-foreground" /> Valor da mensalidade (R$)
+          </Label>
+          <Input type="number" step="0.01" min="0" value={handoff.monthlyValue} onChange={e => update('monthlyValue', e.target.value)} placeholder="0,00" />
         </div>
       </section>
 
-      {/* Observações */}
       <section className="space-y-2 rounded-lg border bg-card p-4">
         <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
           <MessageSquare className="h-3.5 w-3.5 text-primary" /> Observações Comerciais
