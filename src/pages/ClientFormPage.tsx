@@ -13,7 +13,7 @@ import { StepIdentification } from '@/components/ClientWizardSteps/StepIdentific
 import { StepContacts, ContactDraft } from '@/components/ClientWizardSteps/StepContacts';
 import { StepStrategic } from '@/components/ClientWizardSteps/StepStrategic';
 
-import { StepHandoff, HandoffDraft, emptyHandoff, HANDOFF_SERVICES } from '@/components/ClientWizardSteps/StepHandoff';
+import { StepHandoff, HandoffDraft, emptyHandoff, parseServices, extractOtherService } from '@/components/ClientWizardSteps/StepHandoff';
 
 const emptyForm = {
   name: '', document: '', segment: '', contract_start_date: new Date().toISOString().split('T')[0],
