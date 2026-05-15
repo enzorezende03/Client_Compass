@@ -160,7 +160,7 @@ export default function Onboarding() {
     const stage = (c.onboarding_stage || 'etapa_1') as OnboardingStage;
     const stageItems = items.filter(i => i.stage === stage);
     const stageProg = progress.filter(p => p.client_id === c.id && p.item.stage === stage);
-    const completed = stageProg.filter(p => p.status === 'completed').length;
+    const completed = stageProg.filter(p => p.status === 'concluido').length;
     const sla = aggregateSlaTone(stageProg.map(p => ({
       created_at: p.created_at, completed_at: p.completed_at, sla_hours: p.item.sla_hours,
     })));
@@ -193,7 +193,7 @@ export default function Onboarding() {
       constituicao: 'etapa_1', etapa_1_nova: 'etapa_1', etapa_2_nova: 'etapa_2', etapa_3_nova: 'etapa_3',
     };
     for (const e of visible) {
-      let s: OnboardingStage = e.client.onboarding_status === 'completed' ? 'completed' : e.stage;
+      let s: OnboardingStage = e.client.onboarding_status === 'completed' ? 'concluido' : e.stage;
       if (!map[s]) {
         // unify new-flow stages into existing columns when "Todos" is selected
         const fallback = novaToExisting[s];
@@ -211,7 +211,7 @@ export default function Onboarding() {
     if (!selectedClient) return null;
     const e = enriched.find(x => x.client.id === selectedClient.id);
     if (!e) return null;
-    const requiredDone = e.stageProg.filter(p => p.item.is_required).every(p => p.status === 'completed');
+    const requiredDone = e.stageProg.filter(p => p.item.is_required).every(p => p.status === 'concluido');
     return { ...e, requiredDone };
   }, [enriched, selectedClient]);
 
@@ -405,13 +405,13 @@ export default function Onboarding() {
                       <div key={p.id} className="border border-border rounded-lg p-3 bg-card">
                         <div className="flex items-start gap-3">
                           <Checkbox
-                            checked={p.status === 'completed'}
+                            checked={p.status === 'concluido'}
                             onCheckedChange={(v) => handleToggle(p, !!v)}
                             className="mt-0.5"
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
-                              <span className={cn('text-sm font-medium', p.status === 'completed' && 'line-through text-muted-foreground')}>
+                              <span className={cn('text-sm font-medium', p.status === 'concluido' && 'line-through text-muted-foreground')}>
                                 {p.item.title}
                                 {p.item.is_required && <span className="text-red-500 ml-0.5">*</span>}
                               </span>
@@ -441,7 +441,7 @@ export default function Onboarding() {
               {/* Convert constituição → empresa nova */}
               {selectedData.client.onboarding_type === 'em_constituicao' && (() => {
                 const cnpjItem = selectedData.stageProg.find(p => /CNPJ/i.test(p.item.title) && /receb/i.test(p.item.title));
-                const ready = cnpjItem?.status === 'completed';
+                const ready = cnpjItem?.status === 'concluido';
                 return (
                   <section className="mt-6">
                     <div className={cn(
@@ -478,7 +478,7 @@ export default function Onboarding() {
               {/* Handoff form (only on Etapa 2) */}
               {selectedData.stage === 'etapa_2' && (() => {
                 const handoffProg = selectedData.stageProg.find(p => /repasse/i.test(p.item.title));
-                const handoffDone = handoffProg?.status === 'completed';
+                const handoffDone = handoffProg?.status === 'concluido';
                 return (
                   <section className="mt-6">
                     <div className="border border-border rounded-lg p-4 bg-card">
@@ -667,7 +667,7 @@ export default function Onboarding() {
             progress.find(p =>
               p.client_id === selectedClient.id
               && p.item.stage === 'etapa_4'
-              && p.status !== 'completed'
+              && p.status !== 'concluido'
               && /relat[óo]rio|mensal|fechamento/i.test(p.item.title)
             )?.id
           }
