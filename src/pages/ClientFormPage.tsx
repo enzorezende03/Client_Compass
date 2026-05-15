@@ -72,17 +72,10 @@ export default function ClientFormPage() {
         const hh = h as any;
         if (hh) {
           setHasHandoff(true);
-          const svcArr: string[] = Array.isArray(hh.services) ? hh.services : [];
-          const known = svcArr.filter(s => (HANDOFF_SERVICES as readonly string[]).includes(s));
-          const other = svcArr.find(s => !(HANDOFF_SERVICES as readonly string[]).includes(s));
           setHandoff({
-            services: known,
-            otherService: other ?? '',
+            services: parseServices(hh.services),
+            otherService: extractOtherService(hh.services),
             monthlyValue: hh.monthly_value != null ? String(hh.monthly_value) : '',
-            paymentMethod: hh.payment_method ?? '',
-            paymentDueDay: hh.payment_due_day != null ? String(hh.payment_due_day) : '',
-            dealClosedAt: hh.deal_closed_at ?? '',
-            salesperson: hh.salesperson ?? '',
             commercialNotes: hh.commercial_notes ?? '',
           });
         }
