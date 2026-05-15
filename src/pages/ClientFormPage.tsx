@@ -183,8 +183,17 @@ export default function ClientFormPage() {
         }
 
         // Persist commercial handoff if user filled at least services or value
-        const allServices = [...handoff.services, ...(handoff.otherService.trim() ? [handoff.otherService.trim()] : [])];
-        const handoffFilled = allServices.length > 0 || !!handoff.monthlyValue || !!handoff.salesperson || !!handoff.dealClosedAt;
+        const otherTrim = handoff.otherService.trim();
+        const servicesPayload: any[] = [
+          ...handoff.services.map(s => ({
+            code: s.code,
+            label: s.label,
+            ...(s.quantity != null ? { quantity: s.quantity } : {}),
+            ...(s.frequency ? { frequency: s.frequency } : {}),
+          })),
+          ...(otherTrim ? [{ code: 'outros', label: otherTrim }] : []),
+        ];
+        const handoffFilled = servicesPayload.length > 0 || !!handoff.monthlyValue || !!handoff.commercialNotes.trim();
         if (handoffFilled) {
           const { data: auth } = await supabase.auth.getUser();
           let filledBy: string | null = null;
@@ -194,12 +203,8 @@ export default function ClientFormPage() {
           }
           const { error: upErr } = await supabase.from('commercial_handoff' as any).upsert({
             client_id: savedId,
-            services: allServices,
+            services: servicesPayload,
             monthly_value: handoff.monthlyValue ? Number(handoff.monthlyValue) : null,
-            payment_method: handoff.paymentMethod || null,
-            payment_due_day: handoff.paymentDueDay ? Number(handoff.paymentDueDay) : null,
-            deal_closed_at: handoff.dealClosedAt || null,
-            salesperson: handoff.salesperson || null,
             commercial_notes: handoff.commercialNotes || null,
             filled_by: filledBy,
           }, { onConflict: 'client_id' });
