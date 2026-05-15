@@ -65,8 +65,6 @@ export default function ClientFormPage() {
           pain_points: client.pain_points ?? '', expectations: client.expectations ?? '',
           attention_points: client.attention_points ?? '', recurring_issues: client.recurring_issues ?? '',
           behavioral_profile: client.behavioral_profile ?? '', strategic_notes: client.strategic_notes ?? '',
-          risk_reason: client.risk_reason ?? '', risk_type: client.risk_type ?? '',
-          risk_identified_date: client.risk_identified_date ?? '', action_plan: client.action_plan ?? '',
           taxation: client.taxation ?? '',
         });
         setOnboardingStatus((client as any).onboarding_status || 'pending_handoff');
