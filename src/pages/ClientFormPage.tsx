@@ -188,13 +188,59 @@ export default function ClientFormPage() {
         for (const c of validContacts) {
           if (c.id) {
             await supabase.from('client_contacts').update({
-              name: c.name, role: c.role, phone: c.phone, email: c.email,
+              name: c.name, role: c.role, phone: c.phone, email: c.email, is_whatsapp: c.isWhatsapp ?? true,
             }).eq('id', c.id);
           } else {
             await supabase.from('client_contacts').insert({
-              client_id: savedId, name: c.name, role: c.role, phone: c.phone, email: c.email,
+              client_id: savedId, name: c.name, role: c.role, phone: c.phone, email: c.email, is_whatsapp: c.isWhatsapp ?? true,
             });
           }
+        }
+
+        // Persist commercial handoff if user filled at least services or value
+        const allServices = [...handoff.services, ...(handoff.otherService.trim() ? [handoff.otherService.trim()] : [])];
+        const handoffFilled = allServices.length > 0 || !!handoff.monthlyValue || !!handoff.salesperson || !!handoff.dealClosedAt;
+        if (handoffFilled) {
+          const { data: auth } = await supabase.auth.getUser();
+          let filledBy: string | null = null;
+          if (auth.user) {
+            const { data: iu } = await supabase.from('internal_users').select('id').eq('auth_user_id', auth.user.id).maybeSingle();
+            filledBy = iu?.id ?? null;
+          }
+          const { error: upErr } = await supabase.from('commercial_handoff' as any).upsert({
+            client_id: savedId,
+            services: allServices,
+            monthly_value: handoff.monthlyValue ? Number(handoff.monthlyValue) : null,
+            payment_method: handoff.paymentMethod || null,
+            payment_due_day: handoff.paymentDueDay ? Number(handoff.paymentDueDay) : null,
+            deal_closed_at: handoff.dealClosedAt || null,
+            salesperson: handoff.salesperson || null,
+            commercial_notes: handoff.commercialNotes || null,
+            filled_by: filledBy,
+          }, { onConflict: 'client_id' });
+          if (upErr) throw upErr;
+
+          // Move client out of pending_handoff once the ficha is filled
+          await supabase.from('clients')
+            .update({ onboarding_status: 'pending_onboarding' } as any)
+            .eq('id', savedId)
+            .eq('onboarding_status', 'pending_handoff');
+
+          if (!hasHandoff) {
+            await supabase.from('timeline_entries').insert({
+              client_id: savedId,
+              type: 'service',
+              description: '[Repasse Comercial] Ficha de repasse preenchida',
+              responsible: 'CS',
+              sector: 'commercial',
+              origin: 'internal',
+              demand_status: 'resolved',
+              is_relevant_event: true,
+              relevant_event_type: 'handoff',
+            });
+          }
+          setHasHandoff(true);
+          if (onboardingStatus === 'pending_handoff') setOnboardingStatus('pending_onboarding');
         }
       }
 
