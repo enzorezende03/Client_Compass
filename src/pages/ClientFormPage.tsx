@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ShieldAlert, ArrowLeft, Rocket, Handshake } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Save, Building2, Users, Sparkles, ArrowLeft, Rocket, Handshake } from 'lucide-react';
 import { StartOnboardingDialog } from '@/components/StartOnboardingDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
