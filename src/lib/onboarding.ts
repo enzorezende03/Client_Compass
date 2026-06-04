@@ -3,17 +3,20 @@ import { supabase } from '@/integrations/supabase/client';
 export const STAGES = ['etapa_1', 'etapa_2', 'etapa_3', 'etapa_4', 'concluido'] as const;
 export type OnboardingStage =
   | 'etapa_1' | 'etapa_2' | 'etapa_3' | 'etapa_4' | 'concluido'
-  | 'constituicao' | 'etapa_1_nova' | 'etapa_2_nova' | 'etapa_3_nova';
+  | 'constituicao' | 'etapa_1_nova' | 'etapa_2_nova' | 'etapa_3_nova'
+  | 'vmk_ativacao';
 
-export type OnboardingType = 'empresa_existente' | 'empresa_nova' | 'em_constituicao';
+export type OnboardingType = 'empresa_existente' | 'empresa_nova' | 'em_constituicao' | 'vmk_parceria';
 
 export const STAGES_EXISTING: OnboardingStage[] = ['etapa_1', 'etapa_2', 'etapa_3', 'etapa_4', 'concluido'];
 export const STAGES_NOVA: OnboardingStage[] = ['constituicao', 'etapa_1_nova', 'etapa_2_nova', 'etapa_3_nova', 'concluido'];
 export const STAGES_CONSTITUICAO: OnboardingStage[] = ['constituicao', 'concluido'];
+export const STAGES_VMK: OnboardingStage[] = ['constituicao', 'vmk_ativacao', 'concluido'];
 
 export function stagesForType(type: OnboardingType): OnboardingStage[] {
   if (type === 'empresa_nova') return STAGES_NOVA;
   if (type === 'em_constituicao') return STAGES_NOVA; // shows constituição alongside the new-company flow
+  if (type === 'vmk_parceria') return STAGES_VMK;
   return STAGES_EXISTING;
 }
 
@@ -21,12 +24,14 @@ export const ONBOARDING_TYPE_LABELS: Record<OnboardingType, string> = {
   empresa_existente: 'Empresa Existente',
   empresa_nova: 'Empresa Nova',
   em_constituicao: 'Em Constituição',
+  vmk_parceria: 'Parceria VMk',
 };
 
 export const ONBOARDING_TYPE_BADGE: Record<OnboardingType, string> = {
   empresa_existente: 'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30',
   empresa_nova: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
   em_constituicao: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30',
+  vmk_parceria: 'bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30',
 };
 
 export const STAGE_LABELS: Record<OnboardingStage, string> = {
@@ -38,6 +43,7 @@ export const STAGE_LABELS: Record<OnboardingStage, string> = {
   etapa_1_nova: 'Etapa 1 — Cadastro',
   etapa_2_nova: 'Etapa 2 — Onboarding',
   etapa_3_nova: 'Etapa 3 — Acompanhamento 60d',
+  vmk_ativacao: 'Ativação VMk',
   concluido: 'Concluído',
 };
 
@@ -50,6 +56,7 @@ export const STAGE_SHORT: Record<OnboardingStage, string> = {
   etapa_1_nova: 'Cadastro',
   etapa_2_nova: 'Onboarding',
   etapa_3_nova: 'Acomp. 60d',
+  vmk_ativacao: 'Ativação VMk',
   concluido: 'Concluído',
 };
 
