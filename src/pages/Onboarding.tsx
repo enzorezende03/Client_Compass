@@ -715,6 +715,15 @@ export default function Onboarding() {
                     Complete todos os itens obrigatórios (*) para avançar.
                   </p>
                 )}
+                {selectedData.client.onboarding_status !== 'completed' && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCancelOpen(true)}
+                    className="w-full gap-2 mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" /> Excluir onboarding
+                  </Button>
+                )}
               </div>
             </>
           )}
