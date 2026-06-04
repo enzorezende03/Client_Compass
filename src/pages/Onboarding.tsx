@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
 import { ConvertToNewCompanyDialog } from '@/components/ConvertToNewCompanyDialog';
@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
-  STAGES_EXISTING, STAGES_NOVA, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
+  STAGES_EXISTING, STAGES_NOVA, STAGES_VMK, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
   ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
   slaTone, aggregateSlaTone, advanceStage, toggleChecklistItem, updateProgressNotes,
   applyTemplateVars, MessageTemplate,
@@ -34,6 +34,9 @@ interface ClientRow {
   onboarding_stage: string | null;
   onboarding_started_at: string | null;
   onboarding_type: OnboardingType | null;
+  document?: string | null;
+  segment?: string | null;
+  parceria?: string | null;
 }
 
 interface ProgressFull {
@@ -96,7 +99,7 @@ export default function Onboarding() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [clientsRes, itemsRes, progRes] = await Promise.all([
-      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type').eq('onboarding_status', 'active'),
+      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,parceria').eq('onboarding_status', 'active'),
       supabase.from('onboarding_checklist_items').select('*').order('order_index'),
       supabase.from('client_onboarding_progress').select('*'),
     ]);
@@ -110,7 +113,7 @@ export default function Onboarding() {
     // also fetch concluded (last 30 days) for the "Concluído" column
     const { data: doneRes } = await supabase
       .from('clients')
-      .select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type')
+      .select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,parceria')
       .eq('onboarding_status', 'completed');
     setClients([...cls, ...((doneRes || []) as ClientRow[])]);
     setItems(its);
@@ -181,6 +184,7 @@ export default function Onboarding() {
   // Choose columns based on the active type filter
   const activeStages: OnboardingStage[] = useMemo(() => {
     if (typeFilter === 'empresa_nova' || typeFilter === 'em_constituicao') return STAGES_NOVA;
+    if (typeFilter === 'vmk_parceria') return STAGES_VMK;
     if (typeFilter === 'empresa_existente') return STAGES_EXISTING;
     // 'all' → use the existing-company columns and bucket new-flow stages into the closest match
     return STAGES_EXISTING;
@@ -191,6 +195,7 @@ export default function Onboarding() {
     for (const s of activeStages) map[s] = [];
     const novaToExisting: Partial<Record<OnboardingStage, OnboardingStage>> = {
       constituicao: 'etapa_1', etapa_1_nova: 'etapa_1', etapa_2_nova: 'etapa_2', etapa_3_nova: 'etapa_3',
+      vmk_ativacao: 'etapa_1',
     };
     for (const e of visible) {
       let s: OnboardingStage = e.client.onboarding_status === 'completed' ? 'concluido' : e.stage;
@@ -287,8 +292,10 @@ export default function Onboarding() {
             <TabsTrigger value="empresa_existente">Empresa Existente</TabsTrigger>
             <TabsTrigger value="empresa_nova">Empresa Nova</TabsTrigger>
             <TabsTrigger value="em_constituicao">Em Constituição</TabsTrigger>
+            <TabsTrigger value="vmk_parceria">Parceria VMk</TabsTrigger>
           </TabsList>
         </Tabs>
+
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -475,6 +482,52 @@ export default function Onboarding() {
                 );
               })()}
 
+              {/* VMk — Dedicated orientation email button (no meeting scheduling) */}
+              {selectedData.client.onboarding_type === 'vmk_parceria' && (() => {
+                const tpl = dbTemplates.find(t => t.onboarding_type === 'vmk_parceria' && t.stage === 'vmk_ativacao');
+                if (!tpl) return null;
+                const c = selectedData.client;
+                const isSaude = /sa[uú]de|cl[íi]nic|m[ée]dic|odont|hospital|farm[áa]c/i
+                  .test(`${c.segment || ''} ${c.name}`);
+                const vars: Record<string, string> = {
+                  NOME_CLIENTE: c.name,
+                  NOME_CS: c.cs_responsible || '',
+                  'SAUDE/CONTABILIDADE': isSaude ? 'Saúde' : 'Contabilidade',
+                  CNPJ_EMPRESA: c.document || '',
+                };
+                const filled = applyTemplateVars(tpl.content, vars);
+                return (
+                  <section className="mt-6">
+                    <div className="border-2 border-violet-500/40 bg-violet-500/5 rounded-lg p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-violet-600" />
+                            E-mail de orientação pós-constituição
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Cliente em parceria VMk. Copie o e-mail com os dados já preenchidos e envie ao cliente.
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => copyTemplate(filled)}
+                          className="gap-1.5 shrink-0 bg-violet-600 hover:bg-violet-700 text-white border-0"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Copiar e-mail de orientação
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed mt-3 border-t border-violet-500/20 pt-3">
+                        {filled}
+                      </p>
+                    </div>
+                  </section>
+                );
+              })()}
+
+
+
               {/* Handoff form (only on Etapa 2) */}
               {selectedData.stage === 'etapa_2' && (() => {
                 const handoffProg = selectedData.stageProg.find(p => /repasse/i.test(p.item.title));
@@ -550,7 +603,9 @@ export default function Onboarding() {
               {/* Templates — DB-backed, filtered by onboarding_type + stage */}
               {(() => {
                 const cType = (selectedData.client.onboarding_type || 'empresa_existente') as OnboardingType;
-                const stageTpls = dbTemplates.filter(t => t.onboarding_type === cType && t.stage === selectedData.stage);
+                const stageTpls = dbTemplates.filter(t => t.onboarding_type === cType && t.stage === selectedData.stage
+                  // VMk orientation email is shown via its dedicated card above
+                  && !(cType === 'vmk_parceria' && t.stage === 'vmk_ativacao'));
                 const legacy = MESSAGE_TEMPLATES[selectedData.stage] || [];
                 if (stageTpls.length === 0 && legacy.length === 0) return null;
 
