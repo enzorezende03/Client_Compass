@@ -603,7 +603,9 @@ export default function Onboarding() {
               {/* Templates — DB-backed, filtered by onboarding_type + stage */}
               {(() => {
                 const cType = (selectedData.client.onboarding_type || 'empresa_existente') as OnboardingType;
-                const stageTpls = dbTemplates.filter(t => t.onboarding_type === cType && t.stage === selectedData.stage);
+                const stageTpls = dbTemplates.filter(t => t.onboarding_type === cType && t.stage === selectedData.stage
+                  // VMk orientation email is shown via its dedicated card above
+                  && !(cType === 'vmk_parceria' && t.stage === 'vmk_ativacao'));
                 const legacy = MESSAGE_TEMPLATES[selectedData.stage] || [];
                 if (stageTpls.length === 0 && legacy.length === 0) return null;
 
