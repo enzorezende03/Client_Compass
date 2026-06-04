@@ -256,6 +256,39 @@ export async function startOnboarding(
 }
 
 /**
+ * Cancels/deletes an in-progress onboarding so it can be recreated correctly
+ * (e.g. created with the wrong type). Clears onboarding fields on the client,
+ * removes the checklist progress rows and the auto-generated onboarding tasks.
+ * The client is set back to "pending_onboarding" so a new onboarding can be started.
+ */
+export async function cancelOnboarding(clientId: string, clientName: string) {
+  // remove checklist progress rows
+  await supabase.from('client_onboarding_progress').delete().eq('client_id', clientId);
+  // remove auto-generated onboarding tasks
+  await supabase.from('tasks').delete().eq('client_id', clientId).eq('category', 'onboarding');
+  // reset client onboarding state
+  await supabase.from('clients').update({
+    onboarding_status: 'pending_onboarding',
+    onboarding_stage: null,
+    onboarding_type: null,
+    onboarding_started_at: null,
+    onboarding_completed_at: null,
+  } as any).eq('id', clientId);
+
+  await supabase.from('timeline_entries').insert({
+    client_id: clientId,
+    type: 'service',
+    description: `[Onboarding] Onboarding excluído — fluxo cancelado para recriação`,
+    responsible: 'CS',
+    sector: 'commercial',
+    origin: 'internal',
+    demand_status: 'resolved',
+    is_relevant_event: true,
+    relevant_event_type: 'onboarding',
+  });
+}
+
+/**
  * Converts an "em_constituicao" client once CNPJ is received.
  * VMk-partnership clients (parceria = 'vmk') go to the "vmk_parceria" flow
  * (stage "vmk_ativacao"); all others go to "empresa_nova" (stage "etapa_1_nova").
