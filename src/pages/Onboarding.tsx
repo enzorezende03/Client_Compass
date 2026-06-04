@@ -730,6 +730,33 @@ export default function Onboarding() {
         </SheetContent>
       </Sheet>
 
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir onboarding?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso vai remover o checklist, as tarefas geradas e zerar o onboarding de{' '}
+              <span className="font-medium text-foreground">{selectedData?.client.name}</span>.
+              O cliente volta a ficar disponível para iniciar um novo onboarding (ex.: Parceria VMk).
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleCancelOnboarding(); }}
+              disabled={cancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2"
+            >
+              {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
+              Excluir onboarding
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
+
       {selectedClient && (
         <OnboardingHandoffDialog
           open={handoffOpen}
