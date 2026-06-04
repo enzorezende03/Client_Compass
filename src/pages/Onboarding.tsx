@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
-  STAGES_EXISTING, STAGES_NOVA, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
+  STAGES_EXISTING, STAGES_NOVA, STAGES_VMK, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
   ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
   slaTone, aggregateSlaTone, advanceStage, toggleChecklistItem, updateProgressNotes,
   applyTemplateVars, MessageTemplate,
@@ -34,6 +34,9 @@ interface ClientRow {
   onboarding_stage: string | null;
   onboarding_started_at: string | null;
   onboarding_type: OnboardingType | null;
+  document?: string | null;
+  segment?: string | null;
+  parceria?: string | null;
 }
 
 interface ProgressFull {
