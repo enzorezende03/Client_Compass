@@ -125,6 +125,21 @@ export function StepHandoff({ handoff, setHandoff }: Props) {
         </p>
       </div>
 
+      <section className="space-y-2 rounded-lg border bg-card p-4">
+        <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+          <Handshake className="h-3.5 w-3.5 text-primary" /> Parceria
+        </Label>
+        <Select value={handoff.parceria || PARCERIA_NONE} onValueChange={(v) => update('parceria', v)}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {PARCERIA_OPTS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          Clientes da parceria <strong>VMk</strong> entram pelo fluxo de constituição e, ao receber o CNPJ, são convertidos para o onboarding de Ativação VMk.
+        </p>
+      </section>
+
       <section className="space-y-4 rounded-lg border bg-card p-4">
         <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
           <FileText className="h-3.5 w-3.5 text-primary" /> Serviços Contratados
