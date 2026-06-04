@@ -99,7 +99,7 @@ export default function Onboarding() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [clientsRes, itemsRes, progRes] = await Promise.all([
-      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type').eq('onboarding_status', 'active'),
+      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,parceria').eq('onboarding_status', 'active'),
       supabase.from('onboarding_checklist_items').select('*').order('order_index'),
       supabase.from('client_onboarding_progress').select('*'),
     ]);
