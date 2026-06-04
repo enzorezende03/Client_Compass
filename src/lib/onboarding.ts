@@ -255,24 +255,37 @@ export async function startOnboarding(
   });
 }
 
-/** Converts an "em_constituicao" client to "empresa_nova" once CNPJ is received. */
+/**
+ * Converts an "em_constituicao" client once CNPJ is received.
+ * VMk-partnership clients (parceria = 'vmk') go to the "vmk_parceria" flow
+ * (stage "vmk_ativacao"); all others go to "empresa_nova" (stage "etapa_1_nova").
+ */
 export async function convertConstitutionToNewCompany(
   clientId: string,
   clientName: string,
   newCnpj: string,
 ) {
+  // Determine partnership to choose the correct destination flow.
+  const { data: clientPre } = await supabase
+    .from('clients').select('cs_responsible, parceria').eq('id', clientId).maybeSingle();
+  const isVmk = (clientPre as any)?.parceria === 'vmk';
+
+  const targetType: OnboardingType = isVmk ? 'vmk_parceria' : 'empresa_nova';
+  const targetStage: OnboardingStage = isVmk ? 'vmk_ativacao' : 'etapa_1_nova';
+  const flowLabel = isVmk ? 'Parceria VMk' : 'Empresa Nova';
+
   await supabase.from('clients').update({
-    onboarding_type: 'empresa_nova',
-    onboarding_stage: 'etapa_1_nova',
+    onboarding_type: targetType,
+    onboarding_stage: targetStage,
     document: newCnpj,
   } as any).eq('id', clientId);
 
-  await seedStage(clientId, 'etapa_1_nova', clientName);
+  await seedStage(clientId, targetStage, clientName);
 
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',
-    description: `[Onboarding] Cliente convertido de Constituição para Empresa Nova — CNPJ ${newCnpj}`,
+    description: `[Onboarding] Cliente convertido de Constituição para ${flowLabel} — CNPJ ${newCnpj}`,
     responsible: 'CS',
     sector: 'commercial',
     origin: 'internal',
@@ -282,23 +295,22 @@ export async function convertConstitutionToNewCompany(
   });
 
   // notify Coordenador Geral + CS responsible
-  const { data: client } = await supabase
-    .from('clients').select('cs_responsible').eq('id', clientId).maybeSingle();
+  const csResponsible = (clientPre as any)?.cs_responsible;
   const recipients = await supabase
     .from('internal_users')
     .select('id, name, access_profile')
     .eq('active', true);
   const targets = (recipients.data || []).filter((u: any) =>
     u.access_profile === 'coordenador_geral' || u.access_profile === 'admin' ||
-    (client?.cs_responsible && u.name === client.cs_responsible)
+    (csResponsible && u.name === csResponsible)
   );
   if (targets.length) {
     await supabase.from('notifications').insert(
       targets.map((u: any) => ({
         user_id: u.id,
         type: 'onboarding_conversion',
-        title: 'Cliente convertido para Empresa Nova',
-        message: `${clientName} recebeu CNPJ (${newCnpj}) e entrou no onboarding de Empresa Nova — Etapa 1.`,
+        title: `Cliente convertido para ${flowLabel}`,
+        message: `${clientName} recebeu CNPJ (${newCnpj}) e entrou no onboarding de ${flowLabel}.`,
       }))
     );
   }
