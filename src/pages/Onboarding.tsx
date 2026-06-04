@@ -184,6 +184,7 @@ export default function Onboarding() {
   // Choose columns based on the active type filter
   const activeStages: OnboardingStage[] = useMemo(() => {
     if (typeFilter === 'empresa_nova' || typeFilter === 'em_constituicao') return STAGES_NOVA;
+    if (typeFilter === 'vmk_parceria') return STAGES_VMK;
     if (typeFilter === 'empresa_existente') return STAGES_EXISTING;
     // 'all' → use the existing-company columns and bucket new-flow stages into the closest match
     return STAGES_EXISTING;
@@ -194,6 +195,7 @@ export default function Onboarding() {
     for (const s of activeStages) map[s] = [];
     const novaToExisting: Partial<Record<OnboardingStage, OnboardingStage>> = {
       constituicao: 'etapa_1', etapa_1_nova: 'etapa_1', etapa_2_nova: 'etapa_2', etapa_3_nova: 'etapa_3',
+      vmk_ativacao: 'etapa_1',
     };
     for (const e of visible) {
       let s: OnboardingStage = e.client.onboarding_status === 'completed' ? 'concluido' : e.stage;
