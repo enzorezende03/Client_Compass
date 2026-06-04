@@ -30,11 +30,18 @@ export const PERIODICIDADE_OPTS: { value: DemonstracoesPeriodicidade; label: str
   { value: 'anual', label: 'Anual' },
 ];
 
+export const PARCERIA_NONE = 'none';
+export const PARCERIA_OPTS: { value: string; label: string }[] = [
+  { value: PARCERIA_NONE, label: 'Nenhuma' },
+  { value: 'vmk', label: 'VMk' },
+];
+
 export interface HandoffDraft {
   services: HandoffServiceItem[];
   otherService: string;
   monthlyValue: string;
   commercialNotes: string;
+  parceria: string;
 }
 
 export const emptyHandoff: HandoffDraft = {
@@ -42,6 +49,7 @@ export const emptyHandoff: HandoffDraft = {
   otherService: '',
   monthlyValue: '',
   commercialNotes: '',
+  parceria: PARCERIA_NONE,
 };
 
 // Backward-compat parser: accepts old string[] or new object[]
@@ -116,6 +124,21 @@ export function StepHandoff({ handoff, setHandoff }: Props) {
           Dados da negociação fechada pelo Comercial. Estes dados são obrigatórios para iniciar o onboarding.
         </p>
       </div>
+
+      <section className="space-y-2 rounded-lg border bg-card p-4">
+        <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+          <Handshake className="h-3.5 w-3.5 text-primary" /> Parceria
+        </Label>
+        <Select value={handoff.parceria || PARCERIA_NONE} onValueChange={(v) => update('parceria', v)}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {PARCERIA_OPTS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          Clientes da parceria <strong>VMk</strong> entram pelo fluxo de constituição e, ao receber o CNPJ, são convertidos para o onboarding de Ativação VMk.
+        </p>
+      </section>
 
       <section className="space-y-4 rounded-lg border bg-card p-4">
         <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">

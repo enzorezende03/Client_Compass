@@ -3,17 +3,20 @@ import { supabase } from '@/integrations/supabase/client';
 export const STAGES = ['etapa_1', 'etapa_2', 'etapa_3', 'etapa_4', 'concluido'] as const;
 export type OnboardingStage =
   | 'etapa_1' | 'etapa_2' | 'etapa_3' | 'etapa_4' | 'concluido'
-  | 'constituicao' | 'etapa_1_nova' | 'etapa_2_nova' | 'etapa_3_nova';
+  | 'constituicao' | 'etapa_1_nova' | 'etapa_2_nova' | 'etapa_3_nova'
+  | 'vmk_ativacao';
 
-export type OnboardingType = 'empresa_existente' | 'empresa_nova' | 'em_constituicao';
+export type OnboardingType = 'empresa_existente' | 'empresa_nova' | 'em_constituicao' | 'vmk_parceria';
 
 export const STAGES_EXISTING: OnboardingStage[] = ['etapa_1', 'etapa_2', 'etapa_3', 'etapa_4', 'concluido'];
 export const STAGES_NOVA: OnboardingStage[] = ['constituicao', 'etapa_1_nova', 'etapa_2_nova', 'etapa_3_nova', 'concluido'];
 export const STAGES_CONSTITUICAO: OnboardingStage[] = ['constituicao', 'concluido'];
+export const STAGES_VMK: OnboardingStage[] = ['constituicao', 'vmk_ativacao', 'concluido'];
 
 export function stagesForType(type: OnboardingType): OnboardingStage[] {
   if (type === 'empresa_nova') return STAGES_NOVA;
   if (type === 'em_constituicao') return STAGES_NOVA; // shows constituição alongside the new-company flow
+  if (type === 'vmk_parceria') return STAGES_VMK;
   return STAGES_EXISTING;
 }
 
@@ -21,12 +24,14 @@ export const ONBOARDING_TYPE_LABELS: Record<OnboardingType, string> = {
   empresa_existente: 'Empresa Existente',
   empresa_nova: 'Empresa Nova',
   em_constituicao: 'Em Constituição',
+  vmk_parceria: 'Parceria VMk',
 };
 
 export const ONBOARDING_TYPE_BADGE: Record<OnboardingType, string> = {
   empresa_existente: 'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30',
   empresa_nova: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
   em_constituicao: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30',
+  vmk_parceria: 'bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30',
 };
 
 export const STAGE_LABELS: Record<OnboardingStage, string> = {
@@ -38,6 +43,7 @@ export const STAGE_LABELS: Record<OnboardingStage, string> = {
   etapa_1_nova: 'Etapa 1 — Cadastro',
   etapa_2_nova: 'Etapa 2 — Onboarding',
   etapa_3_nova: 'Etapa 3 — Acompanhamento 60d',
+  vmk_ativacao: 'Ativação VMk',
   concluido: 'Concluído',
 };
 
@@ -50,6 +56,7 @@ export const STAGE_SHORT: Record<OnboardingStage, string> = {
   etapa_1_nova: 'Cadastro',
   etapa_2_nova: 'Onboarding',
   etapa_3_nova: 'Acomp. 60d',
+  vmk_ativacao: 'Ativação VMk',
   concluido: 'Concluído',
 };
 
@@ -226,6 +233,7 @@ export async function startOnboarding(
   const stage: OnboardingStage =
     type === 'empresa_nova' ? 'etapa_1_nova'
     : type === 'em_constituicao' ? 'constituicao'
+    : type === 'vmk_parceria' ? 'vmk_ativacao'
     : 'etapa_1';
   await supabase.from('clients').update({
     onboarding_status: 'active',
@@ -247,24 +255,37 @@ export async function startOnboarding(
   });
 }
 
-/** Converts an "em_constituicao" client to "empresa_nova" once CNPJ is received. */
+/**
+ * Converts an "em_constituicao" client once CNPJ is received.
+ * VMk-partnership clients (parceria = 'vmk') go to the "vmk_parceria" flow
+ * (stage "vmk_ativacao"); all others go to "empresa_nova" (stage "etapa_1_nova").
+ */
 export async function convertConstitutionToNewCompany(
   clientId: string,
   clientName: string,
   newCnpj: string,
 ) {
+  // Determine partnership to choose the correct destination flow.
+  const { data: clientPre } = await supabase
+    .from('clients').select('cs_responsible, parceria').eq('id', clientId).maybeSingle();
+  const isVmk = (clientPre as any)?.parceria === 'vmk';
+
+  const targetType: OnboardingType = isVmk ? 'vmk_parceria' : 'empresa_nova';
+  const targetStage: OnboardingStage = isVmk ? 'vmk_ativacao' : 'etapa_1_nova';
+  const flowLabel = isVmk ? 'Parceria VMk' : 'Empresa Nova';
+
   await supabase.from('clients').update({
-    onboarding_type: 'empresa_nova',
-    onboarding_stage: 'etapa_1_nova',
+    onboarding_type: targetType,
+    onboarding_stage: targetStage,
     document: newCnpj,
   } as any).eq('id', clientId);
 
-  await seedStage(clientId, 'etapa_1_nova', clientName);
+  await seedStage(clientId, targetStage, clientName);
 
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',
-    description: `[Onboarding] Cliente convertido de Constituição para Empresa Nova — CNPJ ${newCnpj}`,
+    description: `[Onboarding] Cliente convertido de Constituição para ${flowLabel} — CNPJ ${newCnpj}`,
     responsible: 'CS',
     sector: 'commercial',
     origin: 'internal',
@@ -274,23 +295,22 @@ export async function convertConstitutionToNewCompany(
   });
 
   // notify Coordenador Geral + CS responsible
-  const { data: client } = await supabase
-    .from('clients').select('cs_responsible').eq('id', clientId).maybeSingle();
+  const csResponsible = (clientPre as any)?.cs_responsible;
   const recipients = await supabase
     .from('internal_users')
     .select('id, name, access_profile')
     .eq('active', true);
   const targets = (recipients.data || []).filter((u: any) =>
     u.access_profile === 'coordenador_geral' || u.access_profile === 'admin' ||
-    (client?.cs_responsible && u.name === client.cs_responsible)
+    (csResponsible && u.name === csResponsible)
   );
   if (targets.length) {
     await supabase.from('notifications').insert(
       targets.map((u: any) => ({
         user_id: u.id,
         type: 'onboarding_conversion',
-        title: 'Cliente convertido para Empresa Nova',
-        message: `${clientName} recebeu CNPJ (${newCnpj}) e entrou no onboarding de Empresa Nova — Etapa 1.`,
+        title: `Cliente convertido para ${flowLabel}`,
+        message: `${clientName} recebeu CNPJ (${newCnpj}) e entrou no onboarding de ${flowLabel}.`,
       }))
     );
   }

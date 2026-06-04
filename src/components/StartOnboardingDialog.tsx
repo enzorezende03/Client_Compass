@@ -13,6 +13,8 @@ interface Props {
   clientName: string;
   /** Lock the type selector to a single option (used by the orange button on /onboarding). */
   forcedType?: OnboardingType;
+  /** Pre-select an initial type without locking the selector. */
+  defaultType?: OnboardingType;
   onStarted?: () => void;
 }
 
@@ -37,9 +39,9 @@ const TYPES: { type: OnboardingType; icon: any; description: string; color: stri
   },
 ];
 
-export function StartOnboardingDialog({ open, onOpenChange, clientId, clientName, forcedType, onStarted }: Props) {
+export function StartOnboardingDialog({ open, onOpenChange, clientId, clientName, forcedType, defaultType, onStarted }: Props) {
   const { toast } = useToast();
-  const [selected, setSelected] = useState<OnboardingType>(forcedType || 'empresa_existente');
+  const [selected, setSelected] = useState<OnboardingType>(forcedType || defaultType || 'empresa_existente');
   const [loading, setLoading] = useState(false);
 
   const options = forcedType ? TYPES.filter(t => t.type === forcedType) : TYPES;

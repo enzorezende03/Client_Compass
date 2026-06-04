@@ -13,7 +13,7 @@ import { StepIdentification } from '@/components/ClientWizardSteps/StepIdentific
 import { StepContacts, ContactDraft } from '@/components/ClientWizardSteps/StepContacts';
 import { StepStrategic } from '@/components/ClientWizardSteps/StepStrategic';
 
-import { StepHandoff, HandoffDraft, emptyHandoff, parseServices, extractOtherService } from '@/components/ClientWizardSteps/StepHandoff';
+import { StepHandoff, HandoffDraft, emptyHandoff, parseServices, extractOtherService, PARCERIA_NONE } from '@/components/ClientWizardSteps/StepHandoff';
 
 const emptyForm = {
   name: '', document: '', segment: '', contract_start_date: new Date().toISOString().split('T')[0],
@@ -77,7 +77,10 @@ export default function ClientFormPage() {
             otherService: extractOtherService(hh.services),
             monthlyValue: hh.monthly_value != null ? String(hh.monthly_value) : '',
             commercialNotes: hh.commercial_notes ?? '',
+            parceria: (client as any).parceria || PARCERIA_NONE,
           });
+        } else {
+          setHandoff(prev => ({ ...prev, parceria: (client as any).parceria || PARCERIA_NONE }));
         }
       }
       const { data: cts } = await supabase.from('client_contacts').select('*').eq('client_id', id);
@@ -166,6 +169,10 @@ export default function ClientFormPage() {
       }
 
       if (savedId) {
+        // Persist partnership (e.g. VMk) on the client record
+        await supabase.from('clients')
+          .update({ parceria: handoff.parceria && handoff.parceria !== PARCERIA_NONE ? handoff.parceria : null } as any)
+          .eq('id', savedId);
         if (removedContactIds.length) {
           await supabase.from('client_contacts').delete().in('id', removedContactIds);
         }
@@ -415,6 +422,7 @@ export default function ClientFormPage() {
           onOpenChange={setStartingOnboarding}
           clientId={id}
           clientName={form.name}
+          defaultType={handoff.parceria === 'vmk' ? 'em_constituicao' : undefined}
           onStarted={() => navigate('/onboarding')}
         />
       )}
