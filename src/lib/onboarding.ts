@@ -230,22 +230,33 @@ export async function startOnboarding(
   type: OnboardingType = 'empresa_existente',
 ) {
   const now = new Date().toISOString();
-  const stage: OnboardingStage =
-    type === 'empresa_nova' ? 'etapa_1_nova'
+
+  // VMk-partnership clients always run on the "Parceria VMk" flow.
+  // If they're still being constituted, keep the "constituicao" stage; otherwise go to "vmk_ativacao".
+  const { data: clientPre } = await supabase
+    .from('clients').select('parceria').eq('id', clientId).maybeSingle();
+  const isVmk = (clientPre as any)?.parceria === 'vmk';
+
+  const effectiveType: OnboardingType = isVmk ? 'vmk_parceria' : type;
+
+  const stage: OnboardingStage = isVmk
+    ? (type === 'em_constituicao' ? 'constituicao' : 'vmk_ativacao')
+    : type === 'empresa_nova' ? 'etapa_1_nova'
     : type === 'em_constituicao' ? 'constituicao'
     : type === 'vmk_parceria' ? 'vmk_ativacao'
     : 'etapa_1';
+
   await supabase.from('clients').update({
     onboarding_status: 'active',
     onboarding_stage: stage,
-    onboarding_type: type,
+    onboarding_type: effectiveType,
     onboarding_started_at: now,
   } as any).eq('id', clientId);
   await seedStage(clientId, stage, clientName);
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',
-    description: `[Onboarding] Iniciado — ${STAGE_LABELS[stage]} (${ONBOARDING_TYPE_LABELS[type]})`,
+    description: `[Onboarding] Iniciado — ${STAGE_LABELS[stage]} (${ONBOARDING_TYPE_LABELS[effectiveType]})`,
     responsible: 'CS',
     sector: 'commercial',
     origin: 'internal',
