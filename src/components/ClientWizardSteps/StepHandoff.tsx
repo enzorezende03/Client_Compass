@@ -30,11 +30,18 @@ export const PERIODICIDADE_OPTS: { value: DemonstracoesPeriodicidade; label: str
   { value: 'anual', label: 'Anual' },
 ];
 
+export const PARCERIA_NONE = 'none';
+export const PARCERIA_OPTS: { value: string; label: string }[] = [
+  { value: PARCERIA_NONE, label: 'Nenhuma' },
+  { value: 'vmk', label: 'VMk' },
+];
+
 export interface HandoffDraft {
   services: HandoffServiceItem[];
   otherService: string;
   monthlyValue: string;
   commercialNotes: string;
+  parceria: string;
 }
 
 export const emptyHandoff: HandoffDraft = {
@@ -42,6 +49,7 @@ export const emptyHandoff: HandoffDraft = {
   otherService: '',
   monthlyValue: '',
   commercialNotes: '',
+  parceria: PARCERIA_NONE,
 };
 
 // Backward-compat parser: accepts old string[] or new object[]
