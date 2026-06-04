@@ -256,7 +256,7 @@ export async function startOnboarding(
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',
-    description: `[Onboarding] Iniciado — ${STAGE_LABELS[stage]} (${ONBOARDING_TYPE_LABELS[type]})`,
+    description: `[Onboarding] Iniciado — ${STAGE_LABELS[stage]} (${ONBOARDING_TYPE_LABELS[effectiveType]})`,
     responsible: 'CS',
     sector: 'commercial',
     origin: 'internal',
