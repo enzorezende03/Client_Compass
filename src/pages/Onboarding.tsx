@@ -96,6 +96,8 @@ export default function Onboarding() {
   const [convertOpen, setConvertOpen] = useState(false);
   const [constInfoOpen, setConstInfoOpen] = useState(false);
   const [dbTemplates, setDbTemplates] = useState<MessageTemplate[]>([]);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
