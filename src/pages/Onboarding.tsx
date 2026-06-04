@@ -255,6 +255,25 @@ export default function Onboarding() {
     }
   };
 
+  const handleCancelOnboarding = async () => {
+    if (!selectedData) return;
+    setCancelling(true);
+    try {
+      await cancelOnboarding(selectedData.client.id, selectedData.client.name);
+      toast({
+        title: 'Onboarding excluído',
+        description: `O onboarding de ${selectedData.client.name} foi removido. Você pode iniciá-lo novamente com o tipo correto.`,
+      });
+      setCancelOpen(false);
+      setSelectedClient(null);
+      await fetchAll();
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const copyTemplate = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: 'Copiado!', description: 'Template copiado para a área de transferência.' });
