@@ -292,8 +292,10 @@ export default function Onboarding() {
             <TabsTrigger value="empresa_existente">Empresa Existente</TabsTrigger>
             <TabsTrigger value="empresa_nova">Empresa Nova</TabsTrigger>
             <TabsTrigger value="em_constituicao">Em Constituição</TabsTrigger>
+            <TabsTrigger value="vmk_parceria">Parceria VMk</TabsTrigger>
           </TabsList>
         </Tabs>
+
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
