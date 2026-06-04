@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2 } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
 import { ConvertToNewCompanyDialog } from '@/components/ConvertToNewCompanyDialog';
@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +24,7 @@ import {
   STAGES_EXISTING, STAGES_NOVA, STAGES_VMK, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
   ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
   slaTone, aggregateSlaTone, advanceStage, toggleChecklistItem, updateProgressNotes,
-  applyTemplateVars, MessageTemplate,
+  applyTemplateVars, MessageTemplate, cancelOnboarding,
 } from '@/lib/onboarding';
 
 interface ClientRow {
@@ -95,6 +96,8 @@ export default function Onboarding() {
   const [convertOpen, setConvertOpen] = useState(false);
   const [constInfoOpen, setConstInfoOpen] = useState(false);
   const [dbTemplates, setDbTemplates] = useState<MessageTemplate[]>([]);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -249,6 +252,25 @@ export default function Onboarding() {
       toast({ title: 'Erro', description: e.message, variant: 'destructive' });
     } finally {
       setAdvancing(false);
+    }
+  };
+
+  const handleCancelOnboarding = async () => {
+    if (!selectedData) return;
+    setCancelling(true);
+    try {
+      await cancelOnboarding(selectedData.client.id, selectedData.client.name);
+      toast({
+        title: 'Onboarding excluído',
+        description: `O onboarding de ${selectedData.client.name} foi removido. Você pode iniciá-lo novamente com o tipo correto.`,
+      });
+      setCancelOpen(false);
+      setSelectedClient(null);
+      await fetchAll();
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -693,11 +715,47 @@ export default function Onboarding() {
                     Complete todos os itens obrigatórios (*) para avançar.
                   </p>
                 )}
+                {selectedData.client.onboarding_status !== 'completed' && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCancelOpen(true)}
+                    className="w-full gap-2 mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" /> Excluir onboarding
+                  </Button>
+                )}
               </div>
             </>
           )}
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir onboarding?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso vai remover o checklist, as tarefas geradas e zerar o onboarding de{' '}
+              <span className="font-medium text-foreground">{selectedData?.client.name}</span>.
+              O cliente volta a ficar disponível para iniciar um novo onboarding (ex.: Parceria VMk).
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleCancelOnboarding(); }}
+              disabled={cancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2"
+            >
+              {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
+              Excluir onboarding
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
 
       {selectedClient && (
         <OnboardingHandoffDialog
