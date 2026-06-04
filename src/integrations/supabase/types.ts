@@ -240,6 +240,7 @@ export type Database = {
           onboarding_status: string
           onboarding_type: string | null
           pain_points: string
+          parceria: string | null
           profile: string
           recurring_issues: string
           risk_identified_date: string | null
@@ -277,6 +278,7 @@ export type Database = {
           onboarding_status?: string
           onboarding_type?: string | null
           pain_points?: string
+          parceria?: string | null
           profile?: string
           recurring_issues?: string
           risk_identified_date?: string | null
@@ -314,6 +316,7 @@ export type Database = {
           onboarding_status?: string
           onboarding_type?: string | null
           pain_points?: string
+          parceria?: string | null
           profile?: string
           recurring_issues?: string
           risk_identified_date?: string | null
