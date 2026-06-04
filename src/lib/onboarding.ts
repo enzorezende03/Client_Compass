@@ -233,6 +233,7 @@ export async function startOnboarding(
   const stage: OnboardingStage =
     type === 'empresa_nova' ? 'etapa_1_nova'
     : type === 'em_constituicao' ? 'constituicao'
+    : type === 'vmk_parceria' ? 'vmk_ativacao'
     : 'etapa_1';
   await supabase.from('clients').update({
     onboarding_status: 'active',
