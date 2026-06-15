@@ -607,19 +607,82 @@ export default function TaskCenter() {
               Prazo Interno
             </button>
           </div>
+          {activeTab === 'onboarding' && (
+            <div className="flex items-center gap-2 ml-auto">
+              <Switch id="show-blocked" checked={showBlocked} onCheckedChange={setShowBlocked} />
+              <Label htmlFor="show-blocked" className="text-xs text-muted-foreground cursor-pointer">
+                Exibir tarefas futuras (bloqueadas)
+              </Label>
+            </div>
+          )}
         </div>
+
+        {activeTab === 'onboarding' && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Em atraso</p>
+              <p className="text-2xl font-bold text-destructive mt-1">{overdueTasks.length}</p>
+            </div>
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+              <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> No prazo (ativo)</p>
+              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-1">{onTimeTasks.length}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/40 p-3">
+              <p className="text-xs text-muted-foreground flex items-center gap-1"><Lock className="h-3.5 w-3.5" /> Bloqueadas</p>
+              <p className="text-2xl font-bold text-muted-foreground mt-1">{blockedTasks.length}</p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1"><CheckSquare className="h-3.5 w-3.5" /> Concluídas</p>
+              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">{completedTasks.length}</p>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-4', showBlocked && activeTab === 'onboarding' ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
             <KanbanColumn title="Atrasadas" icon={<AlertTriangle className="h-4 w-4" />} tasks={overdueTasks} variant="danger" dropStatus="pending" />
             <KanbanColumn title="Hoje" icon={<Clock className="h-4 w-4" />} tasks={todayTasks} variant="warning" dropStatus="pending" />
             <KanbanColumn title="Próximas" icon={<CalendarClock className="h-4 w-4" />} tasks={upcomingTasks} dropStatus="pending" />
+            {showBlocked && activeTab === 'onboarding' && (
+              <KanbanColumn title="Bloqueadas" icon={<Lock className="h-4 w-4" />} tasks={blockedTasks} dropStatus="pending" />
+            )}
             <KanbanColumn title="Concluídas" icon={<CheckSquare className="h-4 w-4" />} tasks={completedTasks} variant="success" dropStatus="completed" />
           </div>
         )}
       </div>
+
+      <Dialog open={!!forceTask} onOpenChange={o => { if (!o) { setForceTask(null); setForceReason(''); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Forçar abertura antecipada</DialogTitle>
+            <DialogDescription>
+              A etapa anterior ainda não foi concluída. Ao forçar a abertura, o SLA desta etapa começará agora. Registre o motivo para o histórico.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Motivo da abertura antecipada *</Label>
+            <Textarea
+              value={forceReason}
+              onChange={e => setForceReason(e.target.value)}
+              placeholder="Descreva por que esta etapa precisa ser aberta antes da anterior..."
+              className="min-h-[100px]"
+            />
+            <p className="text-[11px] text-muted-foreground">Mínimo de 10 caracteres.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setForceTask(null); setForceReason(''); }}>Cancelar</Button>
+            <Button
+              onClick={submitForceUnlock}
+              disabled={forcing || forceReason.trim().length < 10}
+              className="bg-orange-600 hover:bg-orange-700 text-white border-0"
+            >
+              Confirmar abertura
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
