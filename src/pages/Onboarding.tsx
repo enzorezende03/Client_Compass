@@ -206,7 +206,7 @@ export default function Onboarding() {
     const stageProg = progress.filter(p => p.client_id === c.id && p.item.stage === stage);
     const completed = stageProg.filter(p => p.status === 'concluido').length;
     const sla = aggregateSlaTone(stageProg.map(p => ({
-      created_at: p.created_at, completed_at: p.completed_at, sla_hours: p.item.sla_hours,
+      unlocked_at: p.unlocked_at, completed_at: p.completed_at, sla_hours: p.item.sla_hours, locked: p.locked,
     })));
     return { client: c, stage, total: stageItems.length, completed, sla, stageProg };
   }), [clients, items, progress]);
