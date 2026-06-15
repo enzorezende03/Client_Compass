@@ -393,6 +393,36 @@ export default function TaskCenter() {
         </motion.div>
       );
     }
+    if (isLocked(task)) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg border border-dashed border-border p-3 bg-muted/30"
+        >
+          <div className="flex items-start gap-2">
+            <Lock className="h-4 w-4 text-muted-foreground/70 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-muted-foreground/80 truncate">{task.title}</p>
+              {task.onboarding_stage && (
+                <Badge variant="outline" className="mt-1 text-[10px] border-border text-muted-foreground">
+                  {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
+                </Badge>
+              )}
+              <p className="text-[11px] text-muted-foreground/70 mt-1.5">Aguardando conclusão da etapa anterior</p>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => { setForceTask(task); setForceReason(''); }}
+                className="h-6 px-0 mt-1 text-xs text-amber-700 dark:text-amber-400 gap-1"
+              >
+                <Unlock className="h-3 w-3" /> Forçar abertura
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
     return (
       <motion.div
         initial={{ opacity: 0, y: 4 }}
