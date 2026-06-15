@@ -114,6 +114,12 @@ export default function TaskCenter() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [reschedules, setReschedules] = useState<RescheduleRow[]>([]);
 
+  // Sequential unlocking
+  const [showBlocked, setShowBlocked] = useState(false);
+  const [forceTask, setForceTask] = useState<TaskRow | null>(null);
+  const [forceReason, setForceReason] = useState('');
+  const [forcing, setForcing] = useState(false);
+
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   const fetchData = async (silent = false) => {
