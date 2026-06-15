@@ -78,6 +78,11 @@ export interface ProgressRow {
   completed_by: string | null;
   notes: string | null;
   created_at: string;
+  locked: boolean;
+  unlocked_at: string | null;
+  force_unlocked_by: string | null;
+  force_unlock_reason: string | null;
+  force_unlocked_at: string | null;
 }
 
 export interface MessageTemplate {
