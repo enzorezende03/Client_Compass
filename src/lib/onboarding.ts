@@ -314,7 +314,8 @@ export async function startOnboarding(
     onboarding_type: effectiveType,
     onboarding_started_at: now,
   } as any).eq('id', clientId);
-  await seedStage(clientId, stage, clientName);
+  // Seed every stage of the flow: first stage unlocked (SLA running), the rest locked.
+  await supabase.rpc('bootstrap_onboarding_locks' as any, { p_client_id: clientId });
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',
