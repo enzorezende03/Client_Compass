@@ -48,6 +48,10 @@ interface ProgressFull {
   completed_at: string | null;
   notes: string | null;
   created_at: string;
+  locked: boolean;
+  unlocked_at: string | null;
+  force_unlocked_by: string | null;
+  force_unlock_reason: string | null;
   item: ChecklistItem;
 }
 
@@ -58,16 +62,18 @@ const SLA_FILTERS = [
   { value: 'red', label: 'SLA estourado' },
 ];
 
-const SLA_BADGE: Record<'green' | 'orange' | 'red', string> = {
+const SLA_BADGE: Record<'green' | 'orange' | 'red' | 'blocked', string> = {
   green: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
   orange: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
   red: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
+  blocked: 'bg-muted text-muted-foreground border-border',
 };
 
-const SLA_LABEL: Record<'green' | 'orange' | 'red', string> = {
+const SLA_LABEL: Record<'green' | 'orange' | 'red' | 'blocked', string> = {
   green: 'No prazo',
   orange: 'SLA próximo',
   red: 'SLA estourado',
+  blocked: 'Aguardando',
 };
 
 function daysSince(iso?: string | null) {
