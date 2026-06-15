@@ -254,6 +254,32 @@ export default function TaskCenter() {
     fetchData();
   };
 
+  const submitForceUnlock = async () => {
+    if (!forceTask) return;
+    if (forceReason.trim().length < 10) {
+      toast({ title: 'Descreva o motivo (mínimo 10 caracteres)', variant: 'destructive' });
+      return;
+    }
+    setForcing(true);
+    try {
+      await forceUnlockByChecklistItem({
+        clientId: forceTask.client_id,
+        checklistItemId: forceTask.checklist_item_id ?? null,
+        taskId: forceTask.id,
+        stage: forceTask.onboarding_stage || '',
+        reason: forceReason.trim(),
+      });
+      toast({ title: '🔓 Etapa desbloqueada manualmente', description: 'Motivo registrado.' });
+      setForceTask(null);
+      setForceReason('');
+      fetchData(true);
+    } catch (e: any) {
+      toast({ title: 'Erro ao desbloquear', description: e.message, variant: 'destructive' });
+    } finally {
+      setForcing(false);
+    }
+  };
+
   const deleteTask = async (id: string) => {
     await supabase.from('tasks').delete().eq('id', id);
     toast({ title: 'Tarefa removida' });
