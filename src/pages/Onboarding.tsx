@@ -273,10 +273,7 @@ export default function Onboarding() {
     if (!e || e.stage === targetStage) return;
     try {
       await moveClientToStage(clientId, targetStage);
-      toast({
-        title: 'Card movido',
-        description: `${e.client.name} → ${STAGE_LABELS[targetStage]}. Tarefas atualizadas.`,
-      });
+      // Toast + refetch are handled by the Realtime subscription on stage change.
       await fetchAll(true);
     } catch (err: any) {
       toast({ title: 'Erro ao mover card', description: err.message, variant: 'destructive' });
