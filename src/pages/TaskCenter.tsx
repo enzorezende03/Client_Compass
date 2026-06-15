@@ -437,11 +437,27 @@ export default function TaskCenter() {
             <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
               {task.title}
             </p>
-            {task.category === 'onboarding' && task.onboarding_stage && (
-              <Badge variant="outline" className="mt-1 text-[10px] border-primary/40 text-primary">
-                {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
-              </Badge>
-            )}
+            <div className="flex items-center gap-1 flex-wrap mt-1">
+              {task.category === 'onboarding' && task.onboarding_stage && (
+                <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                  {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
+                </Badge>
+              )}
+              {task.force_unlocked_by && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-[10px] gap-1 bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                        <Unlock className="h-2.5 w-2.5" /> Abertura forçada
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs">{task.force_unlock_reason || 'Aberta antecipadamente'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
         </div>
         {task.description && (
