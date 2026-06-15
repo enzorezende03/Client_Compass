@@ -196,68 +196,70 @@ async function getCurrentInternalUserId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
-async function getCurrentInternalUser(): Promise<{ id: string; name: string } | null> {
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return null;
-  const { data } = await supabase
-    .from('internal_users')
-    .select('id, name')
-    .eq('auth_user_id', auth.user.id)
-    .maybeSingle();
-  return data ?? null;
-}
+/**
+ * Forces the early opening of a blocked onboarding item, starting its SLA now.
+ * Updates the canonical progress row (which mirrors to the task), writes a
+ * permanent audit record, and logs a timeline entry.
+ */
+export async function forceUnlockByChecklistItem(opts: {
+  clientId: string;
+  checklistItemId: string | null;
+  taskId?: string | null;
+  stage: string;
+  reason: string;
+}) {
+  const userId = await getCurrentInternalUserId();
+  const now = new Date().toISOString();
 
-/** Creates progress rows + tasks for the given stage's checklist items. */
-async function seedStage(clientId: string, stage: OnboardingStage, clientName: string) {
-  const { data: items } = await supabase
-    .from('onboarding_checklist_items')
-    .select('*')
-    .eq('stage', stage)
-    .order('order_index');
-  if (!items?.length) return;
+  let progressId: string | null = null;
+  if (opts.checklistItemId) {
+    const { data } = await supabase
+      .from('client_onboarding_progress')
+      .select('id')
+      .eq('client_id', opts.clientId)
+      .eq('checklist_item_id', opts.checklistItemId)
+      .maybeSingle();
+    progressId = (data as any)?.id ?? null;
+  }
 
-  // create progress rows (idempotent via UNIQUE)
-  const progressRows = items.map(it => ({
-    client_id: clientId,
-    checklist_item_id: it.id,
-    status: 'pendente',
-  }));
-  await supabase.from('client_onboarding_progress').upsert(progressRows, {
-    onConflict: 'client_id,checklist_item_id',
-    ignoreDuplicates: true,
+  if (progressId) {
+    await supabase.from('client_onboarding_progress').update({
+      locked: false,
+      unlocked_at: now,
+      force_unlocked_by: userId,
+      force_unlock_reason: opts.reason,
+      force_unlocked_at: now,
+    } as any).eq('id', progressId);
+  } else if (opts.taskId) {
+    // fallback: update the task directly if no progress row is linked
+    await supabase.from('tasks').update({
+      locked: false,
+      unlocked_at: now,
+      force_unlocked_by: userId,
+      force_unlock_reason: opts.reason,
+    } as any).eq('id', opts.taskId);
+  }
+
+  await supabase.from('task_force_unlocks').insert({
+    progress_id: progressId,
+    task_id: opts.taskId ?? null,
+    client_id: opts.clientId,
+    stage: opts.stage,
+    unlocked_by: userId,
+    reason: opts.reason,
   } as any);
 
-  // create tasks (one per item) — idempotent: skip items that already have a task.
-  // Each task is linked to its checklist item so both panels stay in sync.
-  const { data: existing } = await supabase
-    .from('tasks')
-    .select('checklist_item_id')
-    .eq('client_id', clientId)
-    .not('checklist_item_id', 'is', null);
-  const existingItemIds = new Set((existing || []).map((t: any) => t.checklist_item_id));
-
-  const user = await getCurrentInternalUser();
-  const taskRows = items
-    .filter(it => !existingItemIds.has(it.id))
-    .map(it => {
-      const days = Math.max(1, Math.ceil(it.sla_hours / 24));
-      const due = new Date();
-      due.setDate(due.getDate() + days);
-      return {
-        client_id: clientId,
-        title: `[Onboarding] ${it.title}`,
-        description: `Item de onboarding (${STAGE_SHORT[stage]}) — SLA: ${it.sla_hours}h`,
-        responsible: user?.name ?? '',
-        responsible_id: user?.id ?? null,
-        due_date: due.toISOString().split('T')[0],
-        internal_due_date: due.toISOString().split('T')[0],
-        status: 'pending',
-        category: 'onboarding',
-        onboarding_stage: stage,
-        checklist_item_id: it.id,
-      };
-    });
-  if (taskRows.length) await supabase.from('tasks').insert(taskRows);
+  await supabase.from('timeline_entries').insert({
+    client_id: opts.clientId,
+    type: 'service',
+    description: `[Onboarding] Abertura antecipada forçada — ${opts.stage}: ${opts.reason}`,
+    responsible: 'CS',
+    sector: 'commercial',
+    origin: 'internal',
+    demand_status: 'in_progress',
+    is_relevant_event: true,
+    relevant_event_type: 'onboarding',
+  });
 }
 
 /**
