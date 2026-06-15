@@ -134,6 +134,19 @@ export default function TaskCenter() {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Realtime: keep tasks in sync with the Onboarding panel (checklist toggles,
+  // stage auto-advance/manual moves) and other logged-in users.
+  useEffect(() => {
+    const channel = supabase
+      .channel('tasks-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_onboarding_progress' }, () => fetchData(true))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+
+
   const filtered = useMemo(() => {
     return tasks.filter(t => {
       const cat = (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'regular';
