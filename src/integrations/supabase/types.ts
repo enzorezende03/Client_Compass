@@ -165,9 +165,14 @@ export type Database = {
           completed_at: string | null
           completed_by: string | null
           created_at: string
+          force_unlock_reason: string | null
+          force_unlocked_at: string | null
+          force_unlocked_by: string | null
           id: string
+          locked: boolean
           notes: string | null
           status: string
+          unlocked_at: string | null
         }
         Insert: {
           checklist_item_id: string
@@ -175,9 +180,14 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          force_unlock_reason?: string | null
+          force_unlocked_at?: string | null
+          force_unlocked_by?: string | null
           id?: string
+          locked?: boolean
           notes?: string | null
           status?: string
+          unlocked_at?: string | null
         }
         Update: {
           checklist_item_id?: string
@@ -185,9 +195,14 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          force_unlock_reason?: string | null
+          force_unlocked_at?: string | null
+          force_unlocked_by?: string | null
           id?: string
+          locked?: boolean
           notes?: string | null
           status?: string
+          unlocked_at?: string | null
         }
         Relationships: [
           {
@@ -207,6 +222,13 @@ export type Database = {
           {
             foreignKeyName: "client_onboarding_progress_completed_by_fkey"
             columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_onboarding_progress_force_unlocked_by_fkey"
+            columns: ["force_unlocked_by"]
             isOneToOne: false
             referencedRelation: "internal_users"
             referencedColumns: ["id"]
@@ -779,6 +801,68 @@ export type Database = {
           },
         ]
       }
+      task_force_unlocks: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          progress_id: string | null
+          reason: string
+          stage: string | null
+          task_id: string | null
+          unlocked_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          progress_id?: string | null
+          reason: string
+          stage?: string | null
+          task_id?: string | null
+          unlocked_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          progress_id?: string | null
+          reason?: string
+          stage?: string | null
+          task_id?: string | null
+          unlocked_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_force_unlocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_force_unlocks_progress_id_fkey"
+            columns: ["progress_id"]
+            isOneToOne: false
+            referencedRelation: "client_onboarding_progress"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_force_unlocks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_force_unlocks_unlocked_by_fkey"
+            columns: ["unlocked_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_reschedules: {
         Row: {
           client_id: string
@@ -824,10 +908,13 @@ export type Database = {
           created_at: string
           description: string
           due_date: string
+          force_unlock_reason: string | null
+          force_unlocked_by: string | null
           id: string
           internal_due_date: string | null
           last_reschedule_reason: string | null
           last_rescheduled_at: string | null
+          locked: boolean
           onboarding_stage: string | null
           reminder_minutes: number | null
           reschedule_count: number
@@ -836,6 +923,7 @@ export type Database = {
           scheduled_time: string | null
           status: string
           title: string
+          unlocked_at: string | null
         }
         Insert: {
           category?: string
@@ -845,10 +933,13 @@ export type Database = {
           created_at?: string
           description?: string
           due_date?: string
+          force_unlock_reason?: string | null
+          force_unlocked_by?: string | null
           id?: string
           internal_due_date?: string | null
           last_reschedule_reason?: string | null
           last_rescheduled_at?: string | null
+          locked?: boolean
           onboarding_stage?: string | null
           reminder_minutes?: number | null
           reschedule_count?: number
@@ -857,6 +948,7 @@ export type Database = {
           scheduled_time?: string | null
           status?: string
           title: string
+          unlocked_at?: string | null
         }
         Update: {
           category?: string
@@ -866,10 +958,13 @@ export type Database = {
           created_at?: string
           description?: string
           due_date?: string
+          force_unlock_reason?: string | null
+          force_unlocked_by?: string | null
           id?: string
           internal_due_date?: string | null
           last_reschedule_reason?: string | null
           last_rescheduled_at?: string | null
+          locked?: boolean
           onboarding_stage?: string | null
           reminder_minutes?: number | null
           reschedule_count?: number
@@ -878,6 +973,7 @@ export type Database = {
           scheduled_time?: string | null
           status?: string
           title?: string
+          unlocked_at?: string | null
         }
         Relationships: [
           {
@@ -892,6 +988,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_force_unlocked_by_fkey"
+            columns: ["force_unlocked_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
             referencedColumns: ["id"]
           },
           {
@@ -961,6 +1064,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bootstrap_onboarding_locks: {
+        Args: { p_client_id: string }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
       is_internal_user: { Args: never; Returns: boolean }
       link_auth_user: { Args: never; Returns: undefined }
@@ -970,7 +1077,7 @@ export type Database = {
       }
       onboarding_stage_sequence: { Args: { p_type: string }; Returns: string[] }
       seed_onboarding_stage: {
-        Args: { p_client_id: string; p_stage: string }
+        Args: { p_client_id: string; p_locked?: boolean; p_stage: string }
         Returns: undefined
       }
     }
