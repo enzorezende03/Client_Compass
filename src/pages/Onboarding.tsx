@@ -394,6 +394,13 @@ export default function Onboarding() {
           </Select>
         </div>
 
+        <p className="text-xs text-muted-foreground mb-3">
+          {dndEnabled
+            ? 'Arraste os cards entre as colunas para mudar a etapa do cliente — as tarefas são sincronizadas automaticamente.'
+            : 'Selecione um tipo de onboarding para arrastar os cards entre as etapas.'}
+        </p>
+
+
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
