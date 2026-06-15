@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { STAGE_LABELS as ONBOARDING_STAGE_LABELS } from '@/lib/onboarding';
 
 interface TaskRow {
   id: string;
@@ -52,17 +53,9 @@ interface RescheduleRow {
   client_name?: string;
 }
 
-const STAGE_LABEL: Record<string, string> = {
-  etapa_1: 'Etapa 1',
-  etapa_2: 'Etapa 2',
-  etapa_3: 'Etapa 3',
-  etapa_4: 'Etapa 4',
-  constituicao: 'Constituição',
-  etapa_1_nova: 'Etapa 1 (Nova)',
-  etapa_2_nova: 'Etapa 2 (Nova)',
-  etapa_3_nova: 'Etapa 3 (Nova)',
-  concluido: 'Concluído',
-};
+// Unified stage labels shared with the Onboarding Kanban for visual consistency.
+const STAGE_LABEL: Record<string, string> = ONBOARDING_STAGE_LABELS as Record<string, string>;
+
 
 interface ClientOption { id: string; name: string; }
 interface InternalUser { id: string; name: string; email: string; active: boolean; }
@@ -116,8 +109,8 @@ export default function TaskCenter() {
 
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     const [tasksRes, clientsRes, usersRes] = await Promise.all([
       supabase.from('tasks').select('*').order('due_date', { ascending: true }),
       supabase.from('clients').select('id, name').eq('archived', false),
@@ -140,6 +133,19 @@ export default function TaskCenter() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  // Realtime: keep tasks in sync with the Onboarding panel (checklist toggles,
+  // stage auto-advance/manual moves) and other logged-in users.
+  useEffect(() => {
+    const channel = supabase
+      .channel('tasks-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_onboarding_progress' }, () => fetchData(true))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+
 
   const filtered = useMemo(() => {
     return tasks.filter(t => {

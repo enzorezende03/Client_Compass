@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
+
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,7 +24,7 @@ import {
   STAGES_EXISTING, STAGES_NOVA, STAGES_VMK, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
   ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
   slaTone, aggregateSlaTone, advanceStage, toggleChecklistItem, updateProgressNotes,
-  applyTemplateVars, MessageTemplate, cancelOnboarding,
+  applyTemplateVars, MessageTemplate, cancelOnboarding, moveClientToStage,
 } from '@/lib/onboarding';
 
 interface ClientRow {
@@ -98,9 +98,11 @@ export default function Onboarding() {
   const [dbTemplates, setDbTemplates] = useState<MessageTemplate[]>([]);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropStage, setDropStage] = useState<OnboardingStage | null>(null);
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
+  const fetchAll = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const [clientsRes, itemsRes, progRes] = await Promise.all([
       supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,parceria').eq('onboarding_status', 'active'),
       supabase.from('onboarding_checklist_items').select('*').order('order_index'),
@@ -125,6 +127,36 @@ export default function Onboarding() {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Realtime: keep the Kanban in sync with stage changes and checklist progress
+  // (auto-advance, manual moves, or actions by other logged-in users).
+  useEffect(() => {
+    const channel = supabase
+      .channel('onboarding-sync')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'clients' }, (payload) => {
+        const oldStage = (payload.old as any)?.onboarding_stage as OnboardingStage | null;
+        const newStage = (payload.new as any)?.onboarding_stage as OnboardingStage | null;
+        if (oldStage !== newStage && newStage) {
+          const seq = stagesForType(((payload.new as any)?.onboarding_type || 'empresa_existente') as OnboardingType);
+          const advanced = seq.indexOf(newStage) > seq.indexOf((oldStage || seq[0]) as OnboardingStage);
+          const name = (payload.new as any)?.name || 'Cliente';
+          if (newStage === 'concluido') {
+            toast({ title: '✅ Onboarding concluído', description: `${name} migrado para atendimento regular` });
+          } else if (advanced) {
+            toast({ title: '✅ Etapa concluída', description: `${name} avançou para ${STAGE_LABELS[newStage]}` });
+          } else {
+            toast({ title: 'Card movido', description: `${name} → ${STAGE_LABELS[newStage]}. Tarefas atualizadas.` });
+          }
+        }
+        fetchAll(true);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_onboarding_progress' }, () => {
+        fetchAll(true);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchAll, toast]);
+
 
   // Load all message templates once
   useEffect(() => {
@@ -225,8 +257,29 @@ export default function Onboarding() {
 
   const handleToggle = async (p: ProgressFull, checked: boolean) => {
     await toggleChecklistItem(p.id, p.client_id, p.item.title, checked);
-    await fetchAll();
+    await fetchAll(true);
   };
+
+  // Drag-and-drop only works on a specific type filter, where each column maps
+  // unambiguously to a stage of that flow.
+  const dndEnabled = typeFilter !== 'all';
+
+  const handleDropOnStage = async (targetStage: OnboardingStage) => {
+    const clientId = draggingId;
+    setDraggingId(null);
+    setDropStage(null);
+    if (!clientId || !dndEnabled) return;
+    const e = enriched.find(x => x.client.id === clientId);
+    if (!e || e.stage === targetStage) return;
+    try {
+      await moveClientToStage(clientId, targetStage);
+      // Toast + refetch are handled by the Realtime subscription on stage change.
+      await fetchAll(true);
+    } catch (err: any) {
+      toast({ title: 'Erro ao mover card', description: err.message, variant: 'destructive' });
+    }
+  };
+
 
   const handleNotes = async (p: ProgressFull, notes: string) => {
     setProgress(prev => prev.map(x => x.id === p.id ? { ...x, notes } : x));
@@ -340,6 +393,13 @@ export default function Onboarding() {
           </Select>
         </div>
 
+        <p className="text-xs text-muted-foreground mb-3">
+          {dndEnabled
+            ? 'Arraste os cards entre as colunas para mudar a etapa do cliente — as tarefas são sincronizadas automaticamente.'
+            : 'Selecione um tipo de onboarding para arrastar os cards entre as etapas.'}
+        </p>
+
+
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -349,7 +409,16 @@ export default function Onboarding() {
             {activeStages.map(stage => {
               const list = byStage[stage] || [];
               return (
-                <div key={stage} className="bg-muted/40 rounded-lg border border-border/60 flex flex-col min-h-[400px]">
+                <div
+                  key={stage}
+                  onDragOver={(e) => { if (dndEnabled && draggingId) { e.preventDefault(); setDropStage(stage); } }}
+                  onDragLeave={() => setDropStage(prev => prev === stage ? null : prev)}
+                  onDrop={(e) => { e.preventDefault(); handleDropOnStage(stage); }}
+                  className={cn(
+                    'bg-muted/40 rounded-lg border flex flex-col min-h-[400px] transition-colors',
+                    dropStage === stage ? 'border-primary border-2 bg-primary/5' : 'border-border/60',
+                  )}
+                >
                   <div className="px-3 py-2.5 border-b border-border/60 flex items-center justify-between sticky top-0 bg-muted/60 backdrop-blur rounded-t-lg">
                     <span className="text-sm font-semibold text-foreground">{STAGE_LABELS[stage]}</span>
                     <Badge variant="outline" className="text-xs">{list.length}</Badge>
@@ -362,19 +431,31 @@ export default function Onboarding() {
                       const days = daysSince(client.onboarding_started_at);
                       const isDone = client.onboarding_status === 'completed';
                       const pct = total ? Math.round((completed / total) * 100) : 0;
+                      const isComplete = pct === 100 && total > 0;
                       const cType = (client.onboarding_type || 'empresa_existente') as OnboardingType;
                       return (
                         <motion.button
                           key={client.id}
                           layout
                           whileHover={{ y: -2 }}
+                          draggable={dndEnabled}
+                          onDragStart={() => setDraggingId(client.id)}
+                          onDragEnd={() => { setDraggingId(null); setDropStage(null); }}
                           onClick={() => setSelectedClient(client)}
-                          className="w-full text-left bg-card hover:bg-card/80 border border-border rounded-lg p-3 shadow-sm transition-all relative"
+                          className={cn(
+                            'w-full text-left bg-card hover:bg-card/80 border rounded-lg p-3 shadow-sm transition-all relative',
+                            dndEnabled && 'cursor-grab active:cursor-grabbing',
+                            draggingId === client.id && 'opacity-50',
+                            !isDone && isComplete ? 'border-emerald-500 border-2' : 'border-border',
+                          )}
                         >
                           <Badge variant="outline" className={cn('absolute top-2 right-2 text-[9px] px-1.5 py-0', ONBOARDING_TYPE_BADGE[cType])}>
                             {ONBOARDING_TYPE_LABELS[cType]}
                           </Badge>
-                          <div className="font-semibold text-sm text-foreground line-clamp-2 pr-24">{client.name}</div>
+                          <div className="font-semibold text-sm text-foreground line-clamp-2 pr-24 flex items-center gap-1">
+                            {!isDone && isComplete && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+                            <span className="line-clamp-2">{client.name}</span>
+                          </div>
                           <div className="flex items-center justify-between mt-1.5 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{days}d na etapa</span>
                             {!isDone && (
@@ -392,8 +473,16 @@ export default function Onboarding() {
                           {!isDone && (
                             <>
                               <div className="mt-2.5">
-                                <Progress value={pct} className="h-1.5" />
-                                <div className="text-[11px] text-muted-foreground mt-1">{completed} de {total} itens</div>
+                                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                                  <div
+                                    className={cn(
+                                      'h-full rounded-full transition-all',
+                                      isComplete ? 'bg-emerald-500' : pct > 0 ? 'bg-sky-500' : 'bg-transparent',
+                                    )}
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                                <div className="text-[11px] text-muted-foreground mt-1">{completed} de {total} tarefas concluídas</div>
                               </div>
                               <div className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
                                 <User className="h-3 w-3" />

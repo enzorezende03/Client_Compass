@@ -818,6 +818,7 @@ export type Database = {
       tasks: {
         Row: {
           category: string
+          checklist_item_id: string | null
           client_due_date: string | null
           client_id: string
           created_at: string
@@ -838,6 +839,7 @@ export type Database = {
         }
         Insert: {
           category?: string
+          checklist_item_id?: string | null
           client_due_date?: string | null
           client_id: string
           created_at?: string
@@ -858,6 +860,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          checklist_item_id?: string | null
           client_due_date?: string | null
           client_id?: string
           created_at?: string
@@ -877,6 +880,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_checklist_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_client_id_fkey"
             columns: ["client_id"]
@@ -954,6 +964,15 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_internal_user: { Args: never; Returns: boolean }
       link_auth_user: { Args: never; Returns: undefined }
+      onboarding_next_stage: {
+        Args: { p_stage: string; p_type: string }
+        Returns: string
+      }
+      onboarding_stage_sequence: { Args: { p_type: string }; Returns: string[] }
+      seed_onboarding_stage: {
+        Args: { p_client_id: string; p_stage: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
