@@ -524,7 +524,7 @@ export default function Onboarding() {
                 <h3 className="text-sm font-semibold text-foreground mb-3">Checklist da etapa</h3>
                 <div className="space-y-2">
                   {selectedData.stageProg.map(p => {
-                    const t = slaTone(p.created_at, p.item.sla_hours, p.completed_at);
+                    const t = slaTone(p.unlocked_at, p.item.sla_hours, p.completed_at, p.locked);
                     return (
                       <div key={p.id} className="border border-border rounded-lg p-3 bg-card">
                         <div className="flex items-start gap-3">
