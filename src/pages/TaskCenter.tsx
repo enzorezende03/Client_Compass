@@ -152,7 +152,14 @@ export default function TaskCenter() {
   useEffect(() => {
     const channel = supabase
       .channel('tasks-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+        const oldLocked = (payload.old as any)?.locked;
+        const newLocked = (payload.new as any)?.locked;
+        if (oldLocked === true && newLocked === false) {
+          toast({ title: '🔓 Etapa desbloqueada', description: 'SLA iniciado agora.' });
+        }
+        fetchData(true);
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'client_onboarding_progress' }, () => fetchData(true))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
