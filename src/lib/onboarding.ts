@@ -202,26 +202,61 @@ async function seedStage(clientId: string, stage: OnboardingStage, clientName: s
     ignoreDuplicates: true,
   } as any);
 
-  // create tasks (one per item) — internal_due_date = today + ceil(sla_hours/24) days
+  // create tasks (one per item) — idempotent: skip items that already have a task.
+  // Each task is linked to its checklist item so both panels stay in sync.
+  const { data: existing } = await supabase
+    .from('tasks')
+    .select('checklist_item_id')
+    .eq('client_id', clientId)
+    .not('checklist_item_id', 'is', null);
+  const existingItemIds = new Set((existing || []).map((t: any) => t.checklist_item_id));
+
   const user = await getCurrentInternalUser();
-  const taskRows = items.map(it => {
-    const days = Math.max(1, Math.ceil(it.sla_hours / 24));
-    const due = new Date();
-    due.setDate(due.getDate() + days);
-    return {
-      client_id: clientId,
-      title: `[Onboarding] ${it.title}`,
-      description: `Item de onboarding (${STAGE_SHORT[stage]}) — SLA: ${it.sla_hours}h`,
-      responsible: user?.name ?? '',
-      responsible_id: user?.id ?? null,
-      due_date: due.toISOString().split('T')[0],
-      internal_due_date: due.toISOString().split('T')[0],
-      status: 'pending',
-      category: 'onboarding',
-      onboarding_stage: stage,
-    };
-  });
+  const taskRows = items
+    .filter(it => !existingItemIds.has(it.id))
+    .map(it => {
+      const days = Math.max(1, Math.ceil(it.sla_hours / 24));
+      const due = new Date();
+      due.setDate(due.getDate() + days);
+      return {
+        client_id: clientId,
+        title: `[Onboarding] ${it.title}`,
+        description: `Item de onboarding (${STAGE_SHORT[stage]}) — SLA: ${it.sla_hours}h`,
+        responsible: user?.name ?? '',
+        responsible_id: user?.id ?? null,
+        due_date: due.toISOString().split('T')[0],
+        internal_due_date: due.toISOString().split('T')[0],
+        status: 'pending',
+        category: 'onboarding',
+        onboarding_stage: stage,
+        checklist_item_id: it.id,
+      };
+    });
   if (taskRows.length) await supabase.from('tasks').insert(taskRows);
+}
+
+/**
+ * Moves a client to a target Kanban stage (manual drag-and-drop).
+ * The DB triggers handle seeding the new stage's items and marking prior
+ * stages as completed; here we only set the stage / completion status.
+ */
+export async function moveClientToStage(
+  clientId: string,
+  targetStage: OnboardingStage,
+) {
+  if (targetStage === 'concluido') {
+    await supabase.from('clients').update({
+      onboarding_status: 'completed',
+      onboarding_stage: 'concluido',
+      onboarding_completed_at: new Date().toISOString(),
+    }).eq('id', clientId);
+  } else {
+    await supabase.from('clients').update({
+      onboarding_status: 'active',
+      onboarding_stage: targetStage,
+      onboarding_completed_at: null,
+    }).eq('id', clientId);
+  }
 }
 
 export async function startOnboarding(
