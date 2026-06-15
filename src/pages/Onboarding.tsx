@@ -48,6 +48,10 @@ interface ProgressFull {
   completed_at: string | null;
   notes: string | null;
   created_at: string;
+  locked: boolean;
+  unlocked_at: string | null;
+  force_unlocked_by: string | null;
+  force_unlock_reason: string | null;
   item: ChecklistItem;
 }
 
@@ -58,16 +62,18 @@ const SLA_FILTERS = [
   { value: 'red', label: 'SLA estourado' },
 ];
 
-const SLA_BADGE: Record<'green' | 'orange' | 'red', string> = {
+const SLA_BADGE: Record<'green' | 'orange' | 'red' | 'blocked', string> = {
   green: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
   orange: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
   red: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
+  blocked: 'bg-muted text-muted-foreground border-border',
 };
 
-const SLA_LABEL: Record<'green' | 'orange' | 'red', string> = {
+const SLA_LABEL: Record<'green' | 'orange' | 'red' | 'blocked', string> = {
   green: 'No prazo',
   orange: 'SLA próximo',
   red: 'SLA estourado',
+  blocked: 'Aguardando',
 };
 
 function daysSince(iso?: string | null) {
@@ -200,7 +206,7 @@ export default function Onboarding() {
     const stageProg = progress.filter(p => p.client_id === c.id && p.item.stage === stage);
     const completed = stageProg.filter(p => p.status === 'concluido').length;
     const sla = aggregateSlaTone(stageProg.map(p => ({
-      created_at: p.created_at, completed_at: p.completed_at, sla_hours: p.item.sla_hours,
+      unlocked_at: p.unlocked_at, completed_at: p.completed_at, sla_hours: p.item.sla_hours, locked: p.locked,
     })));
     return { client: c, stage, total: stageItems.length, completed, sla, stageProg };
   }), [clients, items, progress]);
@@ -518,7 +524,7 @@ export default function Onboarding() {
                 <h3 className="text-sm font-semibold text-foreground mb-3">Checklist da etapa</h3>
                 <div className="space-y-2">
                   {selectedData.stageProg.map(p => {
-                    const t = slaTone(p.created_at, p.item.sla_hours, p.completed_at);
+                    const t = slaTone(p.unlocked_at, p.item.sla_hours, p.completed_at, p.locked);
                     return (
                       <div key={p.id} className="border border-border rounded-lg p-3 bg-card">
                         <div className="flex items-start gap-3">

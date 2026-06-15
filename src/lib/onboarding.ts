@@ -78,6 +78,11 @@ export interface ProgressRow {
   completed_by: string | null;
   notes: string | null;
   created_at: string;
+  locked: boolean;
+  unlocked_at: string | null;
+  force_unlocked_by: string | null;
+  force_unlock_reason: string | null;
+  force_unlocked_at: string | null;
 }
 
 export interface MessageTemplate {
@@ -133,23 +138,43 @@ export const MESSAGE_TEMPLATES: Record<string, { title: string; text: string }[]
   ],
 };
 
-/** SLA tone based on hours elapsed since item creation vs sla_hours */
-export function slaTone(createdAt: string, slaHours: number, completedAt?: string | null) {
-  if (completedAt) return { color: 'bg-emerald-500', label: 'Concluído', tone: 'green' as const };
-  const elapsed = (Date.now() - new Date(createdAt).getTime()) / 36e5;
+export type SlaTone = 'green' | 'orange' | 'red' | 'blocked';
+
+/**
+ * SLA tone based on hours elapsed since the item was *unlocked* (not created).
+ * Locked items (waiting for the previous stage) report a neutral "blocked" tone
+ * and never count as overdue.
+ */
+export function slaTone(
+  unlockedAt: string | null,
+  slaHours: number,
+  completedAt?: string | null,
+  locked?: boolean,
+): { color: string; label: string; tone: SlaTone } {
+  if (completedAt) return { color: 'bg-emerald-500', label: 'Concluído', tone: 'green' };
+  if (locked || !unlockedAt) {
+    return { color: 'bg-muted-foreground/40', label: 'Aguardando etapa anterior', tone: 'blocked' };
+  }
+  const elapsed = (Date.now() - new Date(unlockedAt).getTime()) / 36e5;
   const remaining = slaHours - elapsed;
-  if (remaining <= 0) return { color: 'bg-red-500', label: 'SLA estourado', tone: 'red' as const };
-  if (remaining / slaHours <= 0.2) return { color: 'bg-orange-500', label: 'SLA próximo', tone: 'orange' as const };
-  return { color: 'bg-emerald-500', label: 'No prazo', tone: 'green' as const };
+  if (remaining <= 0) return { color: 'bg-red-500', label: 'SLA estourado', tone: 'red' };
+  if (remaining / slaHours <= 0.2) return { color: 'bg-orange-500', label: 'SLA próximo', tone: 'orange' };
+  return { color: 'bg-emerald-500', label: 'No prazo', tone: 'green' };
 }
 
-export function aggregateSlaTone(progress: { created_at: string; completed_at: string | null; sla_hours: number }[]): 'green' | 'orange' | 'red' {
-  let worst: 'green' | 'orange' | 'red' = 'green';
+export function aggregateSlaTone(
+  progress: { unlocked_at: string | null; completed_at: string | null; sla_hours: number; locked?: boolean }[],
+): SlaTone {
+  let worst: SlaTone = 'green';
+  let anyUnlocked = false;
   for (const p of progress) {
-    const t = slaTone(p.created_at, p.sla_hours, p.completed_at).tone;
+    if (p.locked || (!p.unlocked_at && !p.completed_at)) continue; // skip blocked items
+    anyUnlocked = true;
+    const t = slaTone(p.unlocked_at, p.sla_hours, p.completed_at, p.locked).tone;
     if (t === 'red') return 'red';
     if (t === 'orange') worst = 'orange';
   }
+  if (!anyUnlocked && progress.length > 0) return 'blocked';
   return worst;
 }
 
@@ -171,68 +196,70 @@ async function getCurrentInternalUserId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
-async function getCurrentInternalUser(): Promise<{ id: string; name: string } | null> {
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return null;
-  const { data } = await supabase
-    .from('internal_users')
-    .select('id, name')
-    .eq('auth_user_id', auth.user.id)
-    .maybeSingle();
-  return data ?? null;
-}
+/**
+ * Forces the early opening of a blocked onboarding item, starting its SLA now.
+ * Updates the canonical progress row (which mirrors to the task), writes a
+ * permanent audit record, and logs a timeline entry.
+ */
+export async function forceUnlockByChecklistItem(opts: {
+  clientId: string;
+  checklistItemId: string | null;
+  taskId?: string | null;
+  stage: string;
+  reason: string;
+}) {
+  const userId = await getCurrentInternalUserId();
+  const now = new Date().toISOString();
 
-/** Creates progress rows + tasks for the given stage's checklist items. */
-async function seedStage(clientId: string, stage: OnboardingStage, clientName: string) {
-  const { data: items } = await supabase
-    .from('onboarding_checklist_items')
-    .select('*')
-    .eq('stage', stage)
-    .order('order_index');
-  if (!items?.length) return;
+  let progressId: string | null = null;
+  if (opts.checklistItemId) {
+    const { data } = await supabase
+      .from('client_onboarding_progress')
+      .select('id')
+      .eq('client_id', opts.clientId)
+      .eq('checklist_item_id', opts.checklistItemId)
+      .maybeSingle();
+    progressId = (data as any)?.id ?? null;
+  }
 
-  // create progress rows (idempotent via UNIQUE)
-  const progressRows = items.map(it => ({
-    client_id: clientId,
-    checklist_item_id: it.id,
-    status: 'pendente',
-  }));
-  await supabase.from('client_onboarding_progress').upsert(progressRows, {
-    onConflict: 'client_id,checklist_item_id',
-    ignoreDuplicates: true,
+  if (progressId) {
+    await supabase.from('client_onboarding_progress').update({
+      locked: false,
+      unlocked_at: now,
+      force_unlocked_by: userId,
+      force_unlock_reason: opts.reason,
+      force_unlocked_at: now,
+    } as any).eq('id', progressId);
+  } else if (opts.taskId) {
+    // fallback: update the task directly if no progress row is linked
+    await supabase.from('tasks').update({
+      locked: false,
+      unlocked_at: now,
+      force_unlocked_by: userId,
+      force_unlock_reason: opts.reason,
+    } as any).eq('id', opts.taskId);
+  }
+
+  await supabase.from('task_force_unlocks').insert({
+    progress_id: progressId,
+    task_id: opts.taskId ?? null,
+    client_id: opts.clientId,
+    stage: opts.stage,
+    unlocked_by: userId,
+    reason: opts.reason,
   } as any);
 
-  // create tasks (one per item) — idempotent: skip items that already have a task.
-  // Each task is linked to its checklist item so both panels stay in sync.
-  const { data: existing } = await supabase
-    .from('tasks')
-    .select('checklist_item_id')
-    .eq('client_id', clientId)
-    .not('checklist_item_id', 'is', null);
-  const existingItemIds = new Set((existing || []).map((t: any) => t.checklist_item_id));
-
-  const user = await getCurrentInternalUser();
-  const taskRows = items
-    .filter(it => !existingItemIds.has(it.id))
-    .map(it => {
-      const days = Math.max(1, Math.ceil(it.sla_hours / 24));
-      const due = new Date();
-      due.setDate(due.getDate() + days);
-      return {
-        client_id: clientId,
-        title: `[Onboarding] ${it.title}`,
-        description: `Item de onboarding (${STAGE_SHORT[stage]}) — SLA: ${it.sla_hours}h`,
-        responsible: user?.name ?? '',
-        responsible_id: user?.id ?? null,
-        due_date: due.toISOString().split('T')[0],
-        internal_due_date: due.toISOString().split('T')[0],
-        status: 'pending',
-        category: 'onboarding',
-        onboarding_stage: stage,
-        checklist_item_id: it.id,
-      };
-    });
-  if (taskRows.length) await supabase.from('tasks').insert(taskRows);
+  await supabase.from('timeline_entries').insert({
+    client_id: opts.clientId,
+    type: 'service',
+    description: `[Onboarding] Abertura antecipada forçada — ${opts.stage}: ${opts.reason}`,
+    responsible: 'CS',
+    sector: 'commercial',
+    origin: 'internal',
+    demand_status: 'in_progress',
+    is_relevant_event: true,
+    relevant_event_type: 'onboarding',
+  });
 }
 
 /**
@@ -287,7 +314,8 @@ export async function startOnboarding(
     onboarding_type: effectiveType,
     onboarding_started_at: now,
   } as any).eq('id', clientId);
-  await seedStage(clientId, stage, clientName);
+  // Seed every stage of the flow: first stage unlocked (SLA running), the rest locked.
+  await supabase.rpc('bootstrap_onboarding_locks' as any, { p_client_id: clientId });
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',
@@ -359,7 +387,8 @@ export async function convertConstitutionToNewCompany(
     document: newCnpj,
   } as any).eq('id', clientId);
 
-  await seedStage(clientId, targetStage, clientName);
+  // Re-seed for the new flow type: seed any missing stages and re-apply lock state.
+  await supabase.rpc('bootstrap_onboarding_locks' as any, { p_client_id: clientId });
 
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
@@ -422,8 +451,8 @@ export async function advanceStage(
     });
     return;
   }
+  // Updating the stage fires the DB trigger that unlocks the next stage's items.
   await supabase.from('clients').update({ onboarding_stage: next }).eq('id', clientId);
-  await seedStage(clientId, next, clientName);
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',

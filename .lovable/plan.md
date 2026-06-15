@@ -1,93 +1,97 @@
 ## Objetivo
 
-Fazer o **Painel Onboarding (Kanban)** e o **Painel Tarefas** refletirem sempre o mesmo estado, em tempo real, sem recarregar a página.
+Desbloqueio sequencial de etapas: cada etapa só fica ativa (e só conta SLA) quando a anterior é concluída. O CS pode forçar abertura antecipada com motivo registrado. O SLA passa a ser calculado a partir do **desbloqueio**, não da criação.
 
-## Diagnóstico (causa raiz)
+## Mapeamento (importante)
 
-Hoje existem **duas representações desconectadas** do mesmo dado:
+O sistema não tem a tabela `onboarding_tasks` do enunciado. As "tarefas de onboarding" são:
 
-- **Checklist** → tabela `client_onboarding_progress` (status `concluido`/`pendente`), marcada no painel lateral do Onboarding.
-- **Tarefas** → tabela `tasks` (status `pending`/`completed`, `category='onboarding'`, `onboarding_stage`), exibidas no Painel Tarefas. São criadas a partir do checklist, mas **sem vínculo de volta**.
+- **`client_onboarding_progress`** — um registro por item de checklist por cliente; é onde vive o SLA do onboarding. **Será a fonte canônica do bloqueio.**
+- **`tasks`** (`category='onboarding'`, ligadas por `checklist_item_id`) — exibidas no Painel de Tarefas. Recebem espelho do estado de bloqueio via trigger.
 
-A coluna do Kanban já é derivada de `clients.onboarding_stage` (não há campo separado de posição) — então o Passo 1 já está essencialmente correto; só vamos garantir o vínculo `tasks ↔ checklist`.
+Hoje as etapas já são semeadas conforme o cliente avança. Para mostrar "tarefas futuras bloqueadas" e permitir "forçar abertura", **todas as etapas passarão a ser criadas no início**, com a 1ª desbloqueada e as demais bloqueadas.
 
-O trigger atual `auto_advance_onboarding_stage` dispara em `tasks.status='concluido'` (valor que nunca ocorre — tasks usam `completed`) e só trata `empresa_nova`. Será substituído.
+## Passo 1 — Banco de dados (migração)
 
-```text
-ANTES                              DEPOIS
-[Checklist] --x--> [Kanban]        [Checklist] <==> [tasks] (trigger DB)
-[tasks]     --x--> [Kanban]               \           /
-                                           v         v
-                                      clients.onboarding_stage (fonte única)
-                                           ^
-                                     Realtime -> Kanban + Tarefas
+Colunas em `client_onboarding_progress`:
+- `unlocked_at timestamptz`
+- `locked boolean not null default false` (default false para não afetar dados existentes; o seeding define `true` nas etapas futuras)
+- `force_unlocked_by uuid references internal_users(id)` (o app usa `internal_users`, não `auth.users`)
+- `force_unlock_reason text`
+- `force_unlocked_at timestamptz`
+
+Espelho em `tasks`: `locked boolean not null default false`, `unlocked_at timestamptz`, `force_unlocked_by uuid`, `force_unlock_reason text`.
+
+Tabela de auditoria:
+```sql
+task_force_unlocks(
+  id uuid pk, progress_id uuid -> client_onboarding_progress,
+  task_id uuid -> tasks (null), client_id uuid -> clients,
+  stage text, unlocked_by uuid -> internal_users, reason text not null,
+  created_at timestamptz default now())
 ```
+com GRANTs (`authenticated`, `service_role`), RLS e policy para usuários internos (`is_internal_user()`), igual às demais tabelas.
 
-## Passo 1 — Fonte de verdade única
+Triggers:
+- Espelhar `locked`/`unlocked_at`/`force_*` de `client_onboarding_progress` → `tasks` (via `checklist_item_id`).
+- Estender o auto‑avanço (Prompt 15): ao concluir todos os itens obrigatórios da etapa, **desbloquear** os itens da próxima etapa (`locked=false`, `unlocked_at=now()`) em vez de só mudar de coluna.
 
-- Confirmar/garantir que a coluna do Kanban deriva 100% de `clients.onboarding_stage`. Nenhum campo de posição separado será criado.
-- Adicionar `checklist_item_id` (uuid, nullable) na tabela `tasks` para vincular cada tarefa de onboarding ao item de checklist correspondente. `seedStage` passa a gravar esse vínculo.
+Backfill dos clientes em onboarding ativo: semear as etapas faltantes do tipo; etapas anteriores à atual = concluídas/desbloqueadas; etapa atual = desbloqueada (`unlocked_at=now()`); futuras = bloqueadas.
 
-## Passo 2 — Vínculo bidirecional checklist ↔ tarefas (trigger DB)
+## Passo 2 — Criação: só a 1ª etapa desbloqueada
 
-Triggers `SECURITY DEFINER` no banco (funcionam para qualquer usuário e alimentam o Realtime):
+`startOnboarding` passa a semear **todas** as etapas do tipo de uma vez:
+- 1ª etapa: `locked=false`, `unlocked_at=now()`.
+- Demais: `locked=true`, `unlocked_at=null`.
 
-- Ao marcar `tasks.status` → `completed`/`pending`: atualizar a `client_onboarding_progress` vinculada (`concluido`/`pendente`).
-- Ao marcar `client_onboarding_progress.status` → `concluido`/`pendente`: atualizar a `task` vinculada.
-- Guarda contra loop (só atualiza se o estado destino diferir).
+`seed_onboarding_stage` ganha parâmetro de bloqueio. Continua idempotente.
 
-## Passo 3 — Auto-avanço ao concluir a etapa
+## Passo 3 — Auto‑desbloqueio ao concluir etapa
 
-Novo trigger em `client_onboarding_progress` (AFTER UPDATE): quando **todos os itens obrigatórios da etapa atual** ficarem `concluido`:
+Quando a última tarefa obrigatória da etapa é marcada como concluída (já integrado ao sync do Prompt 15), o trigger desbloqueia a próxima etapa. O frontend, ao receber o evento Realtime, exibe toast: `🔓 Etapa desbloqueada — SLA iniciado agora`.
 
-1. Avança `clients.onboarding_stage` para a próxima etapa conforme o tipo:
-   - `empresa_existente`: etapa_1 → etapa_2 → etapa_3 → etapa_4 → concluido
-   - `empresa_nova`: constituicao → etapa_1_nova → etapa_2_nova → etapa_3_nova → concluido
-   - `em_constituicao`: igual empresa_nova (constituicao aguarda CNPJ)
-   - `vmk_parceria`: constituicao → vmk_ativacao → concluido
-2. Faz `seed` dos itens/tarefas da próxima etapa.
-3. Ao chegar em `concluido`: marca `onboarding_status='completed'`.
-4. Registra `timeline_entries`.
+## Passo 4 — Cálculo do SLA por `unlocked_at`
 
-O toast `"✅ Etapa N concluída — avançou para Etapa N+1"` é disparado no frontend ao receber o evento Realtime.
+`src/lib/onboarding.ts` `slaTone`/`aggregateSlaTone` passam a usar `unlocked_at`:
+- `locked=true` ou `unlocked_at=null` → sem SLA, não conta atraso, exibe "Aguardando etapa anterior".
+- desbloqueada → `dias_corridos = now - unlocked_at`; atraso = `max(0, dias_corridos - sla)`.
 
-## Passo 4 — Sincronização ao mover card manualmente (Kanban)
+Card do Kanban: progresso/SLA consideram só itens desbloqueados da etapa atual.
 
-Adicionar **drag-and-drop** (HTML5 nativo, mesmo padrão do TaskCenter) às colunas do Onboarding:
+## Passo 5 — Painel de Tarefas: tarefas bloqueadas
 
-1. Soltar o card → `update clients.onboarding_stage` para o estágio da nova coluna.
-2. Itens de etapas anteriores → marcados como `concluido` automaticamente (trigger).
-3. Itens da nova etapa → criados se faltarem, status atual preservado (não reseta marcados).
-4. Toast: `"Card movido para [Etapa]. Tarefas atualizadas."`
+`src/pages/TaskCenter.tsx`:
+- Tarefa `locked` → ícone 🔒, texto esmaecido, sem checkbox/SLA, label "Aguardando conclusão da etapa anterior", botão discreto "Forçar abertura".
+- Tarefa desbloqueada → comportamento normal; se `force_unlocked_by` → badge amarelo "Abertura forçada" com tooltip (nome do CS + motivo).
 
-## Passo 5 — Realtime nos dois painéis
+## Passo 6 — Modal "Forçar abertura antecipada"
 
-- `Onboarding.tsx`: canal assinando `clients` e `client_onboarding_progress` → re-`fetchAll()` + toast de avanço quando `onboarding_stage` muda.
-- `TaskCenter.tsx`: canal assinando `tasks` (e `client_onboarding_progress`) → recarrega a lista.
-- Migração: `ALTER PUBLICATION supabase_realtime ADD TABLE` para `clients`, `client_onboarding_progress`, `tasks` (com `REPLICA IDENTITY FULL`).
-- Subscriptions dentro de `useEffect` com cleanup (sem vazamento).
+Modal com texto explicativo + textarea obrigatório (mín. 10 caracteres). Ao confirmar:
+1. Atualiza o registro (`locked=false`, `unlocked_at=now()`, `force_unlocked_by`, `force_unlock_reason`, `force_unlocked_at`) — via helper `forceUnlockTask` em `onboarding.ts`.
+2. Insere em `task_force_unlocks`.
+3. Fecha modal; Realtime recarrega os painéis.
+4. Toast: `🔓 Etapa desbloqueada manualmente. Motivo registrado.`
 
-## Passo 6 — Indicador de progresso no card
+Disponível tanto no Painel de Tarefas quanto no checklist do painel lateral do Onboarding (itens bloqueados ganham o botão).
 
-O card já mostra `Progress` + "X de Y itens". Ajustes:
-- 100% → borda verde + ícone de check.
-- 0% → barra cinza.
-- Parcial → barra azul proporcional.
+## Passo 7 — Dashboard: separar SLA real do ruído
 
-## Passo 7 — Consistência visual
+No cabeçalho do Painel de Tarefas, cards de indicadores:
+- 🔴 Em atraso: desbloqueadas com `dias_corridos > sla`.
+- 🟡 No prazo (ativo): desbloqueadas dentro do prazo.
+- 🔒 Bloqueadas: `locked=true`.
+- ✅ Concluídas: `status='completed'`.
 
-- Reutilizar `STAGE_LABELS`, `STAGE_SHORT` e as cores/badges de `src/lib/onboarding.ts` nos dois painéis (TaskCenter passa a importar os mesmos rótulos).
-- Ao abrir o painel lateral, destacar/scroll até a etapa atual.
-- Cliente `completed` → todos os itens exibidos como concluídos e card na coluna "Concluído".
+Filtro "Mostrar apenas ativas" (padrão **ligado**, oculta bloqueadas) + toggle "Exibir tarefas futuras (bloqueadas)".
 
-## Detalhes técnicos / arquivos
+## Arquivos
 
-- **Migração (schema)**: coluna `tasks.checklist_item_id`; substituir `auto_advance_onboarding_stage`; novas funções/triggers de sync; `REPLICA IDENTITY FULL` + publication realtime.
-- **`src/lib/onboarding.ts`**: `seedStage` grava `checklist_item_id`; helper `moveClientToStage(clientId, stage)` para o drag-and-drop.
-- **`src/pages/Onboarding.tsx`**: drag-and-drop nas colunas, Realtime, estilo do card (passos 4/5/6).
-- **`src/pages/TaskCenter.tsx`**: Realtime + rótulos unificados (passos 5/7).
+- **Migração**: colunas de bloqueio, `task_force_unlocks` (+GRANT/RLS), triggers de espelho e de desbloqueio, backfill.
+- **`src/lib/onboarding.ts`**: `seed_onboarding_stage`/`startOnboarding` (semear tudo), `slaTone` por `unlocked_at`, `forceUnlockTask`, tipos `ProgressRow`.
+- **`src/pages/TaskCenter.tsx`**: render bloqueado, modal forçar abertura, cards de indicadores, filtro/toggle.
+- **`src/pages/Onboarding.tsx`**: SLA por `unlocked_at`, item bloqueado no checklist + botão forçar abertura, toast de desbloqueio via Realtime.
 
-## Riscos / observações
+## Riscos
 
-- Drag-and-drop no Onboarding é novo (hoje os cards só abrem o painel). Será adicionado sem remover o clique para abrir.
-- Os triggers têm proteção contra loop de atualização recíproca entre `tasks` e `client_onboarding_progress`.
+- Mudança de "semear ao avançar" para "semear tudo no início" — mantida idempotência e backfill dos clientes ativos para não duplicar nem perder dados.
+- Coluna `locked` em `tasks` usa default `false` para não afetar tarefas regulares (não‑onboarding).

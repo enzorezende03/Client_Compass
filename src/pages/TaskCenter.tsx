@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus
+  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -17,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { STAGE_LABELS as ONBOARDING_STAGE_LABELS } from '@/lib/onboarding';
+import { STAGE_LABELS as ONBOARDING_STAGE_LABELS, forceUnlockByChecklistItem } from '@/lib/onboarding';
 
 interface TaskRow {
   id: string;
@@ -33,6 +35,11 @@ interface TaskRow {
   client_name?: string;
   category?: string;
   onboarding_stage?: string | null;
+  checklist_item_id?: string | null;
+  locked?: boolean;
+  unlocked_at?: string | null;
+  force_unlocked_by?: string | null;
+  force_unlock_reason?: string | null;
   reschedule_count?: number;
   last_reschedule_reason?: string | null;
   last_rescheduled_at?: string | null;
@@ -107,6 +114,12 @@ export default function TaskCenter() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [reschedules, setReschedules] = useState<RescheduleRow[]>([]);
 
+  // Sequential unlocking
+  const [showBlocked, setShowBlocked] = useState(false);
+  const [forceTask, setForceTask] = useState<TaskRow | null>(null);
+  const [forceReason, setForceReason] = useState('');
+  const [forcing, setForcing] = useState(false);
+
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   const fetchData = async (silent = false) => {
@@ -139,7 +152,14 @@ export default function TaskCenter() {
   useEffect(() => {
     const channel = supabase
       .channel('tasks-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+        const oldLocked = (payload.old as any)?.locked;
+        const newLocked = (payload.new as any)?.locked;
+        if (oldLocked === true && newLocked === false) {
+          toast({ title: '🔓 Etapa desbloqueada', description: 'SLA iniciado agora.' });
+        }
+        fetchData(true);
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'client_onboarding_progress' }, () => fetchData(true))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -167,10 +187,17 @@ export default function TaskCenter() {
     return (t as any).client_due_date || (t as any).internal_due_date || t.due_date;
   };
 
-  const overdueTasks = filtered.filter(t => t.status === 'pending' && getDeadline(t) < today);
-  const todayTasks = filtered.filter(t => t.status === 'pending' && getDeadline(t) === today);
-  const upcomingTasks = filtered.filter(t => t.status === 'pending' && getDeadline(t) > today);
+  const isLocked = (t: TaskRow) => !!t.locked;
+  // Blocked tasks never count toward overdue/active SLA buckets.
+  const activePending = filtered.filter(t => t.status === 'pending' && !isLocked(t));
+  const overdueTasks = activePending.filter(t => getDeadline(t) < today);
+  const todayTasks = activePending.filter(t => getDeadline(t) === today);
+  const upcomingTasks = activePending.filter(t => getDeadline(t) > today);
+  const blockedTasks = filtered.filter(t => t.status !== 'completed' && isLocked(t));
   const completedTasks = filtered.filter(t => t.status === 'completed');
+
+  // Indicator counts (onboarding view): real SLA separated from blocked noise.
+  const onTimeTasks = activePending.filter(t => getDeadline(t) >= today);
 
   const openNew = () => { setForm(emptyForm); setEditId(null); setDialogOpen(true); };
   const openEdit = (task: TaskRow) => {
@@ -225,6 +252,32 @@ export default function TaskCenter() {
   const moveToStatus = async (taskId: string, newStatus: string) => {
     await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
     fetchData();
+  };
+
+  const submitForceUnlock = async () => {
+    if (!forceTask) return;
+    if (forceReason.trim().length < 10) {
+      toast({ title: 'Descreva o motivo (mínimo 10 caracteres)', variant: 'destructive' });
+      return;
+    }
+    setForcing(true);
+    try {
+      await forceUnlockByChecklistItem({
+        clientId: forceTask.client_id,
+        checklistItemId: forceTask.checklist_item_id ?? null,
+        taskId: forceTask.id,
+        stage: forceTask.onboarding_stage || '',
+        reason: forceReason.trim(),
+      });
+      toast({ title: '🔓 Etapa desbloqueada manualmente', description: 'Motivo registrado.' });
+      setForceTask(null);
+      setForceReason('');
+      fetchData(true);
+    } catch (e: any) {
+      toast({ title: 'Erro ao desbloquear', description: e.message, variant: 'destructive' });
+    } finally {
+      setForcing(false);
+    }
   };
 
   const deleteTask = async (id: string) => {
@@ -340,6 +393,36 @@ export default function TaskCenter() {
         </motion.div>
       );
     }
+    if (isLocked(task)) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg border border-dashed border-border p-3 bg-muted/30"
+        >
+          <div className="flex items-start gap-2">
+            <Lock className="h-4 w-4 text-muted-foreground/70 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-muted-foreground/80 truncate">{task.title}</p>
+              {task.onboarding_stage && (
+                <Badge variant="outline" className="mt-1 text-[10px] border-border text-muted-foreground">
+                  {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
+                </Badge>
+              )}
+              <p className="text-[11px] text-muted-foreground/70 mt-1.5">Aguardando conclusão da etapa anterior</p>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => { setForceTask(task); setForceReason(''); }}
+                className="h-6 px-0 mt-1 text-xs text-amber-700 dark:text-amber-400 gap-1"
+              >
+                <Unlock className="h-3 w-3" /> Forçar abertura
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
     return (
       <motion.div
         initial={{ opacity: 0, y: 4 }}
@@ -354,11 +437,27 @@ export default function TaskCenter() {
             <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
               {task.title}
             </p>
-            {task.category === 'onboarding' && task.onboarding_stage && (
-              <Badge variant="outline" className="mt-1 text-[10px] border-primary/40 text-primary">
-                {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
-              </Badge>
-            )}
+            <div className="flex items-center gap-1 flex-wrap mt-1">
+              {task.category === 'onboarding' && task.onboarding_stage && (
+                <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                  {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
+                </Badge>
+              )}
+              {task.force_unlocked_by && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-[10px] gap-1 bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                        <Unlock className="h-2.5 w-2.5" /> Abertura forçada
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs">{task.force_unlock_reason || 'Aberta antecipadamente'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
         </div>
         {task.description && (
@@ -524,19 +623,82 @@ export default function TaskCenter() {
               Prazo Interno
             </button>
           </div>
+          {activeTab === 'onboarding' && (
+            <div className="flex items-center gap-2 ml-auto">
+              <Switch id="show-blocked" checked={showBlocked} onCheckedChange={setShowBlocked} />
+              <Label htmlFor="show-blocked" className="text-xs text-muted-foreground cursor-pointer">
+                Exibir tarefas futuras (bloqueadas)
+              </Label>
+            </div>
+          )}
         </div>
+
+        {activeTab === 'onboarding' && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Em atraso</p>
+              <p className="text-2xl font-bold text-destructive mt-1">{overdueTasks.length}</p>
+            </div>
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+              <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> No prazo (ativo)</p>
+              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-1">{onTimeTasks.length}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/40 p-3">
+              <p className="text-xs text-muted-foreground flex items-center gap-1"><Lock className="h-3.5 w-3.5" /> Bloqueadas</p>
+              <p className="text-2xl font-bold text-muted-foreground mt-1">{blockedTasks.length}</p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1"><CheckSquare className="h-3.5 w-3.5" /> Concluídas</p>
+              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">{completedTasks.length}</p>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-4', showBlocked && activeTab === 'onboarding' ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
             <KanbanColumn title="Atrasadas" icon={<AlertTriangle className="h-4 w-4" />} tasks={overdueTasks} variant="danger" dropStatus="pending" />
             <KanbanColumn title="Hoje" icon={<Clock className="h-4 w-4" />} tasks={todayTasks} variant="warning" dropStatus="pending" />
             <KanbanColumn title="Próximas" icon={<CalendarClock className="h-4 w-4" />} tasks={upcomingTasks} dropStatus="pending" />
+            {showBlocked && activeTab === 'onboarding' && (
+              <KanbanColumn title="Bloqueadas" icon={<Lock className="h-4 w-4" />} tasks={blockedTasks} dropStatus="pending" />
+            )}
             <KanbanColumn title="Concluídas" icon={<CheckSquare className="h-4 w-4" />} tasks={completedTasks} variant="success" dropStatus="completed" />
           </div>
         )}
       </div>
+
+      <Dialog open={!!forceTask} onOpenChange={o => { if (!o) { setForceTask(null); setForceReason(''); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Forçar abertura antecipada</DialogTitle>
+            <DialogDescription>
+              A etapa anterior ainda não foi concluída. Ao forçar a abertura, o SLA desta etapa começará agora. Registre o motivo para o histórico.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Motivo da abertura antecipada *</Label>
+            <Textarea
+              value={forceReason}
+              onChange={e => setForceReason(e.target.value)}
+              placeholder="Descreva por que esta etapa precisa ser aberta antes da anterior..."
+              className="min-h-[100px]"
+            />
+            <p className="text-[11px] text-muted-foreground">Mínimo de 10 caracteres.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setForceTask(null); setForceReason(''); }}>Cancelar</Button>
+            <Button
+              onClick={submitForceUnlock}
+              disabled={forcing || forceReason.trim().length < 10}
+              className="bg-orange-600 hover:bg-orange-700 text-white border-0"
+            >
+              Confirmar abertura
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
