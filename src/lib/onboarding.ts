@@ -138,23 +138,43 @@ export const MESSAGE_TEMPLATES: Record<string, { title: string; text: string }[]
   ],
 };
 
-/** SLA tone based on hours elapsed since item creation vs sla_hours */
-export function slaTone(createdAt: string, slaHours: number, completedAt?: string | null) {
-  if (completedAt) return { color: 'bg-emerald-500', label: 'Concluído', tone: 'green' as const };
-  const elapsed = (Date.now() - new Date(createdAt).getTime()) / 36e5;
+export type SlaTone = 'green' | 'orange' | 'red' | 'blocked';
+
+/**
+ * SLA tone based on hours elapsed since the item was *unlocked* (not created).
+ * Locked items (waiting for the previous stage) report a neutral "blocked" tone
+ * and never count as overdue.
+ */
+export function slaTone(
+  unlockedAt: string | null,
+  slaHours: number,
+  completedAt?: string | null,
+  locked?: boolean,
+): { color: string; label: string; tone: SlaTone } {
+  if (completedAt) return { color: 'bg-emerald-500', label: 'Concluído', tone: 'green' };
+  if (locked || !unlockedAt) {
+    return { color: 'bg-muted-foreground/40', label: 'Aguardando etapa anterior', tone: 'blocked' };
+  }
+  const elapsed = (Date.now() - new Date(unlockedAt).getTime()) / 36e5;
   const remaining = slaHours - elapsed;
-  if (remaining <= 0) return { color: 'bg-red-500', label: 'SLA estourado', tone: 'red' as const };
-  if (remaining / slaHours <= 0.2) return { color: 'bg-orange-500', label: 'SLA próximo', tone: 'orange' as const };
-  return { color: 'bg-emerald-500', label: 'No prazo', tone: 'green' as const };
+  if (remaining <= 0) return { color: 'bg-red-500', label: 'SLA estourado', tone: 'red' };
+  if (remaining / slaHours <= 0.2) return { color: 'bg-orange-500', label: 'SLA próximo', tone: 'orange' };
+  return { color: 'bg-emerald-500', label: 'No prazo', tone: 'green' };
 }
 
-export function aggregateSlaTone(progress: { created_at: string; completed_at: string | null; sla_hours: number }[]): 'green' | 'orange' | 'red' {
-  let worst: 'green' | 'orange' | 'red' = 'green';
+export function aggregateSlaTone(
+  progress: { unlocked_at: string | null; completed_at: string | null; sla_hours: number; locked?: boolean }[],
+): SlaTone {
+  let worst: SlaTone = 'green';
+  let anyUnlocked = false;
   for (const p of progress) {
-    const t = slaTone(p.created_at, p.sla_hours, p.completed_at).tone;
+    if (p.locked || (!p.unlocked_at && !p.completed_at)) continue; // skip blocked items
+    anyUnlocked = true;
+    const t = slaTone(p.unlocked_at, p.sla_hours, p.completed_at, p.locked).tone;
     if (t === 'red') return 'red';
     if (t === 'orange') worst = 'orange';
   }
+  if (!anyUnlocked && progress.length > 0) return 'blocked';
   return worst;
 }
 
