@@ -98,9 +98,11 @@ export default function Onboarding() {
   const [dbTemplates, setDbTemplates] = useState<MessageTemplate[]>([]);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropStage, setDropStage] = useState<OnboardingStage | null>(null);
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
+  const fetchAll = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const [clientsRes, itemsRes, progRes] = await Promise.all([
       supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,parceria').eq('onboarding_status', 'active'),
       supabase.from('onboarding_checklist_items').select('*').order('order_index'),
@@ -125,6 +127,34 @@ export default function Onboarding() {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Realtime: keep the Kanban in sync with stage changes and checklist progress
+  // (auto-advance, manual moves, or actions by other logged-in users).
+  useEffect(() => {
+    const channel = supabase
+      .channel('onboarding-sync')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'clients' }, (payload) => {
+        const oldStage = (payload.old as any)?.onboarding_stage as OnboardingStage | null;
+        const newStage = (payload.new as any)?.onboarding_stage as OnboardingStage | null;
+        if (oldStage !== newStage && newStage) {
+          const seq = stagesForType(((payload.new as any)?.onboarding_type || 'empresa_existente') as OnboardingType);
+          const advanced = seq.indexOf(newStage) > seq.indexOf((oldStage || seq[0]) as OnboardingStage);
+          const name = (payload.new as any)?.name || 'Cliente';
+          if (newStage === 'concluido') {
+            toast({ title: '✅ Onboarding concluído', description: `${name} migrado para atendimento regular` });
+          } else if (advanced) {
+            toast({ title: '✅ Etapa concluída', description: `${name} avançou para ${STAGE_LABELS[newStage]}` });
+          }
+        }
+        fetchAll(true);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_onboarding_progress' }, () => {
+        fetchAll(true);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchAll, toast]);
+
 
   // Load all message templates once
   useEffect(() => {
