@@ -451,8 +451,8 @@ export async function advanceStage(
     });
     return;
   }
+  // Updating the stage fires the DB trigger that unlocks the next stage's items.
   await supabase.from('clients').update({ onboarding_stage: next }).eq('id', clientId);
-  await seedStage(clientId, next, clientName);
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',
