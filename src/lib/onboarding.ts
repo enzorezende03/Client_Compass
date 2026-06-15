@@ -387,7 +387,8 @@ export async function convertConstitutionToNewCompany(
     document: newCnpj,
   } as any).eq('id', clientId);
 
-  await seedStage(clientId, targetStage, clientName);
+  // Re-seed for the new flow type: seed any missing stages and re-apply lock state.
+  await supabase.rpc('bootstrap_onboarding_locks' as any, { p_client_id: clientId });
 
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
