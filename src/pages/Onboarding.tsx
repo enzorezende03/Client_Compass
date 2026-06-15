@@ -255,8 +255,32 @@ export default function Onboarding() {
 
   const handleToggle = async (p: ProgressFull, checked: boolean) => {
     await toggleChecklistItem(p.id, p.client_id, p.item.title, checked);
-    await fetchAll();
+    await fetchAll(true);
   };
+
+  // Drag-and-drop only works on a specific type filter, where each column maps
+  // unambiguously to a stage of that flow.
+  const dndEnabled = typeFilter !== 'all';
+
+  const handleDropOnStage = async (targetStage: OnboardingStage) => {
+    const clientId = draggingId;
+    setDraggingId(null);
+    setDropStage(null);
+    if (!clientId || !dndEnabled) return;
+    const e = enriched.find(x => x.client.id === clientId);
+    if (!e || e.stage === targetStage) return;
+    try {
+      await moveClientToStage(clientId, targetStage);
+      toast({
+        title: 'Card movido',
+        description: `${e.client.name} → ${STAGE_LABELS[targetStage]}. Tarefas atualizadas.`,
+      });
+      await fetchAll(true);
+    } catch (err: any) {
+      toast({ title: 'Erro ao mover card', description: err.message, variant: 'destructive' });
+    }
+  };
+
 
   const handleNotes = async (p: ProgressFull, notes: string) => {
     setProgress(prev => prev.map(x => x.id === p.id ? { ...x, notes } : x));
