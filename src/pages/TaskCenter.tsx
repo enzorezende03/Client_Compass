@@ -187,10 +187,17 @@ export default function TaskCenter() {
     return (t as any).client_due_date || (t as any).internal_due_date || t.due_date;
   };
 
-  const overdueTasks = filtered.filter(t => t.status === 'pending' && getDeadline(t) < today);
-  const todayTasks = filtered.filter(t => t.status === 'pending' && getDeadline(t) === today);
-  const upcomingTasks = filtered.filter(t => t.status === 'pending' && getDeadline(t) > today);
+  const isLocked = (t: TaskRow) => !!t.locked;
+  // Blocked tasks never count toward overdue/active SLA buckets.
+  const activePending = filtered.filter(t => t.status === 'pending' && !isLocked(t));
+  const overdueTasks = activePending.filter(t => getDeadline(t) < today);
+  const todayTasks = activePending.filter(t => getDeadline(t) === today);
+  const upcomingTasks = activePending.filter(t => getDeadline(t) > today);
+  const blockedTasks = filtered.filter(t => t.status !== 'completed' && isLocked(t));
   const completedTasks = filtered.filter(t => t.status === 'completed');
+
+  // Indicator counts (onboarding view): real SLA separated from blocked noise.
+  const onTimeTasks = activePending.filter(t => getDeadline(t) >= today);
 
   const openNew = () => { setForm(emptyForm); setEditId(null); setDialogOpen(true); };
   const openEdit = (task: TaskRow) => {
