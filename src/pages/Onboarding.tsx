@@ -144,6 +144,8 @@ export default function Onboarding() {
             toast({ title: '✅ Onboarding concluído', description: `${name} migrado para atendimento regular` });
           } else if (advanced) {
             toast({ title: '✅ Etapa concluída', description: `${name} avançou para ${STAGE_LABELS[newStage]}` });
+          } else {
+            toast({ title: 'Card movido', description: `${name} → ${STAGE_LABELS[newStage]}. Tarefas atualizadas.` });
           }
         }
         fetchAll(true);
