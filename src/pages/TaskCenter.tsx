@@ -53,17 +53,9 @@ interface RescheduleRow {
   client_name?: string;
 }
 
-const STAGE_LABEL: Record<string, string> = {
-  etapa_1: 'Etapa 1',
-  etapa_2: 'Etapa 2',
-  etapa_3: 'Etapa 3',
-  etapa_4: 'Etapa 4',
-  constituicao: 'Constituição',
-  etapa_1_nova: 'Etapa 1 (Nova)',
-  etapa_2_nova: 'Etapa 2 (Nova)',
-  etapa_3_nova: 'Etapa 3 (Nova)',
-  concluido: 'Concluído',
-};
+// Unified stage labels shared with the Onboarding Kanban for visual consistency.
+const STAGE_LABEL: Record<string, string> = ONBOARDING_STAGE_LABELS as Record<string, string>;
+
 
 interface ClientOption { id: string; name: string; }
 interface InternalUser { id: string; name: string; email: string; active: boolean; }
