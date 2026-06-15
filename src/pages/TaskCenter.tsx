@@ -35,6 +35,11 @@ interface TaskRow {
   client_name?: string;
   category?: string;
   onboarding_stage?: string | null;
+  checklist_item_id?: string | null;
+  locked?: boolean;
+  unlocked_at?: string | null;
+  force_unlocked_by?: string | null;
+  force_unlock_reason?: string | null;
   reschedule_count?: number;
   last_reschedule_reason?: string | null;
   last_rescheduled_at?: string | null;
