@@ -2,8 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Clock, CheckCircle2, TrendingDown, Users, Gauge } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import {
+  ChurnMetrics, fetchChurnMetrics, formatBRL, monthRange, TERMINATION_REASON_LABELS, TerminationReason,
+} from '@/lib/churn';
 import {
   OnboardingType, OnboardingStage, STAGE_SHORT, ONBOARDING_TYPE_LABELS,
 } from '@/lib/onboarding';
