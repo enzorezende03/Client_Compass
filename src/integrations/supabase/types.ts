@@ -1107,6 +1107,7 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: undefined
       }
+      dashboard_health_counts: { Args: never; Returns: Json }
       has_permission: { Args: { _permission: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_internal_user: { Args: never; Returns: boolean }
