@@ -251,55 +251,79 @@ export default function ClientList() {
             <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Saúde da carteira */}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
             <StatCard
               icon={Building2}
-              label="Clientes Ativos"
-              value={stats.total}
-              onClick={() => {
-                setShowArchived(false);
-                setSearch('');
-                setFinancialFilter('all');
-                setComplexityFilter('all');
-                setHealthFilter('all');
-                setResponsibleFilter('all');
-                setProfileFilter('all');
-              }}
-              active={!showArchived && financialFilter === 'all' && healthFilter === 'all'}
+              label={CARD_LABELS.total}
+              value={counts?.total ?? 0}
+              onClick={() => selectCard('total')}
+              active={!showArchived && (cardFilter === null || cardFilter === 'total')}
+              footer={counts && counts.unclassified > 0 ? `${counts.unclassified} sem classificação` : undefined}
+            />
+            <StatCard
+              icon={HeartPulse}
+              label={CARD_LABELS.healthy}
+              value={counts?.healthy ?? 0}
+              variant="success"
+              percent={pct(counts?.healthy ?? 0)}
+              onClick={() => selectCard('healthy')}
+              active={!showArchived && cardFilter === 'healthy'}
             />
             <StatCard
               icon={AlertTriangle}
-              label="Em Risco / Crítico"
-              value={stats.atRisk}
+              label={CARD_LABELS.attention}
+              value={counts?.attention ?? 0}
+              variant="warning"
+              percent={pct(counts?.attention ?? 0)}
+              onClick={() => selectCard('attention')}
+              active={!showArchived && cardFilter === 'attention'}
+            />
+            <StatCard
+              icon={ShieldAlert}
+              label={CARD_LABELS.critical}
+              value={counts?.critical ?? 0}
               variant="danger"
-              onClick={() => {
-                setShowArchived(false);
-                setHealthFilter('critical');
-                setFinancialFilter('all');
-              }}
-              active={!showArchived && healthFilter === 'critical'}
+              emphasis
+              percent={pct(counts?.critical ?? 0)}
+              onClick={() => selectCard('critical')}
+              active={!showArchived && cardFilter === 'critical'}
+            />
+            <StatCard
+              icon={Stethoscope}
+              label={CARD_LABELS.treatment}
+              value={counts?.treatment ?? 0}
+              percent={pct(counts?.treatment ?? 0)}
+              footer="com plano de ação ou acompanhamento"
+              onClick={() => selectCard('treatment')}
+              active={!showArchived && cardFilter === 'treatment'}
             />
             <StatCard
               icon={TrendingUp}
-              label="Financeiro Suspenso"
-              value={stats.suspended}
+              label={CARD_LABELS.suspended}
+              value={counts?.suspended ?? 0}
               variant="warning"
-              onClick={() => {
-                setShowArchived(false);
-                setFinancialFilter('suspended');
-                setHealthFilter('all');
-              }}
-              active={!showArchived && financialFilter === 'suspended'}
-            />
-            <StatCard
-              icon={Archive}
-              label="Arquivados"
-              value={stats.archived}
-              onClick={() => setShowArchived(true)}
-              active={showArchived}
+              percent={pct(counts?.suspended ?? 0)}
+              onClick={() => selectCard('suspended')}
+              active={!showArchived && cardFilter === 'suspended'}
             />
           </div>
+
+          {cardFilter && !showArchived && (
+            <div className="mt-4">
+              <Badge variant="secondary" className="gap-2 py-1.5 pl-3 pr-2 text-xs">
+                Filtro: {CARD_LABELS[cardFilter]}
+                <button
+                  type="button"
+                  onClick={() => setCardFilter(null)}
+                  className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+                  aria-label="Limpar filtro"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            </div>
+          )}
         </div>
       </header>
 
