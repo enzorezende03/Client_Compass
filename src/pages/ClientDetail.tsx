@@ -343,7 +343,20 @@ export default function ClientDetail() {
         </Tabs>
       </div>
 
-      <QuickInteractionModal open={interactionOpen} onOpenChange={setInteractionOpen} clientId={client.id} onSubmit={handleNewInteraction} />
+      <QuickInteractionModal
+        open={interactionOpen}
+        onOpenChange={setInteractionOpen}
+        clientId={client.id}
+        clientName={client.name}
+        onSaved={loadTimelineAndTasks}
+      />
+      <GenerateTaskFromEntryDialog
+        entry={genTaskEntry}
+        clientName={client.name}
+        onOpenChange={(v) => { if (!v) setGenTaskEntry(null); }}
+        onCreated={loadTimelineAndTasks}
+      />
+
       <CommercialHandoffDialog
         open={handoffOpen}
         onOpenChange={setHandoffOpen}
