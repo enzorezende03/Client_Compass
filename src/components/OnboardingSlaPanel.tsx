@@ -357,6 +357,45 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
           </div>
         )}
       </div>
+
+      <Dialog open={churnOpen} onOpenChange={setChurnOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Distratos do período</DialogTitle>
+            <DialogDescription>
+              {churnList.length} distrato{churnList.length === 1 ? '' : 's'} registrado
+              {churnList.length === 1 ? '' : 's'} no mês selecionado ·{' '}
+              {churn?.distratos_revertidos ?? 0} revertido(s)
+            </DialogDescription>
+          </DialogHeader>
+          {churnList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum distrato no período.</p>
+          ) : (
+            <div className="divide-y divide-border max-h-[420px] overflow-auto">
+              {churnList.map(t => (
+                <div key={t.id} className="py-2.5 flex items-center gap-3 flex-wrap text-xs">
+                  <span className="font-medium text-sm text-foreground min-w-[180px] truncate">{t.client_name}</span>
+                  <span className="text-muted-foreground">
+                    {new Date(t.request_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {TERMINATION_REASON_LABELS[t.reason_category as TerminationReason] || t.reason_category}
+                  </Badge>
+                  {t.during_onboarding && (
+                    <Badge variant="outline" className="text-[10px] border-destructive/50 text-destructive">
+                      durante o onboarding
+                    </Badge>
+                  )}
+                  <span className="text-muted-foreground flex-1 min-w-[100px]">
+                    {formatBRL(t.monthly_fee_at_termination)}
+                  </span>
+                  <span className="text-muted-foreground">Registrado por {t.registered_by_name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
