@@ -15,6 +15,11 @@ import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
 import { GenerateTaskFromEntryDialog } from '@/components/GenerateTaskFromEntryDialog';
+import { RegisterTerminationDialog, RevertTerminationDialog } from '@/components/TerminationDialog';
+import { TERMINATION_REASON_LABELS, Termination } from '@/lib/churn';
+import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreVertical } from 'lucide-react';
 
 import { EditableStrategicCard } from '@/components/EditableStrategicCard';
 import { supabase } from '@/integrations/supabase/client';
@@ -90,6 +95,28 @@ export default function ClientDetail() {
   const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
   const [genTaskEntry, setGenTaskEntry] = useState<TimelineEntry | null>(null);
+  const [termination, setTermination] = useState<Termination | null>(null);
+  const [registerTerminationOpen, setRegisterTerminationOpen] = useState(false);
+  const [revertTerminationOpen, setRevertTerminationOpen] = useState(false);
+
+  const reloadTermination = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from('client_terminations' as any)
+      .select('*')
+      .eq('client_id', id)
+      .is('reverted_at', null)
+      .maybeSingle();
+    setTermination((data as any) || null);
+  }, [id]);
+
+  const afterTerminationChange = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase.from('clients').select('*').eq('id', id).single();
+    if (data) setClient(mapClient(data));
+    await Promise.all([reloadTermination(), loadTimelineAndTasks()]);
+    setAuditRefreshKey(k => k + 1);
+  }, [id, reloadTermination]);
 
 
   const reloadHandoff = useCallback(async () => {
