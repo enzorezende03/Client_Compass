@@ -57,6 +57,28 @@ function mapRow(r: any): ClientWithArchive {
   };
 }
 
+type CardFilter = 'total' | 'healthy' | 'attention' | 'critical' | 'treatment' | 'suspended' | null;
+
+interface HealthCounts {
+  total: number;
+  healthy: number;
+  attention: number;
+  critical: number;
+  unclassified: number;
+  suspended: number;
+  treatment: number;
+  treatment_ids: string[];
+}
+
+const CARD_LABELS: Record<Exclude<CardFilter, null>, string> = {
+  total: 'Total de clientes',
+  healthy: 'Saudáveis',
+  attention: 'Em atenção',
+  critical: 'Críticos',
+  treatment: 'Em tratamento',
+  suspended: 'Financeiro suspenso',
+};
+
 export default function ClientList() {
   const navigate = useNavigate();
   const { toast } = useToast();
