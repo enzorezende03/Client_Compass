@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2, Download, Archive, ArchiveRestore, MoreVertical } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2, Download, Archive, ArchiveRestore, MoreVertical, HeartPulse, ShieldAlert, Stethoscope, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -56,6 +57,28 @@ function mapRow(r: any): ClientWithArchive {
   };
 }
 
+type CardFilter = 'total' | 'healthy' | 'attention' | 'critical' | 'treatment' | 'suspended' | null;
+
+interface HealthCounts {
+  total: number;
+  healthy: number;
+  attention: number;
+  critical: number;
+  unclassified: number;
+  suspended: number;
+  treatment: number;
+  treatment_ids: string[];
+}
+
+const CARD_LABELS: Record<Exclude<CardFilter, null>, string> = {
+  total: 'Total de clientes',
+  healthy: 'Saudáveis',
+  attention: 'Em atenção',
+  critical: 'Críticos',
+  treatment: 'Em tratamento',
+  suspended: 'Financeiro suspenso',
+};
+
 export default function ClientList() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -68,6 +91,23 @@ export default function ClientList() {
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
   const [profileFilter, setProfileFilter] = useState<string>('all');
   const [showArchived, setShowArchived] = useState(false);
+  const [cardFilter, setCardFilter] = useState<CardFilter>(null);
+
+  const queryClient = useQueryClient();
+  const { data: counts } = useQuery({
+    queryKey: ['dashboard-health-counts'],
+    queryFn: async (): Promise<HealthCounts> => {
+      const { data, error } = await (supabase as any).rpc('dashboard_health_counts');
+      if (error) throw error;
+      return data as HealthCounts;
+    },
+  });
+  const treatmentIds = new Set<string>(counts?.treatment_ids ?? []);
+  const pct = (n: number) => {
+    const total = counts?.total ?? 0;
+    if (!total) return '0%';
+    return `${Math.round((n / total) * 100)}%`;
+  };
 
   // Archive dialog state
   const [archiveTarget, setArchiveTarget] = useState<ClientWithArchive | null>(null);
@@ -76,19 +116,34 @@ export default function ClientList() {
   const [unarchiveTarget, setUnarchiveTarget] = useState<ClientWithArchive | null>(null);
 
   const loadClients = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard-health-counts'] });
     supabase.from('clients').select('*').order('name').then(({ data }) => {
       setClients((data || []).map(mapRow));
       setLoading(false);
     });
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => { loadClients(); }, [loadClients]);
 
   const responsibles = [...new Set(clients.filter(c => !c.archived).map(c => c.csResponsible).filter(Boolean))];
   const archivedCount = clients.filter(c => c.archived).length;
 
+  const matchesCard = (c: ClientWithArchive) => {
+    if (!cardFilter || cardFilter === 'total') return c.status !== 'cancelled';
+    if (c.status === 'cancelled') return false;
+    switch (cardFilter) {
+      case 'healthy': return c.healthScore === 'healthy';
+      case 'attention': return c.healthScore === 'attention';
+      case 'critical': return c.healthScore === 'critical';
+      case 'treatment': return treatmentIds.has(c.id) || c.status === 'recovery';
+      case 'suspended': return c.financialStatus === 'suspended';
+      default: return true;
+    }
+  };
+
   const filtered = clients.filter(c => {
     if (showArchived ? !c.archived : !!c.archived) return false;
+    if (!showArchived && !matchesCard(c)) return false;
     const matchSearch = search === '' ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.document.includes(search);
@@ -100,12 +155,9 @@ export default function ClientList() {
     return matchSearch && matchFinancial && matchComplexity && matchHealth && matchResp && matchProfile;
   });
 
-  const activeClients = clients.filter(c => !c.archived);
-  const stats = {
-    total: activeClients.length,
-    atRisk: activeClients.filter(c => c.status === 'at_risk' || c.status === 'recovery' || c.healthScore === 'critical').length,
-    suspended: activeClients.filter(c => c.financialStatus === 'suspended').length,
-    archived: archivedCount,
+  const selectCard = (key: CardFilter) => {
+    setShowArchived(false);
+    setCardFilter(prev => (prev === key ? null : key));
   };
 
   const exportClientsReport = () => {
@@ -199,55 +251,79 @@ export default function ClientList() {
             <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Saúde da carteira */}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
             <StatCard
               icon={Building2}
-              label="Clientes Ativos"
-              value={stats.total}
-              onClick={() => {
-                setShowArchived(false);
-                setSearch('');
-                setFinancialFilter('all');
-                setComplexityFilter('all');
-                setHealthFilter('all');
-                setResponsibleFilter('all');
-                setProfileFilter('all');
-              }}
-              active={!showArchived && financialFilter === 'all' && healthFilter === 'all'}
+              label={CARD_LABELS.total}
+              value={counts?.total ?? 0}
+              onClick={() => selectCard('total')}
+              active={!showArchived && (cardFilter === null || cardFilter === 'total')}
+              footer={counts && counts.unclassified > 0 ? `${counts.unclassified} sem classificação` : undefined}
+            />
+            <StatCard
+              icon={HeartPulse}
+              label={CARD_LABELS.healthy}
+              value={counts?.healthy ?? 0}
+              variant="success"
+              percent={pct(counts?.healthy ?? 0)}
+              onClick={() => selectCard('healthy')}
+              active={!showArchived && cardFilter === 'healthy'}
             />
             <StatCard
               icon={AlertTriangle}
-              label="Em Risco / Crítico"
-              value={stats.atRisk}
+              label={CARD_LABELS.attention}
+              value={counts?.attention ?? 0}
+              variant="warning"
+              percent={pct(counts?.attention ?? 0)}
+              onClick={() => selectCard('attention')}
+              active={!showArchived && cardFilter === 'attention'}
+            />
+            <StatCard
+              icon={ShieldAlert}
+              label={CARD_LABELS.critical}
+              value={counts?.critical ?? 0}
               variant="danger"
-              onClick={() => {
-                setShowArchived(false);
-                setHealthFilter('critical');
-                setFinancialFilter('all');
-              }}
-              active={!showArchived && healthFilter === 'critical'}
+              emphasis
+              percent={pct(counts?.critical ?? 0)}
+              onClick={() => selectCard('critical')}
+              active={!showArchived && cardFilter === 'critical'}
+            />
+            <StatCard
+              icon={Stethoscope}
+              label={CARD_LABELS.treatment}
+              value={counts?.treatment ?? 0}
+              percent={pct(counts?.treatment ?? 0)}
+              footer="com plano de ação ou acompanhamento"
+              onClick={() => selectCard('treatment')}
+              active={!showArchived && cardFilter === 'treatment'}
             />
             <StatCard
               icon={TrendingUp}
-              label="Financeiro Suspenso"
-              value={stats.suspended}
+              label={CARD_LABELS.suspended}
+              value={counts?.suspended ?? 0}
               variant="warning"
-              onClick={() => {
-                setShowArchived(false);
-                setFinancialFilter('suspended');
-                setHealthFilter('all');
-              }}
-              active={!showArchived && financialFilter === 'suspended'}
-            />
-            <StatCard
-              icon={Archive}
-              label="Arquivados"
-              value={stats.archived}
-              onClick={() => setShowArchived(true)}
-              active={showArchived}
+              percent={pct(counts?.suspended ?? 0)}
+              onClick={() => selectCard('suspended')}
+              active={!showArchived && cardFilter === 'suspended'}
             />
           </div>
+
+          {cardFilter && !showArchived && (
+            <div className="mt-4">
+              <Badge variant="secondary" className="gap-2 py-1.5 pl-3 pr-2 text-xs">
+                Filtro: {CARD_LABELS[cardFilter]}
+                <button
+                  type="button"
+                  onClick={() => setCardFilter(null)}
+                  className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+                  aria-label="Limpar filtro"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            </div>
+          )}
         </div>
       </header>
 
@@ -464,13 +540,13 @@ export default function ClientList() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, variant, onClick, active }: {
+function StatCard({ icon: Icon, label, value, variant, onClick, active, percent, footer, emphasis }: {
   icon: typeof Building2; label: string; value: number; variant?: 'warning' | 'danger' | 'success';
-  onClick?: () => void; active?: boolean;
+  onClick?: () => void; active?: boolean; percent?: string; footer?: string; emphasis?: boolean;
 }) {
   const colors = {
     warning: 'text-health-attention',
-    danger: 'text-health-critical',
+    danger: 'text-destructive',
     success: 'text-health-healthy',
   };
   const interactive = !!onClick;
@@ -482,13 +558,17 @@ function StatCard({ icon: Icon, label, value, variant, onClick, active }: {
       onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
       className={`rounded-lg border bg-card p-4 shadow-card transition-all ${
         interactive ? 'cursor-pointer hover:shadow-card-hover hover:border-primary/30' : ''
-      } ${active ? 'border-primary ring-2 ring-primary/20' : ''}`}
+      } ${emphasis ? 'border-destructive/40 bg-destructive/5' : ''} ${active ? 'border-primary ring-2 ring-primary/20' : ''}`}
     >
       <div className="flex items-center gap-2 mb-1">
         <Icon className={`h-4 w-4 ${variant ? colors[variant] : 'text-muted-foreground'}`} />
         <span className="text-xs text-muted-foreground">{label}</span>
       </div>
-      <p className={`text-2xl font-bold ${variant ? colors[variant] : 'text-foreground'}`}>{value}</p>
+      <div className="flex items-baseline gap-2">
+        <p className={`text-2xl font-bold ${variant ? colors[variant] : 'text-foreground'}`}>{value}</p>
+        {percent && <span className="text-xs text-muted-foreground">{percent}</span>}
+      </div>
+      {footer && <p className="mt-1 text-[11px] leading-tight text-muted-foreground">{footer}</p>}
     </div>
   );
 }
