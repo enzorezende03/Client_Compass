@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2, LayoutGrid, CalendarDays } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2, LayoutGrid, CalendarDays, BookOpen } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { OnboardingSlaPanel } from '@/components/OnboardingSlaPanel';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
@@ -1000,6 +1000,19 @@ export default function Onboarding() {
           clientName={selectedClient.name}
           onConverted={() => { setSelectedClient(null); fetchAll(); }}
         />
+
+      <ProcedureStageSheet
+        open={procedureOpen}
+        onOpenChange={setProcedureOpen}
+        stage={selectedData?.stage || null}
+        onboardingType={(selectedData?.client.onboarding_type || 'empresa_existente') as OnboardingType}
+        clientContext={{
+          name: selectedData?.client.name,
+          document: (selectedData?.client as any)?.document,
+          cs_responsible: selectedData?.client.cs_responsible,
+          segment: (selectedData?.client as any)?.segment,
+        }}
+      />
       )}
 
       {/* Constituição info dialog */}
