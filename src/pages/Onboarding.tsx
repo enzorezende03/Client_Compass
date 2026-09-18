@@ -108,6 +108,13 @@ export default function Onboarding() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropStage, setDropStage] = useState<OnboardingStage | null>(null);
   const [overdueByClient, setOverdueByClient] = useState<Record<string, number>>({});
+  const [viewMode, setViewMode] = useState<'board' | 'calendar'>(() => {
+    try { return localStorage.getItem('cshub:onboarding:viewMode') === 'calendar' ? 'calendar' : 'board'; } catch { return 'board'; }
+  });
+  const changeViewMode = (mode: 'board' | 'calendar') => {
+    setViewMode(mode);
+    try { localStorage.setItem('cshub:onboarding:viewMode', mode); } catch { /* indisponível */ }
+  };
 
   const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
