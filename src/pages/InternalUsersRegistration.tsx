@@ -11,6 +11,13 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
+import { useIsAdmin, type AppPermission } from '@/hooks/usePermission';
+
+const SPECIAL_PERMISSIONS: { key: AppPermission; label: string }[] = [
+  { key: 'manage_sla_catalog', label: 'Gerenciar prazos de demandas' },
+  { key: 'manage_onboarding_procedures', label: 'Gerenciar procedimento de onboarding' },
+];
+
 
 
 const ACCESS_PROFILE_LABELS: Record<string, string> = {
@@ -42,7 +49,10 @@ export default function InternalUsersRegistration() {
   const [saving, setSaving] = useState(false);
   const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string }>({ open: false, email: '', password: '' });
   const [copied, setCopied] = useState(false);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [permSaving, setPermSaving] = useState<string | null>(null);
   const { toast } = useToast();
+  const { isAdmin } = useIsAdmin();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -53,19 +63,53 @@ export default function InternalUsersRegistration() {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  const fetchPermissions = async (userId: string) => {
+    const { data } = await supabase
+      .from('internal_user_permissions' as any)
+      .select('permission')
+      .eq('internal_user_id', userId);
+    setPermissions(((data as any[]) ?? []).map(r => r.permission));
+  };
+
+  const togglePermission = async (permission: string, enabled: boolean) => {
+    if (!selectedId) return;
+    setPermSaving(permission);
+    let error: any = null;
+    if (enabled) {
+      ({ error } = await supabase
+        .from('internal_user_permissions' as any)
+        .insert({ internal_user_id: selectedId, permission } as any));
+    } else {
+      ({ error } = await supabase
+        .from('internal_user_permissions' as any)
+        .delete()
+        .eq('internal_user_id', selectedId)
+        .eq('permission', permission));
+    }
+    setPermSaving(null);
+    if (error) {
+      toast({ title: 'Erro ao atualizar permissão', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setPermissions(prev => enabled ? [...prev, permission] : prev.filter(p => p !== permission));
+    toast({ title: enabled ? 'Permissão concedida!' : 'Permissão removida!' });
+  };
+
   const filtered = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const openNew = () => { setForm(emptyForm); setSelectedId(null); setDialogOpen(true); };
+  const openNew = () => { setForm(emptyForm); setSelectedId(null); setPermissions([]); setDialogOpen(true); };
   const openEdit = (user: any) => {
     setForm({
       name: user.name, email: user.email,
       access_profile: user.access_profile, active: user.active,
     });
     setSelectedId(user.id);
+    setPermissions([]);
     setDialogOpen(true);
+    if (isAdmin) fetchPermissions(user.id);
   };
 
   const handleSave = async () => {
@@ -211,6 +255,25 @@ export default function InternalUsersRegistration() {
               <Switch checked={form.active} onCheckedChange={v => updateField('active', v)} />
               <Label>Ativo</Label>
             </div>
+
+            {isAdmin && selectedId && (
+              <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+                <div>
+                  <Label className="text-sm font-semibold">Permissões especiais</Label>
+                  <p className="text-xs text-muted-foreground">Concedem acessos específicos sem tornar o usuário administrador.</p>
+                </div>
+                {SPECIAL_PERMISSIONS.map(p => (
+                  <div key={p.key} className="flex items-center justify-between gap-3">
+                    <Label className="font-normal">{p.label}</Label>
+                    <Switch
+                      checked={permissions.includes(p.key)}
+                      disabled={permSaving === p.key}
+                      onCheckedChange={v => togglePermission(p.key, v)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <DialogFooter className="mt-4">
