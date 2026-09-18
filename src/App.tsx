@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import SlaCatalogPage from "./pages/SlaCatalogPage";
+import OnboardingProcedure from "./pages/OnboardingProcedure";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
           <Route path="/gclick-sync" element={<AuthGuard><GClickSync /></AuthGuard>} />
           <Route path="/prazos" element={<AuthGuard><SlaCatalogPage /></AuthGuard>} />
+          <Route path="/procedimento-onboarding" element={<AuthGuard><OnboardingProcedure /></AuthGuard>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
