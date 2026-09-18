@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2 } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2, LayoutGrid, CalendarDays } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { OnboardingSlaPanel } from '@/components/OnboardingSlaPanel';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
@@ -400,16 +400,35 @@ export default function Onboarding() {
           </div>
         </div>
 
-        {/* Type tabs */}
-        <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)} className="mb-4">
-          <TabsList>
-            <TabsTrigger value="all">Todos</TabsTrigger>
-            <TabsTrigger value="empresa_existente">Empresa Existente</TabsTrigger>
-            <TabsTrigger value="empresa_nova">Empresa Nova</TabsTrigger>
-            <TabsTrigger value="em_constituicao">Em Constituição</TabsTrigger>
-            <TabsTrigger value="vmk_parceria">Parceria VMk</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Type tabs + view toggle */}
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
+            <TabsList>
+              <TabsTrigger value="all">Todos</TabsTrigger>
+              <TabsTrigger value="empresa_existente">Empresa Existente</TabsTrigger>
+              <TabsTrigger value="empresa_nova">Empresa Nova</TabsTrigger>
+              <TabsTrigger value="em_constituicao">Em Constituição</TabsTrigger>
+              <TabsTrigger value="vmk_parceria">Parceria VMk</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="inline-flex rounded-md border bg-muted p-1">
+            <button
+              onClick={() => changeViewMode('board')}
+              className={cn('px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5',
+                viewMode === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Quadro
+            </button>
+            <button
+              onClick={() => changeViewMode('calendar')}
+              className={cn('px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5',
+                viewMode === 'calendar' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> Calendário
+            </button>
+          </div>
+        </div>
+
 
         <OnboardingSlaPanel
           typeFilter={typeFilter}
