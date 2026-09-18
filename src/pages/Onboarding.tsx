@@ -1014,7 +1014,7 @@ export default function Onboarding() {
           segment: (selectedData?.client as any)?.segment,
         }}
       />
-      )}
+
 
       {/* Constituição info dialog */}
       <Dialog open={constInfoOpen} onOpenChange={setConstInfoOpen}>
