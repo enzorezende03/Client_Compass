@@ -76,8 +76,6 @@ export default function InternalUsersRegistration() {
     setPermSaving(permission);
     let error: any = null;
     if (enabled) {
-      const me = users.find(u => u.access_profile === 'admin' && u.id === selectedId);
-      void me;
       ({ error } = await supabase
         .from('internal_user_permissions' as any)
         .insert({ internal_user_id: selectedId, permission } as any));
