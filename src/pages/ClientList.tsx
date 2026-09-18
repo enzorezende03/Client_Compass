@@ -190,7 +190,7 @@ export default function ClientList() {
     worksheet['!cols'] = Array.from({ length: Object.keys(rows[0] || {}).length }, () => ({ wch: 24 }));
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
-    XLSX.writeFile(workbook, `${VIEW_LABELS[selectedView].toLocaleLowerCase('pt-BR').replaceAll(' ', '-')}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(workbook, `${VIEW_LABELS[selectedView].toLocaleLowerCase('pt-BR').replace(/ /g, '-')}-${new Date().toISOString().slice(0, 10)}.xlsx`);
     toast({ title: 'Relatório baixado', description: `${rows.length} cliente(s) exportado(s).` });
   };
 
