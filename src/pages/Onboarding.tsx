@@ -377,6 +377,16 @@ export default function Onboarding() {
           </TabsList>
         </Tabs>
 
+        <OnboardingSlaPanel
+          typeFilter={typeFilter}
+          onOverdueChange={setOverdueByClient}
+          onSelectClient={(clientId) => {
+            const c = clients.find(x => x.id === clientId);
+            if (c) setSelectedClient(c);
+          }}
+        />
+
+
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
