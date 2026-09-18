@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2, Download, Archive, ArchiveRestore, MoreVertical } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2, Download, Archive, ArchiveRestore, MoreVertical, HeartPulse, ShieldAlert, Stethoscope, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
