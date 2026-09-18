@@ -489,6 +489,113 @@ export type Database = {
           },
         ]
       }
+      demand_sla_catalog: {
+        Row: {
+          active: boolean
+          created_at: string
+          demand_name: string
+          id: string
+          notes: string
+          sector: string
+          sla_unit: string
+          sla_value: number
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          demand_name: string
+          id?: string
+          notes?: string
+          sector: string
+          sla_unit: string
+          sla_value: number
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          demand_name?: string
+          id?: string
+          notes?: string
+          sector?: string
+          sla_unit?: string
+          sla_value?: number
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_sla_catalog_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_sla_catalog_history: {
+        Row: {
+          action: string
+          catalog_id: string | null
+          changed_by: string | null
+          changed_by_name: string
+          created_at: string
+          demand_name: string
+          field_name: string
+          id: string
+          new_value: string
+          old_value: string
+          sector: string
+        }
+        Insert: {
+          action: string
+          catalog_id?: string | null
+          changed_by?: string | null
+          changed_by_name?: string
+          created_at?: string
+          demand_name: string
+          field_name: string
+          id?: string
+          new_value?: string
+          old_value?: string
+          sector: string
+        }
+        Update: {
+          action?: string
+          catalog_id?: string | null
+          changed_by?: string | null
+          changed_by_name?: string
+          created_at?: string
+          demand_name?: string
+          field_name?: string
+          id?: string
+          new_value?: string
+          old_value?: string
+          sector?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_sla_catalog_history_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "demand_sla_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demand_sla_catalog_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digisac_complaints: {
         Row: {
           contact_name: string

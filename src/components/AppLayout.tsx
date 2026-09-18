@@ -1,5 +1,6 @@
 import { NavLink } from '@/components/NavLink';
 import { NotificationBell } from '@/components/NotificationBell';
+import { SlaCatalogSheet } from '@/components/SlaCatalogSheet';
 import { UrgentTaskAlert } from '@/components/UrgentTaskAlert';
 import { Users, Building2, LayoutDashboard, CalendarClock, LogOut, RefreshCw, Rocket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -70,6 +71,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             G-Click
           </NavLink>
           <div className="ml-auto flex items-center gap-2">
+            <SlaCatalogSheet />
             <NotificationBell />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
