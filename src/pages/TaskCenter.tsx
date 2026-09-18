@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock, MessageSquare
+  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock, MessageSquare, LayoutGrid, CalendarDays
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { STAGE_LABELS as ONBOARDING_STAGE_LABELS, forceUnlockByChecklistItem } from '@/lib/onboarding';
+import { CalendarView, CalendarEvent, eventStatusForDate } from '@/components/calendar/CalendarView';
 
 interface TaskRow {
   id: string;
@@ -107,6 +108,14 @@ export default function TaskCenter() {
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [deadlineView, setDeadlineView] = useState<'client' | 'internal'>('client');
   const [activeTab, setActiveTab] = useState<'regular' | 'onboarding'>('regular');
+  const [viewMode, setViewMode] = useState<'board' | 'calendar'>(() => {
+    try { return localStorage.getItem('cshub:tasks:viewMode') === 'calendar' ? 'calendar' : 'board'; } catch { return 'board'; }
+  });
+  const [viewAll, setViewAll] = useState(false);
+  const changeViewMode = (mode: 'board' | 'calendar') => {
+    setViewMode(mode);
+    try { localStorage.setItem('cshub:tasks:viewMode', mode); } catch { /* indisponível */ }
+  };
 
   // Reschedule
   const [rescheduleTask, setRescheduleTask] = useState<TaskRow | null>(null);
