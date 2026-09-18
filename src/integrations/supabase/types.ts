@@ -960,6 +960,7 @@ export type Database = {
           responsible: string
           responsible_id: string | null
           scheduled_time: string | null
+          source_timeline_entry_id: string | null
           status: string
           title: string
           unlocked_at: string | null
@@ -985,6 +986,7 @@ export type Database = {
           responsible?: string
           responsible_id?: string | null
           scheduled_time?: string | null
+          source_timeline_entry_id?: string | null
           status?: string
           title: string
           unlocked_at?: string | null
@@ -1010,6 +1012,7 @@ export type Database = {
           responsible?: string
           responsible_id?: string | null
           scheduled_time?: string | null
+          source_timeline_entry_id?: string | null
           status?: string
           title?: string
           unlocked_at?: string | null
@@ -1043,12 +1046,20 @@ export type Database = {
             referencedRelation: "internal_users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tasks_source_timeline_entry_id_fkey"
+            columns: ["source_timeline_entry_id"]
+            isOneToOne: false
+            referencedRelation: "timeline_entries"
+            referencedColumns: ["id"]
+          },
         ]
       }
       timeline_entries: {
         Row: {
           client_id: string
           created_at: string
+          created_by: string | null
           date: string
           demand_status: string
           description: string
@@ -1056,6 +1067,7 @@ export type Database = {
           is_relevant_event: boolean
           origin: string
           relevant_event_type: string | null
+          responsibility_origin: string | null
           responsible: string
           sector: string
           type: string
@@ -1063,6 +1075,7 @@ export type Database = {
         Insert: {
           client_id: string
           created_at?: string
+          created_by?: string | null
           date?: string
           demand_status?: string
           description?: string
@@ -1070,6 +1083,7 @@ export type Database = {
           is_relevant_event?: boolean
           origin?: string
           relevant_event_type?: string | null
+          responsibility_origin?: string | null
           responsible?: string
           sector?: string
           type?: string
@@ -1077,6 +1091,7 @@ export type Database = {
         Update: {
           client_id?: string
           created_at?: string
+          created_by?: string | null
           date?: string
           demand_status?: string
           description?: string
@@ -1084,6 +1099,7 @@ export type Database = {
           is_relevant_event?: boolean
           origin?: string
           relevant_event_type?: string | null
+          responsibility_origin?: string | null
           responsible?: string
           sector?: string
           type?: string
@@ -1096,6 +1112,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "timeline_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -1106,6 +1129,29 @@ export type Database = {
       bootstrap_onboarding_locks: {
         Args: { p_client_id: string }
         Returns: undefined
+      }
+      create_interaction_with_task: {
+        Args: {
+          p_client_id: string
+          p_create_task?: boolean
+          p_demand_status: string
+          p_description: string
+          p_is_relevant?: boolean
+          p_origin: string
+          p_relevant_type?: string
+          p_responsibility_origin?: string
+          p_responsible: string
+          p_sector: string
+          p_task_client_due_date?: string
+          p_task_due_date?: string
+          p_task_internal_due_date?: string
+          p_task_responsible?: string
+          p_task_responsible_id?: string
+          p_task_time?: string
+          p_task_title?: string
+          p_type: string
+        }
+        Returns: Json
       }
       dashboard_health_counts: { Args: never; Returns: Json }
       has_permission: { Args: { _permission: string }; Returns: boolean }
