@@ -81,6 +81,9 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
   const [rows, setRows] = useState<SlaRow[]>([]);
   const [completed, setCompleted] = useState<{ id: string; onboarding_type: string | null; started: string | null; done: string | null }[]>([]);
   const [month, setMonth] = useState(currentMonth());
+  const [churn, setChurn] = useState<ChurnMetrics | null>(null);
+  const [churnOpen, setChurnOpen] = useState(false);
+  const [churnList, setChurnList] = useState<any[]>([]);
 
   const fetchData = useCallback(async () => {
     const [slaRes, doneRes] = await Promise.all([
@@ -98,6 +101,27 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const loadChurn = useCallback(async () => {
+    setChurn(await fetchChurnMetrics(month));
+    const { start, end } = monthRange(month);
+    const [termRes, usersRes] = await Promise.all([
+      supabase.from('client_terminations' as any)
+        .select('*, clients(name)')
+        .gte('request_date', start).lte('request_date', end)
+        .is('reverted_at', null)
+        .order('request_date', { ascending: false }),
+      supabase.from('internal_users').select('id,name'),
+    ]);
+    const userMap = Object.fromEntries(((usersRes.data as any[]) || []).map(u => [u.id, u.name]));
+    setChurnList(((termRes.data as any[]) || []).map(t => ({
+      ...t,
+      client_name: t.clients?.name || '—',
+      registered_by_name: t.registered_by ? (userMap[t.registered_by] || '—') : '—',
+    })));
+  }, [month]);
+
+  useEffect(() => { loadChurn(); }, [loadChurn]);
 
   useEffect(() => {
     const ch = supabase
