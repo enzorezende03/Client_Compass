@@ -100,14 +100,16 @@ export default function InternalUsersRegistration() {
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const openNew = () => { setForm(emptyForm); setSelectedId(null); setDialogOpen(true); };
+  const openNew = () => { setForm(emptyForm); setSelectedId(null); setPermissions([]); setDialogOpen(true); };
   const openEdit = (user: any) => {
     setForm({
       name: user.name, email: user.email,
       access_profile: user.access_profile, active: user.active,
     });
     setSelectedId(user.id);
+    setPermissions([]);
     setDialogOpen(true);
+    if (isAdmin) fetchPermissions(user.id);
   };
 
   const handleSave = async () => {
