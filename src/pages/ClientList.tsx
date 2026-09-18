@@ -103,6 +103,10 @@ export default function ClientList() {
       return data as HealthCounts;
     },
   });
+  const { data: churn } = useQuery({
+    queryKey: ['churn-current-month'],
+    queryFn: () => fetchChurnMetrics(currentMonthKey()),
+  });
   const treatmentIds = new Set<string>(counts?.treatment_ids ?? []);
   const pct = (n: number) => {
     const total = counts?.total ?? 0;
