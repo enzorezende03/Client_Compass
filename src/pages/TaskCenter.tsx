@@ -698,7 +698,7 @@ export default function TaskCenter() {
               Prazo Interno
             </button>
           </div>
-          {activeTab === 'onboarding' && (
+          {(activeTab === 'onboarding' || (viewMode === 'calendar' && viewAll)) && (
             <div className="flex items-center gap-2 ml-auto">
               <Switch id="show-blocked" checked={showBlocked} onCheckedChange={setShowBlocked} />
               <Label htmlFor="show-blocked" className="text-xs text-muted-foreground cursor-pointer">
@@ -708,7 +708,7 @@ export default function TaskCenter() {
           )}
         </div>
 
-        {activeTab === 'onboarding' && (
+        {activeTab === 'onboarding' && viewMode === 'board' && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
             <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
               <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Em atraso</p>
@@ -731,6 +731,17 @@ export default function TaskCenter() {
 
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+        ) : viewMode === 'calendar' ? (
+          <CalendarView
+            events={calendarEvents}
+            storageKey="cshub:tasks:calendarView"
+            emptyLabel="Nenhuma tarefa"
+            onEventClick={(ev) => {
+              const task = tasks.find(t => t.id === ev.id);
+              if (task) openEdit(task);
+            }}
+            onEventDrop={handleCalendarDrop}
+          />
         ) : (
           <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-4', showBlocked && activeTab === 'onboarding' ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
             <KanbanColumn title="Atrasadas" icon={<AlertTriangle className="h-4 w-4" />} tasks={overdueTasks} variant="danger" dropStatus="pending" />
