@@ -474,6 +474,15 @@ export default function Onboarding() {
                             {!isDone && isComplete && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
                             <span className="line-clamp-2">{client.name}</span>
                           </div>
+                          {!isDone && overdueByClient[client.id] > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="mt-1.5 text-[10px] px-1.5 py-0 gap-1 border-destructive/60 text-destructive bg-destructive/10"
+                            >
+                              <AlertTriangle className="h-2.5 w-2.5" />
+                              {overdueByClient[client.id]} dia{overdueByClient[client.id] === 1 ? '' : 's'} atrasado
+                            </Badge>
+                          )}
                           <div className="flex items-center justify-between mt-1.5 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{days}d na etapa</span>
                             {!isDone && (
