@@ -423,6 +423,21 @@ export default function ClientDetail() {
           setOnboardingStatus(prev => prev === 'pending_handoff' ? 'pending_onboarding' : prev);
         }}
       />
+
+      <RegisterTerminationDialog
+        open={registerTerminationOpen}
+        onOpenChange={setRegisterTerminationOpen}
+        clientId={client.id}
+        onDone={afterTerminationChange}
+      />
+      {termination && (
+        <RevertTerminationDialog
+          open={revertTerminationOpen}
+          onOpenChange={setRevertTerminationOpen}
+          terminationId={termination.id}
+          onDone={afterTerminationChange}
+        />
+      )}
     </AppLayout>
   );
 }
