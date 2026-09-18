@@ -304,7 +304,16 @@ export default function ClientDetail() {
           </TabsList>
 
           <TabsContent value="timeline" className="mt-4">
-            {timeline.length > 0 ? <Timeline entries={timeline} /> : <div className="text-center py-12 text-muted-foreground">Nenhuma interação registrada.</div>}
+            {timeline.length > 0 ? (
+              <Timeline
+                entries={timeline}
+                tasksByEntry={tasksByEntry}
+                onClassify={handleClassify}
+                onGenerateTask={(e) => setGenTaskEntry(e)}
+                onOpenTask={() => navigate('/tarefas')}
+              />
+            ) : <div className="text-center py-12 text-muted-foreground">Nenhuma interação registrada.</div>}
+
           </TabsContent>
 
           <TabsContent value="repasse" className="mt-4">
