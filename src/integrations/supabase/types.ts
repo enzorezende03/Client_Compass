@@ -213,6 +213,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_onboarding_progress_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_sla_status"
+            referencedColumns: ["checklist_item_id"]
+          },
+          {
             foreignKeyName: "client_onboarding_progress_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
@@ -887,6 +894,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "task_force_unlocks_progress_id_fkey"
+            columns: ["progress_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_sla_status"
+            referencedColumns: ["progress_id"]
+          },
+          {
             foreignKeyName: "task_force_unlocks_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -1026,6 +1040,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_sla_status"
+            referencedColumns: ["checklist_item_id"]
+          },
+          {
             foreignKeyName: "tasks_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
@@ -1123,7 +1144,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      onboarding_sla_status: {
+        Row: {
+          checklist_item_id: string | null
+          client_id: string | null
+          client_name: string | null
+          concluded_at: string | null
+          cs_responsible: string | null
+          current_stage: string | null
+          days_overdue: number | null
+          due_at: string | null
+          force_unlocked: boolean | null
+          is_overdue: boolean | null
+          is_required: boolean | null
+          item_title: string | null
+          locked: boolean | null
+          onboarding_status: string | null
+          onboarding_type: string | null
+          order_index: number | null
+          progress_id: string | null
+          responsible: string | null
+          stage: string | null
+          unlocked_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_onboarding_progress_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       bootstrap_onboarding_locks: {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2 } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
+import { OnboardingSlaPanel } from '@/components/OnboardingSlaPanel';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
 import { ConvertToNewCompanyDialog } from '@/components/ConvertToNewCompanyDialog';
 import { AppLayout } from '@/components/AppLayout';
@@ -106,6 +107,7 @@ export default function Onboarding() {
   const [cancelling, setCancelling] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropStage, setDropStage] = useState<OnboardingStage | null>(null);
+  const [overdueByClient, setOverdueByClient] = useState<Record<string, number>>({});
 
   const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -377,6 +379,16 @@ export default function Onboarding() {
           </TabsList>
         </Tabs>
 
+        <OnboardingSlaPanel
+          typeFilter={typeFilter}
+          onOverdueChange={setOverdueByClient}
+          onSelectClient={(clientId) => {
+            const c = clients.find(x => x.id === clientId);
+            if (c) setSelectedClient(c);
+          }}
+        />
+
+
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -462,6 +474,15 @@ export default function Onboarding() {
                             {!isDone && isComplete && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
                             <span className="line-clamp-2">{client.name}</span>
                           </div>
+                          {!isDone && overdueByClient[client.id] > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="mt-1.5 text-[10px] px-1.5 py-0 gap-1 border-destructive/60 text-destructive bg-destructive/10"
+                            >
+                              <AlertTriangle className="h-2.5 w-2.5" />
+                              {overdueByClient[client.id]} dia{overdueByClient[client.id] === 1 ? '' : 's'} atrasado
+                            </Badge>
+                          )}
                           <div className="flex items-center justify-between mt-1.5 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{days}d na etapa</span>
                             {!isDone && (

@@ -101,10 +101,13 @@ Deno.serve(async (req) => {
     // ===== PARTE 2: Notificações por proximidade de prazo =====
     const { data: pendingTasks } = await supabase
       .from("tasks")
-      .select("id, title, client_id, responsible_id, due_date, internal_due_date, client_due_date")
+      .select("id, title, client_id, responsible_id, due_date, internal_due_date, client_due_date, locked")
       .eq("status", "pending");
 
     for (const task of pendingTasks || []) {
+      // Itens de onboarding ainda bloqueados (aguardando a etapa anterior) nunca notificam:
+      // o prazo só passa a contar a partir do desbloqueio.
+      if ((task as any).locked === true) continue;
       const effectiveDate: string =
         (task as any).client_due_date || (task as any).internal_due_date || task.due_date;
       if (!effectiveDate) continue;
