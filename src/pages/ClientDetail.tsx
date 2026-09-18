@@ -87,6 +87,8 @@ export default function ClientDetail() {
   const [strategicOpen, setStrategicOpen] = useState(true);
   const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
+  const [genTaskEntry, setGenTaskEntry] = useState<TimelineEntry | null>(null);
+
 
   const reloadHandoff = useCallback(async () => {
     if (!id) return;
