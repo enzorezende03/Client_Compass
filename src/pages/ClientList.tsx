@@ -564,7 +564,11 @@ function StatCard({ icon: Icon, label, value, variant, onClick, active, percent,
         <Icon className={`h-4 w-4 ${variant ? colors[variant] : 'text-muted-foreground'}`} />
         <span className="text-xs text-muted-foreground">{label}</span>
       </div>
-      <p className={`text-2xl font-bold ${variant ? colors[variant] : 'text-foreground'}`}>{value}</p>
+      <div className="flex items-baseline gap-2">
+        <p className={`text-2xl font-bold ${variant ? colors[variant] : 'text-foreground'}`}>{value}</p>
+        {percent && <span className="text-xs text-muted-foreground">{percent}</span>}
+      </div>
+      {footer && <p className="mt-1 text-[11px] leading-tight text-muted-foreground">{footer}</p>}
     </div>
   );
 }
