@@ -11,6 +11,13 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
+import { useIsAdmin, type AppPermission } from '@/hooks/usePermission';
+
+const SPECIAL_PERMISSIONS: { key: AppPermission; label: string }[] = [
+  { key: 'manage_sla_catalog', label: 'Gerenciar prazos de demandas' },
+  { key: 'manage_onboarding_procedures', label: 'Gerenciar procedimento de onboarding' },
+];
+
 
 
 const ACCESS_PROFILE_LABELS: Record<string, string> = {
