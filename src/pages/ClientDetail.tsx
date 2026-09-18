@@ -194,9 +194,6 @@ export default function ClientDetail() {
     return <AppLayout><div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Cliente não encontrado.</p></div></AppLayout>;
   }
 
-  const handleNewInteraction = (entry: Omit<TimelineEntry, 'id'>) => {
-    setTimeline(prev => [{ ...entry, id: `t${Date.now()}` }, ...prev]);
-  };
 
   const toggleTask = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
