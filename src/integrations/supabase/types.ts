@@ -242,6 +242,76 @@ export type Database = {
           },
         ]
       }
+      client_terminations: {
+        Row: {
+          client_id: string
+          created_at: string
+          during_onboarding: boolean
+          effective_date: string | null
+          id: string
+          monthly_fee_at_termination: number | null
+          reason_category: string
+          reason_detail: string
+          registered_by: string | null
+          request_date: string
+          revert_reason: string | null
+          reverted_at: string | null
+          reverted_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          during_onboarding?: boolean
+          effective_date?: string | null
+          id?: string
+          monthly_fee_at_termination?: number | null
+          reason_category: string
+          reason_detail?: string
+          registered_by?: string | null
+          request_date: string
+          revert_reason?: string | null
+          reverted_at?: string | null
+          reverted_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          during_onboarding?: boolean
+          effective_date?: string | null
+          id?: string
+          monthly_fee_at_termination?: number | null
+          reason_category?: string
+          reason_detail?: string
+          registered_by?: string | null
+          request_date?: string
+          revert_reason?: string | null
+          reverted_at?: string | null
+          reverted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_terminations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_terminations_registered_by_fkey"
+            columns: ["registered_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_terminations_reverted_by_fkey"
+            columns: ["reverted_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           action_plan: string | null
@@ -1183,6 +1253,7 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: undefined
       }
+      churn_metrics: { Args: { p_end: string; p_start: string }; Returns: Json }
       create_interaction_with_task: {
         Args: {
           p_client_id: string
@@ -1216,6 +1287,10 @@ export type Database = {
         Returns: string
       }
       onboarding_stage_sequence: { Args: { p_type: string }; Returns: string[] }
+      revert_termination: {
+        Args: { p_reason: string; p_termination_id: string }
+        Returns: undefined
+      }
       seed_onboarding_stage: {
         Args: { p_client_id: string; p_locked?: boolean; p_stage: string }
         Returns: undefined
