@@ -98,23 +98,36 @@ export default function ClientDetail() {
     setContacts(cts || []);
   }, [id]);
 
+  const loadTimelineAndTasks = useCallback(async () => {
+    if (!id) return;
+    const [timelineRes, tasksRes, usersRes] = await Promise.all([
+      supabase.from('timeline_entries').select('*').eq('client_id', id).order('date', { ascending: false }),
+      supabase.from('tasks').select('*').eq('client_id', id).order('due_date'),
+      supabase.from('internal_users').select('id, name'),
+    ]);
+    const userMap = Object.fromEntries(((usersRes.data as any[]) || []).map(u => [u.id, u.name]));
+    setTimeline(((timelineRes.data as any[]) || []).map(r => {
+      const e = mapTimeline(r);
+      return { ...e, createdByName: e.createdBy ? (userMap[e.createdBy] || null) : null };
+    }));
+    setTasks(((tasksRes.data as any[]) || []).map(mapTask));
+  }, [id]);
+
   useEffect(() => {
     if (!id) return;
     Promise.all([
       supabase.from('clients').select('*').eq('id', id).single(),
-      supabase.from('timeline_entries').select('*').eq('client_id', id).order('date', { ascending: false }),
-      supabase.from('tasks').select('*').eq('client_id', id).order('due_date'),
-    ]).then(([clientRes, timelineRes, tasksRes]) => {
+      loadTimelineAndTasks(),
+    ]).then(([clientRes]) => {
       if (clientRes.data) {
         setClient(mapClient(clientRes.data));
         setOnboardingStatus((clientRes.data as any).onboarding_status || 'pending_handoff');
       }
-      setTimeline((timelineRes.data || []).map(mapTimeline));
-      setTasks((tasksRes.data || []).map(mapTask));
       setLoading(false);
     });
     reloadHandoff();
-  }, [id, reloadHandoff]);
+  }, [id, reloadHandoff, loadTimelineAndTasks]);
+
 
   const getOldValue = (fieldKey: string): string => {
     if (!client) return '';
