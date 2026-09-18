@@ -94,11 +94,12 @@ export default function ClientList() {
   const [unarchiveTarget, setUnarchiveTarget] = useState<ClientWithArchive | null>(null);
 
   const loadClients = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard-health-counts'] });
     supabase.from('clients').select('*').order('name').then(({ data }) => {
       setClients((data || []).map(mapRow));
       setLoading(false);
     });
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => { loadClients(); }, [loadClients]);
 
