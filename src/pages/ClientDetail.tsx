@@ -15,6 +15,11 @@ import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
 import { GenerateTaskFromEntryDialog } from '@/components/GenerateTaskFromEntryDialog';
+import { RegisterTerminationDialog, RevertTerminationDialog } from '@/components/TerminationDialog';
+import { TERMINATION_REASON_LABELS, Termination } from '@/lib/churn';
+import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreVertical } from 'lucide-react';
 
 import { EditableStrategicCard } from '@/components/EditableStrategicCard';
 import { supabase } from '@/integrations/supabase/client';
@@ -90,6 +95,21 @@ export default function ClientDetail() {
   const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
   const [genTaskEntry, setGenTaskEntry] = useState<TimelineEntry | null>(null);
+  const [termination, setTermination] = useState<Termination | null>(null);
+  const [registerTerminationOpen, setRegisterTerminationOpen] = useState(false);
+  const [revertTerminationOpen, setRevertTerminationOpen] = useState(false);
+
+  const reloadTermination = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from('client_terminations' as any)
+      .select('*')
+      .eq('client_id', id)
+      .is('reverted_at', null)
+      .maybeSingle();
+    setTermination((data as any) || null);
+  }, [id]);
+
 
 
   const reloadHandoff = useCallback(async () => {
@@ -116,6 +136,16 @@ export default function ClientDetail() {
     }));
     setTasks(((tasksRes.data as any[]) || []).map(mapTask));
   }, [id]);
+
+  const afterTerminationChange = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase.from('clients').select('*').eq('id', id).single();
+    if (data) setClient(mapClient(data));
+    await Promise.all([reloadTermination(), loadTimelineAndTasks()]);
+    setAuditRefreshKey(k => k + 1);
+  }, [id, reloadTermination, loadTimelineAndTasks]);
+
+  useEffect(() => { reloadTermination(); }, [reloadTermination]);
 
   useEffect(() => {
     if (!id) return;
@@ -230,6 +260,12 @@ export default function ClientDetail() {
                 <ServiceTierBadge profile={client.profile as ClientProfile} />
                 <HealthScoreBadge score={client.healthScore} size="lg" />
                 <FinancialStatusBadge status={client.financialStatus} />
+                {termination && (
+                  <Badge variant="outline" className="border-destructive/50 text-destructive">
+                    Distrato em {new Date(termination.request_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    {' · '}{TERMINATION_REASON_LABELS[termination.reason_category]}
+                  </Badge>
+                )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 <ProfileInfoCard label="Segmento" value={client.segment} />
@@ -251,6 +287,24 @@ export default function ClientDetail() {
               <Button onClick={() => setInteractionOpen(true)} className="gap-2 shadow-md">
                 <Plus className="h-4 w-4" /> Nova Interação
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="shadow-sm" aria-label="Mais ações">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {termination ? (
+                    <DropdownMenuItem onClick={() => setRevertTerminationOpen(true)}>
+                      Reverter distrato
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setRegisterTerminationOpen(true)}>
+                      Registrar distrato
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -369,6 +423,21 @@ export default function ClientDetail() {
           setOnboardingStatus(prev => prev === 'pending_handoff' ? 'pending_onboarding' : prev);
         }}
       />
+
+      <RegisterTerminationDialog
+        open={registerTerminationOpen}
+        onOpenChange={setRegisterTerminationOpen}
+        clientId={client.id}
+        onDone={afterTerminationChange}
+      />
+      {termination && (
+        <RevertTerminationDialog
+          open={revertTerminationOpen}
+          onOpenChange={setRevertTerminationOpen}
+          terminationId={termination.id}
+          onDone={afterTerminationChange}
+        />
+      )}
     </AppLayout>
   );
 }

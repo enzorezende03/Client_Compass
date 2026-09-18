@@ -2,8 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Clock, CheckCircle2, TrendingDown, Users, Gauge } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import {
+  ChurnMetrics, fetchChurnMetrics, formatBRL, monthRange, TERMINATION_REASON_LABELS, TerminationReason,
+} from '@/lib/churn';
 import {
   OnboardingType, OnboardingStage, STAGE_SHORT, ONBOARDING_TYPE_LABELS,
 } from '@/lib/onboarding';
@@ -77,6 +81,9 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
   const [rows, setRows] = useState<SlaRow[]>([]);
   const [completed, setCompleted] = useState<{ id: string; onboarding_type: string | null; started: string | null; done: string | null }[]>([]);
   const [month, setMonth] = useState(currentMonth());
+  const [churn, setChurn] = useState<ChurnMetrics | null>(null);
+  const [churnOpen, setChurnOpen] = useState(false);
+  const [churnList, setChurnList] = useState<any[]>([]);
 
   const fetchData = useCallback(async () => {
     const [slaRes, doneRes] = await Promise.all([
@@ -94,6 +101,27 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const loadChurn = useCallback(async () => {
+    setChurn(await fetchChurnMetrics(month));
+    const { start, end } = monthRange(month);
+    const [termRes, usersRes] = await Promise.all([
+      supabase.from('client_terminations' as any)
+        .select('*, clients(name)')
+        .gte('request_date', start).lte('request_date', end)
+        .is('reverted_at', null)
+        .order('request_date', { ascending: false }),
+      supabase.from('internal_users').select('id,name'),
+    ]);
+    const userMap = Object.fromEntries(((usersRes.data as any[]) || []).map(u => [u.id, u.name]));
+    setChurnList(((termRes.data as any[]) || []).map(t => ({
+      ...t,
+      client_name: t.clients?.name || '—',
+      registered_by_name: t.registered_by ? (userMap[t.registered_by] || '—') : '—',
+    })));
+  }, [month]);
+
+  useEffect(() => { loadChurn(); }, [loadChurn]);
 
   useEffect(() => {
     const ch = supabase
@@ -212,13 +240,26 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
           subtitle="clientes concluídos no mês selecionado"
           icon={<Gauge className="h-3.5 w-3.5" />}
         />
-        <Card
-          title="Churn do período"
-          value="—"
-          subtitle="Em breve"
-          icon={<TrendingDown className="h-3.5 w-3.5" />}
-          muted
-        />
+        <button
+          type="button"
+          onClick={() => setChurnOpen(true)}
+          className={cn(
+            'rounded-lg border bg-card p-4 flex flex-col gap-1 text-left transition-colors hover:bg-muted/40',
+            (churn?.distratos_periodo ?? 0) > 0 ? 'border-destructive/60 bg-destructive/5' : 'border-border',
+          )}
+        >
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <TrendingDown className="h-3.5 w-3.5" /><span className="truncate">Churn do período</span>
+          </div>
+          <div className={cn('text-2xl font-bold',
+            (churn?.distratos_periodo ?? 0) > 0 ? 'text-destructive' : 'text-foreground')}>
+            {(churn?.taxa_churn ?? 0).toString().replace('.', ',')}%
+          </div>
+          <div className="text-[11px] text-muted-foreground leading-tight">
+            {churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'} ·{' '}
+            {formatBRL(churn?.receita_mensal_perdida)} · {churn?.distratos_durante_onboarding ?? 0} durante o onboarding
+          </div>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -316,6 +357,45 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
           </div>
         )}
       </div>
+
+      <Dialog open={churnOpen} onOpenChange={setChurnOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Distratos do período</DialogTitle>
+            <DialogDescription>
+              {churnList.length} distrato{churnList.length === 1 ? '' : 's'} registrado
+              {churnList.length === 1 ? '' : 's'} no mês selecionado ·{' '}
+              {churn?.distratos_revertidos ?? 0} revertido(s)
+            </DialogDescription>
+          </DialogHeader>
+          {churnList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum distrato no período.</p>
+          ) : (
+            <div className="divide-y divide-border max-h-[420px] overflow-auto">
+              {churnList.map(t => (
+                <div key={t.id} className="py-2.5 flex items-center gap-3 flex-wrap text-xs">
+                  <span className="font-medium text-sm text-foreground min-w-[180px] truncate">{t.client_name}</span>
+                  <span className="text-muted-foreground">
+                    {new Date(t.request_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {TERMINATION_REASON_LABELS[t.reason_category as TerminationReason] || t.reason_category}
+                  </Badge>
+                  {t.during_onboarding && (
+                    <Badge variant="outline" className="text-[10px] border-destructive/50 text-destructive">
+                      durante o onboarding
+                    </Badge>
+                  )}
+                  <span className="text-muted-foreground flex-1 min-w-[100px]">
+                    {formatBRL(t.monthly_fee_at_termination)}
+                  </span>
+                  <span className="text-muted-foreground">Registrado por {t.registered_by_name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

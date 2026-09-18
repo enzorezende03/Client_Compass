@@ -18,6 +18,7 @@ import { Client, STATUS_LABELS, COMPLEXITY_LABELS, COMPLEXITY_EMOJIS, HEALTH_LAB
 import { AppLayout } from '@/components/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { currentMonthKey, fetchChurnMetrics, formatBRL } from '@/lib/churn';
 
 interface ClientWithArchive extends Client {
   archived?: boolean;
@@ -101,6 +102,10 @@ export default function ClientList() {
       if (error) throw error;
       return data as HealthCounts;
     },
+  });
+  const { data: churn } = useQuery({
+    queryKey: ['churn-current-month'],
+    queryFn: () => fetchChurnMetrics(currentMonthKey()),
   });
   const treatmentIds = new Set<string>(counts?.treatment_ids ?? []);
   const pct = (n: number) => {
@@ -308,6 +313,15 @@ export default function ClientList() {
               active={!showArchived && cardFilter === 'suspended'}
             />
           </div>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            Churn do mês:{' '}
+            <span className={(churn?.distratos_periodo ?? 0) > 0 ? 'font-semibold text-destructive' : 'font-semibold text-foreground'}>
+              {(churn?.taxa_churn ?? 0).toString().replace('.', ',')}%
+            </span>
+            {' '}· {churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'}
+            {' '}· {formatBRL(churn?.receita_mensal_perdida)} de mensalidade perdida
+          </p>
 
           {cardFilter && !showArchived && (
             <div className="mt-4">
