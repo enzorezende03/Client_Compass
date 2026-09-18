@@ -297,12 +297,13 @@ export default function TaskCenter() {
     fetchData();
   };
 
-  const openReschedule = (task: TaskRow) => {
+  const openReschedule = (task: TaskRow, presetDate?: string) => {
     setRescheduleTask(task);
     setRescheduleReason('');
     const hasClient = !!task.client_due_date;
     const hasInternal = !!task.internal_due_date;
-    setRescheduleField(hasClient ? 'client' : hasInternal ? 'internal' : 'client');
+    setRescheduleField(presetDate ? deadlineView : hasClient ? 'client' : hasInternal ? 'internal' : 'client');
+    if (presetDate) { setRescheduleNewDate(presetDate); return; }
     const today = new Date();
     today.setDate(today.getDate() + 1);
     setRescheduleNewDate(today.toISOString().split('T')[0]);
