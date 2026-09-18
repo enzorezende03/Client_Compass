@@ -14,6 +14,8 @@ import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
+import { GenerateTaskFromEntryDialog } from '@/components/GenerateTaskFromEntryDialog';
+
 import { EditableStrategicCard } from '@/components/EditableStrategicCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
