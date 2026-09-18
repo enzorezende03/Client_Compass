@@ -964,6 +964,154 @@ export type Database = {
           },
         ]
       }
+      onboarding_procedure_history: {
+        Row: {
+          action: string
+          after_data: Json | null
+          before_data: Json | null
+          changed_by: string | null
+          changed_by_name: string
+          created_at: string
+          id: string
+          record_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_by?: string | null
+          changed_by_name?: string
+          created_at?: string
+          id?: string
+          record_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_by?: string | null
+          changed_by_name?: string
+          created_at?: string
+          id?: string
+          record_id?: string | null
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_procedure_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_procedure_items: {
+        Row: {
+          active: boolean
+          channel: string | null
+          content: string
+          created_at: string
+          id: string
+          kind: string
+          phase_id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          channel?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          kind: string
+          phase_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          channel?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          phase_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_procedure_items_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_procedure_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_procedure_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_procedure_phases: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          id: string
+          linked_stage_key: string | null
+          onboarding_type: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          id?: string
+          linked_stage_key?: string | null
+          onboarding_type?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          id?: string
+          linked_stage_key?: string | null
+          onboarding_type?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_procedure_phases_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operational_monthly_reports: {
         Row: {
           client_id: string
