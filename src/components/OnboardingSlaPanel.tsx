@@ -240,13 +240,26 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
           subtitle="clientes concluídos no mês selecionado"
           icon={<Gauge className="h-3.5 w-3.5" />}
         />
-        <Card
-          title="Churn do período"
-          value="—"
-          subtitle="Em breve"
-          icon={<TrendingDown className="h-3.5 w-3.5" />}
-          muted
-        />
+        <button
+          type="button"
+          onClick={() => setChurnOpen(true)}
+          className={cn(
+            'rounded-lg border bg-card p-4 flex flex-col gap-1 text-left transition-colors hover:bg-muted/40',
+            (churn?.distratos_periodo ?? 0) > 0 ? 'border-destructive/60 bg-destructive/5' : 'border-border',
+          )}
+        >
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <TrendingDown className="h-3.5 w-3.5" /><span className="truncate">Churn do período</span>
+          </div>
+          <div className={cn('text-2xl font-bold',
+            (churn?.distratos_periodo ?? 0) > 0 ? 'text-destructive' : 'text-foreground')}>
+            {(churn?.taxa_churn ?? 0).toString().replace('.', ',')}%
+          </div>
+          <div className="text-[11px] text-muted-foreground leading-tight">
+            {churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'} ·{' '}
+            {formatBRL(churn?.receita_mensal_perdida)} · {churn?.distratos_durante_onboarding ?? 0} durante o onboarding
+          </div>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
