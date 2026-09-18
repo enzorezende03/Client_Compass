@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock
+  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock, MessageSquare
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -45,6 +45,8 @@ interface TaskRow {
   last_rescheduled_at?: string | null;
   internal_due_date?: string | null;
   client_due_date?: string | null;
+  source_timeline_entry_id?: string | null;
+
 }
 
 interface RescheduleRow {
@@ -443,7 +445,16 @@ export default function TaskCenter() {
                   {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
                 </Badge>
               )}
+              {task.source_timeline_entry_id && (
+                <button onClick={() => navigate(`/client/${task.client_id}`)}>
+                  <Badge variant="outline" className="text-[10px] gap-1 border-primary/40 text-primary">
+                    <MessageSquare className="h-2.5 w-2.5" /> Origem: ocorrência
+                  </Badge>
+                </button>
+              )}
               {task.force_unlocked_by && (
+
+
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

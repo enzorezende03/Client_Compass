@@ -14,6 +14,8 @@ import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
 import { QuickInteractionModal } from '@/components/QuickInteractionModal';
+import { GenerateTaskFromEntryDialog } from '@/components/GenerateTaskFromEntryDialog';
+
 import { EditableStrategicCard } from '@/components/EditableStrategicCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +56,9 @@ function mapTimeline(r: any): TimelineEntry {
     description: r.description, responsible: r.responsible, sector: r.sector,
     origin: r.origin, demandStatus: r.demand_status,
     isRelevantEvent: r.is_relevant_event, relevantEventType: r.relevant_event_type,
+    responsibilityOrigin: r.responsibility_origin ?? null,
+    createdBy: r.created_by ?? null,
+    createdAt: r.created_at ?? null,
   };
 }
 
@@ -61,9 +66,10 @@ function mapTask(r: any): Task {
   return {
     id: r.id, clientId: r.client_id, title: r.title, responsible: r.responsible,
     dueDate: r.due_date, scheduledTime: r.scheduled_time, status: r.status,
-    createdAt: r.created_at,
+    createdAt: r.created_at, sourceTimelineEntryId: r.source_timeline_entry_id ?? null,
   };
 }
+
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -83,6 +89,8 @@ export default function ClientDetail() {
   const [strategicOpen, setStrategicOpen] = useState(true);
   const [strategicOverrides, setStrategicOverrides] = useState<Record<string, string>>({});
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
+  const [genTaskEntry, setGenTaskEntry] = useState<TimelineEntry | null>(null);
+
 
   const reloadHandoff = useCallback(async () => {
     if (!id) return;
@@ -94,23 +102,36 @@ export default function ClientDetail() {
     setContacts(cts || []);
   }, [id]);
 
+  const loadTimelineAndTasks = useCallback(async () => {
+    if (!id) return;
+    const [timelineRes, tasksRes, usersRes] = await Promise.all([
+      supabase.from('timeline_entries').select('*').eq('client_id', id).order('date', { ascending: false }),
+      supabase.from('tasks').select('*').eq('client_id', id).order('due_date'),
+      supabase.from('internal_users').select('id, name'),
+    ]);
+    const userMap = Object.fromEntries(((usersRes.data as any[]) || []).map(u => [u.id, u.name]));
+    setTimeline(((timelineRes.data as any[]) || []).map(r => {
+      const e = mapTimeline(r);
+      return { ...e, createdByName: e.createdBy ? (userMap[e.createdBy] || null) : null };
+    }));
+    setTasks(((tasksRes.data as any[]) || []).map(mapTask));
+  }, [id]);
+
   useEffect(() => {
     if (!id) return;
     Promise.all([
       supabase.from('clients').select('*').eq('id', id).single(),
-      supabase.from('timeline_entries').select('*').eq('client_id', id).order('date', { ascending: false }),
-      supabase.from('tasks').select('*').eq('client_id', id).order('due_date'),
-    ]).then(([clientRes, timelineRes, tasksRes]) => {
+      loadTimelineAndTasks(),
+    ]).then(([clientRes]) => {
       if (clientRes.data) {
         setClient(mapClient(clientRes.data));
         setOnboardingStatus((clientRes.data as any).onboarding_status || 'pending_handoff');
       }
-      setTimeline((timelineRes.data || []).map(mapTimeline));
-      setTasks((tasksRes.data || []).map(mapTask));
       setLoading(false);
     });
     reloadHandoff();
-  }, [id, reloadHandoff]);
+  }, [id, reloadHandoff, loadTimelineAndTasks]);
+
 
   const getOldValue = (fieldKey: string): string => {
     if (!client) return '';
@@ -147,6 +168,28 @@ export default function ClientDetail() {
 
   const clientTasks = useMemo(() => tasks.filter(t => t.clientId === id), [tasks, id]);
 
+  const tasksByEntry = useMemo(() => {
+    const map: Record<string, { id: string; title: string; status: string }> = {};
+    tasks.forEach(t => {
+      if (t.sourceTimelineEntryId) map[t.sourceTimelineEntryId] = { id: t.id, title: t.title, status: t.status };
+    });
+    return map;
+  }, [tasks]);
+
+  const handleClassify = useCallback(async (entry: TimelineEntry, value: 'escritorio' | 'cliente') => {
+    const { error } = await supabase
+      .from('timeline_entries')
+      .update({ responsibility_origin: value } as any)
+      .eq('id', entry.id);
+    if (error) {
+      toast({ title: 'Erro ao classificar', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setTimeline(prev => prev.map(e => e.id === entry.id ? { ...e, responsibilityOrigin: value } : e));
+    toast({ title: 'Classificação salva' });
+  }, [toast]);
+
+
   if (loading) {
     return <AppLayout><div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando...</div></AppLayout>;
   }
@@ -155,9 +198,6 @@ export default function ClientDetail() {
     return <AppLayout><div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Cliente não encontrado.</p></div></AppLayout>;
   }
 
-  const handleNewInteraction = (entry: Omit<TimelineEntry, 'id'>) => {
-    setTimeline(prev => [{ ...entry, id: `t${Date.now()}` }, ...prev]);
-  };
 
   const toggleTask = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
@@ -266,7 +306,16 @@ export default function ClientDetail() {
           </TabsList>
 
           <TabsContent value="timeline" className="mt-4">
-            {timeline.length > 0 ? <Timeline entries={timeline} /> : <div className="text-center py-12 text-muted-foreground">Nenhuma interação registrada.</div>}
+            {timeline.length > 0 ? (
+              <Timeline
+                entries={timeline}
+                tasksByEntry={tasksByEntry}
+                onClassify={handleClassify}
+                onGenerateTask={(e) => setGenTaskEntry(e)}
+                onOpenTask={() => navigate('/tarefas')}
+              />
+            ) : <div className="text-center py-12 text-muted-foreground">Nenhuma interação registrada.</div>}
+
           </TabsContent>
 
           <TabsContent value="repasse" className="mt-4">
@@ -296,7 +345,20 @@ export default function ClientDetail() {
         </Tabs>
       </div>
 
-      <QuickInteractionModal open={interactionOpen} onOpenChange={setInteractionOpen} clientId={client.id} onSubmit={handleNewInteraction} />
+      <QuickInteractionModal
+        open={interactionOpen}
+        onOpenChange={setInteractionOpen}
+        clientId={client.id}
+        clientName={client.name}
+        onSaved={loadTimelineAndTasks}
+      />
+      <GenerateTaskFromEntryDialog
+        entry={genTaskEntry}
+        clientName={client.name}
+        onOpenChange={(v) => { if (!v) setGenTaskEntry(null); }}
+        onCreated={loadTimelineAndTasks}
+      />
+
       <CommercialHandoffDialog
         open={handoffOpen}
         onOpenChange={setHandoffOpen}
