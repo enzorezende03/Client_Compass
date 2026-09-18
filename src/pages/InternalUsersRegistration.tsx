@@ -255,6 +255,25 @@ export default function InternalUsersRegistration() {
               <Switch checked={form.active} onCheckedChange={v => updateField('active', v)} />
               <Label>Ativo</Label>
             </div>
+
+            {isAdmin && selectedId && (
+              <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+                <div>
+                  <Label className="text-sm font-semibold">Permissões especiais</Label>
+                  <p className="text-xs text-muted-foreground">Concedem acessos específicos sem tornar o usuário administrador.</p>
+                </div>
+                {SPECIAL_PERMISSIONS.map(p => (
+                  <div key={p.key} className="flex items-center justify-between gap-3">
+                    <Label className="font-normal">{p.label}</Label>
+                    <Switch
+                      checked={permissions.includes(p.key)}
+                      disabled={permSaving === p.key}
+                      onCheckedChange={v => togglePermission(p.key, v)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <DialogFooter className="mt-4">
