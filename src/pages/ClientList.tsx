@@ -1,24 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Filter, Users, AlertTriangle, TrendingUp, Building2, Download, Archive, ArchiveRestore, MoreVertical, HeartPulse, ShieldAlert, Stethoscope, X } from 'lucide-react';
+import {
+  Archive, ArchiveRestore, ArrowRight, Building2, Download, HeartPulse,
+  Search, ShieldAlert, Stethoscope, TrendingDown, TrendingUp, Users,
+  AlertTriangle,
+} from 'lucide-react';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import * as XLSX from 'xlsx';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AppLayout } from '@/components/AppLayout';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
-import { Client, STATUS_LABELS, COMPLEXITY_LABELS, COMPLEXITY_EMOJIS, HEALTH_LABELS, PROFILE_LABELS, PROFILE_ICONS, FINANCIAL_LABELS, FINANCIAL_EMOJIS, ClientStatus, ComplexityLevel, HealthScore, FinancialStatus, ClientProfile } from '@/types/client';
-import { AppLayout } from '@/components/AppLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { currentMonthKey, fetchChurnMetrics, formatBRL } from '@/lib/churn';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Client, ClientStatus, ComplexityLevel, HealthScore, STATUS_LABELS,
+  COMPLEXITY_LABELS, HEALTH_LABELS, PROFILE_LABELS,
+} from '@/types/client';
+import { cn } from '@/lib/utils';
 
 interface ClientWithArchive extends Client {
   archived?: boolean;
@@ -27,38 +38,7 @@ interface ClientWithArchive extends Client {
   archivedBy?: string;
 }
 
-function mapRow(r: any): ClientWithArchive {
-  return {
-    id: r.id,
-    name: r.name,
-    document: r.document,
-    segment: r.segment,
-    contractStartDate: r.contract_start_date,
-    csResponsible: r.cs_responsible,
-    complexity: r.complexity as any,
-    status: r.status as any,
-    profile: r.profile as any,
-    financialStatus: r.financial_status as any,
-    healthScore: r.health_score as any,
-    painPoints: r.pain_points,
-    expectations: r.expectations,
-    attentionPoints: r.attention_points,
-    recurringIssues: r.recurring_issues,
-    behavioralProfile: r.behavioral_profile,
-    strategicNotes: r.strategic_notes,
-    riskReason: r.risk_reason ?? undefined,
-    riskType: r.risk_type ?? undefined,
-    riskIdentifiedDate: r.risk_identified_date ?? undefined,
-    actionPlan: r.action_plan ?? undefined,
-    taxation: r.taxation ?? undefined,
-    archived: r.archived ?? false,
-    archivedAt: r.archived_at ?? undefined,
-    archivedReason: r.archived_reason ?? '',
-    archivedBy: r.archived_by ?? '',
-  };
-}
-
-type CardFilter = 'total' | 'healthy' | 'attention' | 'critical' | 'treatment' | 'suspended' | null;
+type PortfolioView = 'total' | 'healthy' | 'attention' | 'critical' | 'treatment' | 'suspended' | 'archived';
 
 interface HealthCounts {
   total: number;
@@ -71,30 +51,66 @@ interface HealthCounts {
   treatment_ids: string[];
 }
 
-const CARD_LABELS: Record<Exclude<CardFilter, null>, string> = {
+const VIEW_LABELS: Record<PortfolioView, string> = {
   total: 'Total de clientes',
-  healthy: 'Saudáveis',
-  attention: 'Em atenção',
-  critical: 'Críticos',
-  treatment: 'Em tratamento',
+  healthy: 'Clientes saudáveis',
+  attention: 'Clientes em atenção',
+  critical: 'Clientes críticos',
+  treatment: 'Clientes em tratamento',
   suspended: 'Financeiro suspenso',
+  archived: 'Clientes arquivados',
 };
+
+const CHART_COLORS = {
+  healthy: 'hsl(var(--health-healthy))',
+  attention: 'hsl(var(--health-attention))',
+  critical: 'hsl(var(--health-critical))',
+};
+
+function mapRow(row: any): ClientWithArchive {
+  return {
+    id: row.id,
+    name: row.name,
+    document: row.document,
+    segment: row.segment,
+    contractStartDate: row.contract_start_date,
+    csResponsible: row.cs_responsible,
+    complexity: row.complexity,
+    status: row.status,
+    profile: row.profile,
+    financialStatus: row.financial_status,
+    healthScore: row.health_score,
+    painPoints: row.pain_points,
+    expectations: row.expectations,
+    attentionPoints: row.attention_points,
+    recurringIssues: row.recurring_issues,
+    behavioralProfile: row.behavioral_profile,
+    strategicNotes: row.strategic_notes,
+    riskReason: row.risk_reason ?? undefined,
+    riskType: row.risk_type ?? undefined,
+    riskIdentifiedDate: row.risk_identified_date ?? undefined,
+    actionPlan: row.action_plan ?? undefined,
+    taxation: row.taxation ?? undefined,
+    archived: row.archived ?? false,
+    archivedAt: row.archived_at ?? undefined,
+    archivedReason: row.archived_reason ?? '',
+    archivedBy: row.archived_by ?? '',
+  };
+}
 
 export default function ClientList() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [clients, setClients] = useState<ClientWithArchive[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedView, setSelectedView] = useState<PortfolioView | null>(null);
   const [search, setSearch] = useState('');
-  const [financialFilter, setFinancialFilter] = useState<string>('all');
-  const [complexityFilter, setComplexityFilter] = useState<string>('all');
-  const [healthFilter, setHealthFilter] = useState<string>('all');
-  const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
-  const [profileFilter, setProfileFilter] = useState<string>('all');
-  const [showArchived, setShowArchived] = useState(false);
-  const [cardFilter, setCardFilter] = useState<CardFilter>(null);
+  const [archiveTarget, setArchiveTarget] = useState<ClientWithArchive | null>(null);
+  const [archiveReason, setArchiveReason] = useState('');
+  const [archiving, setArchiving] = useState(false);
+  const [unarchiveTarget, setUnarchiveTarget] = useState<ClientWithArchive | null>(null);
 
-  const queryClient = useQueryClient();
   const { data: counts } = useQuery({
     queryKey: ['dashboard-health-counts'],
     queryFn: async (): Promise<HealthCounts> => {
@@ -107,18 +123,6 @@ export default function ClientList() {
     queryKey: ['churn-current-month'],
     queryFn: () => fetchChurnMetrics(currentMonthKey()),
   });
-  const treatmentIds = new Set<string>(counts?.treatment_ids ?? []);
-  const pct = (n: number) => {
-    const total = counts?.total ?? 0;
-    if (!total) return '0%';
-    return `${Math.round((n / total) * 100)}%`;
-  };
-
-  // Archive dialog state
-  const [archiveTarget, setArchiveTarget] = useState<ClientWithArchive | null>(null);
-  const [archiveReason, setArchiveReason] = useState('');
-  const [archiving, setArchiving] = useState(false);
-  const [unarchiveTarget, setUnarchiveTarget] = useState<ClientWithArchive | null>(null);
 
   const loadClients = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['dashboard-health-counts'] });
@@ -130,43 +134,43 @@ export default function ClientList() {
 
   useEffect(() => { loadClients(); }, [loadClients]);
 
-  const responsibles = [...new Set(clients.filter(c => !c.archived).map(c => c.csResponsible).filter(Boolean))];
-  const archivedCount = clients.filter(c => c.archived).length;
+  const treatmentIds = useMemo(() => new Set(counts?.treatment_ids ?? []), [counts?.treatment_ids]);
+  const archivedCount = clients.filter(client => client.archived).length;
+  const percent = (value: number) => counts?.total ? `${Math.round((value / counts.total) * 100)}%` : '0%';
 
-  const matchesCard = (c: ClientWithArchive) => {
-    if (!cardFilter || cardFilter === 'total') return c.status !== 'cancelled';
-    if (c.status === 'cancelled') return false;
-    switch (cardFilter) {
-      case 'healthy': return c.healthScore === 'healthy';
-      case 'attention': return c.healthScore === 'attention';
-      case 'critical': return c.healthScore === 'critical';
-      case 'treatment': return treatmentIds.has(c.id) || c.status === 'recovery';
-      case 'suspended': return c.financialStatus === 'suspended';
-      default: return true;
-    }
-  };
+  const matchesView = useCallback((client: ClientWithArchive, view: PortfolioView) => {
+    if (view === 'archived') return !!client.archived;
+    if (client.archived || client.status === 'cancelled') return false;
+    if (view === 'total') return true;
+    if (view === 'healthy') return client.healthScore === 'healthy';
+    if (view === 'attention') return client.healthScore === 'attention';
+    if (view === 'critical') return client.healthScore === 'critical';
+    if (view === 'treatment') return treatmentIds.has(client.id) || client.status === 'recovery';
+    return client.financialStatus === 'suspended';
+  }, [treatmentIds]);
 
-  const filtered = clients.filter(c => {
-    if (showArchived ? !c.archived : !!c.archived) return false;
-    if (!showArchived && !matchesCard(c)) return false;
-    const matchSearch = search === '' ||
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.document.includes(search);
-    const matchFinancial = financialFilter === 'all' || c.financialStatus === financialFilter;
-    const matchComplexity = complexityFilter === 'all' || c.complexity === complexityFilter;
-    const matchHealth = healthFilter === 'all' || c.healthScore === healthFilter;
-    const matchResp = responsibleFilter === 'all' || c.csResponsible === responsibleFilter;
-    const matchProfile = profileFilter === 'all' || c.profile === profileFilter;
-    return matchSearch && matchFinancial && matchComplexity && matchHealth && matchResp && matchProfile;
-  });
+  const visibleClients = useMemo(() => {
+    if (!selectedView) return [];
+    const normalized = search.trim().toLocaleLowerCase('pt-BR');
+    return clients.filter(client => matchesView(client, selectedView)).filter(client => (
+      !normalized || client.name.toLocaleLowerCase('pt-BR').includes(normalized) || client.document.includes(normalized)
+    ));
+  }, [clients, matchesView, search, selectedView]);
 
-  const selectCard = (key: CardFilter) => {
-    setShowArchived(false);
-    setCardFilter(prev => (prev === key ? null : key));
+  const chartData = [
+    { key: 'healthy', name: 'Saudáveis', value: counts?.healthy ?? 0 },
+    { key: 'attention', name: 'Em atenção', value: counts?.attention ?? 0 },
+    { key: 'critical', name: 'Críticos', value: counts?.critical ?? 0 },
+  ];
+
+  const openView = (view: PortfolioView) => {
+    setSearch('');
+    setSelectedView(view);
   };
 
   const exportClientsReport = () => {
-    const rows = filtered.map(client => ({
+    if (!selectedView) return;
+    const rows = visibleClients.map(client => ({
       Nome: client.name,
       Documento: client.document,
       Segmento: client.segment,
@@ -176,50 +180,38 @@ export default function ClientList() {
       Tier: PROFILE_LABELS[client.profile] || client.profile,
       'Health Score': HEALTH_LABELS[client.healthScore as HealthScore] || client.healthScore,
       'Início do contrato': client.contractStartDate,
-      ...(showArchived ? {
+      ...(selectedView === 'archived' ? {
         'Justificativa arquivamento': client.archivedReason,
         'Arquivado em': client.archivedAt ? new Date(client.archivedAt).toLocaleDateString('pt-BR') : '',
         'Arquivado por': client.archivedBy,
       } : {}),
     }));
-
     const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-      { wch: 34 }, { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 24 },
-      { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
-      ...(showArchived ? [{ wch: 40 }, { wch: 16 }, { wch: 24 }] : []),
-    ];
+    worksheet['!cols'] = Array.from({ length: Object.keys(rows[0] || {}).length }, () => ({ wch: 24 }));
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, showArchived ? 'Clientes arquivados' : 'Clientes');
-    XLSX.writeFile(workbook, `relatorio-clientes${showArchived ? '-arquivados' : ''}-${new Date().toISOString().slice(0, 10)}.xlsx`);
-    toast({ title: 'Relatório baixado!', description: `${rows.length} cliente(s) exportado(s) para Excel.` });
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
+    XLSX.writeFile(workbook, `${VIEW_LABELS[selectedView].toLocaleLowerCase('pt-BR').replaceAll(' ', '-')}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast({ title: 'Relatório baixado', description: `${rows.length} cliente(s) exportado(s).` });
   };
 
   const handleArchive = async () => {
-    if (!archiveTarget) return;
-    if (archiveReason.trim().length < 5) {
-      toast({ title: 'Justificativa obrigatória', description: 'Informe pelo menos 5 caracteres.', variant: 'destructive' });
-      return;
-    }
+    if (!archiveTarget || archiveReason.trim().length < 5) return;
     setArchiving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          archived: true,
-          archived_at: new Date().toISOString(),
-          archived_reason: archiveReason.trim(),
-          archived_by: user?.email || '',
-        })
-        .eq('id', archiveTarget.id);
+      const { error } = await supabase.from('clients').update({
+        archived: true,
+        archived_at: new Date().toISOString(),
+        archived_reason: archiveReason.trim(),
+        archived_by: user?.email || '',
+      }).eq('id', archiveTarget.id);
       if (error) throw error;
-      toast({ title: 'Cliente arquivado', description: `${archiveTarget.name} foi arquivado e não aparecerá mais nas próximas sincronizações com o G-Click.` });
+      toast({ title: 'Cliente arquivado', description: `${archiveTarget.name} foi arquivado.` });
       setArchiveTarget(null);
       setArchiveReason('');
       loadClients();
-    } catch (err: any) {
-      toast({ title: 'Erro ao arquivar', description: err.message, variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao arquivar', description: error.message, variant: 'destructive' });
     } finally {
       setArchiving(false);
     }
@@ -228,361 +220,187 @@ export default function ClientList() {
   const handleUnarchive = async () => {
     if (!unarchiveTarget) return;
     try {
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          archived: false,
-          archived_at: null,
-          archived_reason: '',
-          archived_by: '',
-        })
-        .eq('id', unarchiveTarget.id);
+      const { error } = await supabase.from('clients').update({
+        archived: false, archived_at: null, archived_reason: '', archived_by: '',
+      }).eq('id', unarchiveTarget.id);
       if (error) throw error;
-      toast({ title: 'Cliente desarquivado', description: `${unarchiveTarget.name} voltou para a lista ativa.` });
+      toast({ title: 'Cliente desarquivado', description: `${unarchiveTarget.name} voltou para a carteira ativa.` });
       setUnarchiveTarget(null);
       loadClients();
-    } catch (err: any) {
-      toast({ title: 'Erro ao desarquivar', description: err.message, variant: 'destructive' });
+    } catch (error: any) {
+      toast({ title: 'Erro ao desarquivar', description: error.message, variant: 'destructive' });
     }
   };
 
   return (
     <AppLayout>
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-6 py-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">CS HUB</h1>
-            <p className="text-sm text-muted-foreground mt-1">Gestão estratégica da carteira de clientes</p>
+      <main className="container mx-auto px-6 py-8 lg:py-10">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Visão geral da carteira</p>
+            <h1 className="text-3xl font-bold text-foreground">Saúde dos clientes</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Clique em uma situação para consultar os clientes.</p>
           </div>
+          <Button variant="outline" className="gap-2 self-start" onClick={() => openView('archived')}>
+            <Archive className="h-4 w-4" /> Arquivados ({archivedCount})
+          </Button>
+        </div>
 
-          {/* Saúde da carteira */}
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-            <StatCard
-              icon={Building2}
-              label={CARD_LABELS.total}
-              value={counts?.total ?? 0}
-              onClick={() => selectCard('total')}
-              active={!showArchived && (cardFilter === null || cardFilter === 'total')}
-              footer={counts && counts.unclassified > 0 ? `${counts.unclassified} sem classificação` : undefined}
-            />
-            <StatCard
-              icon={HeartPulse}
-              label={CARD_LABELS.healthy}
-              value={counts?.healthy ?? 0}
-              variant="success"
-              percent={pct(counts?.healthy ?? 0)}
-              onClick={() => selectCard('healthy')}
-              active={!showArchived && cardFilter === 'healthy'}
-            />
-            <StatCard
-              icon={AlertTriangle}
-              label={CARD_LABELS.attention}
-              value={counts?.attention ?? 0}
-              variant="warning"
-              percent={pct(counts?.attention ?? 0)}
-              onClick={() => selectCard('attention')}
-              active={!showArchived && cardFilter === 'attention'}
-            />
-            <StatCard
-              icon={ShieldAlert}
-              label={CARD_LABELS.critical}
-              value={counts?.critical ?? 0}
-              variant="danger"
-              emphasis
-              percent={pct(counts?.critical ?? 0)}
-              onClick={() => selectCard('critical')}
-              active={!showArchived && cardFilter === 'critical'}
-            />
-            <StatCard
-              icon={Stethoscope}
-              label={CARD_LABELS.treatment}
-              value={counts?.treatment ?? 0}
-              percent={pct(counts?.treatment ?? 0)}
-              footer="com plano de ação ou acompanhamento"
-              onClick={() => selectCard('treatment')}
-              active={!showArchived && cardFilter === 'treatment'}
-            />
-            <StatCard
-              icon={TrendingUp}
-              label={CARD_LABELS.suspended}
-              value={counts?.suspended ?? 0}
-              variant="warning"
-              percent={pct(counts?.suspended ?? 0)}
-              onClick={() => selectCard('suspended')}
-              active={!showArchived && cardFilter === 'suspended'}
-            />
-          </div>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-12">
+          <StatCard className="xl:col-span-4" icon={Building2} label="Total de clientes" value={counts?.total ?? 0} onClick={() => openView('total')} footer={counts?.unclassified ? `${counts.unclassified} sem classificação` : 'Carteira ativa'} />
+          <StatCard className="xl:col-span-4" icon={HeartPulse} label="Saudáveis" value={counts?.healthy ?? 0} percent={percent(counts?.healthy ?? 0)} tone="healthy" onClick={() => openView('healthy')} footer="Carteira estável" />
+          <StatCard className="xl:col-span-4" icon={ShieldAlert} label="Críticos" value={counts?.critical ?? 0} percent={percent(counts?.critical ?? 0)} tone="critical" emphasis onClick={() => openView('critical')} footer="Exigem atenção imediata" />
+          <StatCard className="xl:col-span-4" icon={AlertTriangle} label="Em atenção" value={counts?.attention ?? 0} percent={percent(counts?.attention ?? 0)} tone="attention" onClick={() => openView('attention')} />
+          <StatCard className="xl:col-span-4" icon={Stethoscope} label="Em tratamento" value={counts?.treatment ?? 0} percent={percent(counts?.treatment ?? 0)} onClick={() => openView('treatment')} footer="Com plano de ação ou acompanhamento" />
+          <StatCard className="xl:col-span-4" icon={TrendingUp} label="Financeiro suspenso" value={counts?.suspended ?? 0} percent={percent(counts?.suspended ?? 0)} tone="attention" onClick={() => openView('suspended')} />
+        </section>
 
-          <p className="mt-3 text-xs text-muted-foreground">
-            Churn do mês:{' '}
-            <span className={(churn?.distratos_periodo ?? 0) > 0 ? 'font-semibold text-destructive' : 'font-semibold text-foreground'}>
-              {(churn?.taxa_churn ?? 0).toString().replace('.', ',')}%
-            </span>
-            {' '}· {churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'}
-            {' '}· {formatBRL(churn?.receita_mensal_perdida)} de mensalidade perdida
-          </p>
-
-          {cardFilter && !showArchived && (
-            <div className="mt-4">
-              <Badge variant="secondary" className="gap-2 py-1.5 pl-3 pr-2 text-xs">
-                Filtro: {CARD_LABELS[cardFilter]}
-                <button
-                  type="button"
-                  onClick={() => setCardFilter(null)}
-                  className="rounded-full p-0.5 hover:bg-muted-foreground/20"
-                  aria-label="Limpar filtro"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
+        <section className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+          <div className="rounded-lg border bg-card p-5 shadow-card">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-semibold text-foreground">Distribuição da saúde</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Clientes ativos por classificação</p>
+              </div>
+              <Users className="h-5 w-5 text-muted-foreground" />
             </div>
-          )}
-        </div>
-      </header>
-
-      {/* Filters */}
-      <div className="container mx-auto px-6 py-4">
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome ou CPF/CNPJ..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 22, bottom: 0, left: 6 }}>
+                  <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={82} axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                  <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={({ active, payload }) => active && payload?.length ? (
+                    <div className="rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-card">
+                      <span className="font-semibold">{payload[0].payload.name}:</span> {payload[0].value}
+                    </div>
+                  ) : null} />
+                  <Bar dataKey="value" radius={[0, 5, 5, 0]} barSize={24} onClick={(entry) => openView(entry.key)} className="cursor-pointer">
+                    {chartData.map(item => <Cell key={item.key} fill={CHART_COLORS[item.key as keyof typeof CHART_COLORS]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <Button
-            variant={showArchived ? 'default' : 'outline'}
-            onClick={() => setShowArchived(v => !v)}
-            className="gap-2"
-            title={showArchived ? 'Voltar para clientes ativos' : 'Ver clientes arquivados'}
-          >
-            <Archive className="h-4 w-4" />
-            {showArchived ? `Arquivados (${archivedCount})` : `Arquivados (${archivedCount})`}
-          </Button>
-          <Button variant="outline" onClick={exportClientsReport} className="gap-2" disabled={loading || filtered.length === 0}>
-            <Download className="h-4 w-4" /> Baixar Excel
-          </Button>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={financialFilter} onValueChange={setFinancialFilter}>
-              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Status</SelectItem>
-                {Object.entries(FINANCIAL_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{FINANCIAL_EMOJIS[k as FinancialStatus]} {v}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={complexityFilter} onValueChange={setComplexityFilter}>
-              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Complexidade" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {Object.entries(COMPLEXITY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={healthFilter} onValueChange={setHealthFilter}>
-              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Health Score" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {Object.entries(HEALTH_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
-              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Responsável" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {responsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={profileFilter} onValueChange={setProfileFilter}>
-              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Tipo de cliente" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Tipos</SelectItem>
-                {Object.entries(PROFILE_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{PROFILE_ICONS[k as ClientProfile]} {v}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
-        {showArchived && (
-          <div className="mb-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-            <Archive className="h-4 w-4 inline mr-2" />
-            Você está visualizando clientes arquivados. Eles não aparecem na busca do G-Click.
-          </div>
-        )}
+          <button type="button" onClick={() => navigate('/onboarding')} className="group rounded-lg border bg-card p-5 text-left shadow-card transition-all hover:border-primary/30 hover:shadow-card-hover">
+            <div className="flex h-full min-h-56 flex-col">
+              <div className="flex items-center justify-between">
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-secondary-foreground"><TrendingDown className="h-5 w-5" /></span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+              </div>
+              <p className="mt-7 text-sm font-medium text-muted-foreground">Churn do mês</p>
+              <div className="mt-2 flex items-end gap-2">
+                <strong className={cn('text-4xl font-bold', (churn?.distratos_periodo ?? 0) > 0 ? 'text-destructive' : 'text-foreground')}>
+                  {(churn?.taxa_churn ?? 0).toString().replace('.', ',')}%
+                </strong>
+                <span className="pb-1 text-xs text-muted-foreground">{churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'}</span>
+              </div>
+              <p className="mt-auto pt-5 text-xs text-muted-foreground">{formatBRL(churn?.receita_mensal_perdida)} de mensalidade perdida</p>
+            </div>
+          </button>
+        </section>
+      </main>
 
-        {/* Client cards */}
-        {loading ? (
-          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map((client, i) => (
-              <motion.div
-                key={client.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.03, 0.5) }}
-                onClick={() => navigate(`/client/${client.id}`)}
-                className={`group flex items-center gap-4 rounded-lg border bg-card p-4 shadow-card cursor-pointer transition-all hover:shadow-card-hover hover:border-primary/20 ${client.archived ? 'opacity-70' : ''}`}
-              >
-                <div
-                  className="flex h-11 w-11 flex-col items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs shrink-0 leading-none"
-                  title={`Complexidade ${COMPLEXITY_LABELS[client.complexity]}`}
-                >
-                  <span className="text-base" aria-hidden>{COMPLEXITY_EMOJIS[client.complexity]}</span>
-                  <span className="mt-0.5">{client.complexity}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
-                    {client.archived && (
-                      <Badge variant="secondary" className="gap-1 text-xs">
-                        <Archive className="h-3 w-3" /> Arquivado
-                      </Badge>
-                    )}
-                    <span
-                      className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                      title={`Tier ${PROFILE_LABELS[client.profile]}`}
-                    >
-                      <span aria-hidden>{PROFILE_ICONS[client.profile]}</span>
-                      <span className="hidden sm:inline">{PROFILE_LABELS[client.profile]}</span>
-                    </span>
+      <Sheet open={selectedView !== null} onOpenChange={open => { if (!open) setSelectedView(null); }}>
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-xl">
+          <SheetHeader className="border-b px-6 py-5 pr-12">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <SheetTitle>{selectedView ? VIEW_LABELS[selectedView] : 'Clientes'}</SheetTitle>
+                <SheetDescription className="mt-1">{visibleClients.length} cliente{visibleClients.length === 1 ? '' : 's'} encontrado{visibleClients.length === 1 ? '' : 's'}</SheetDescription>
+              </div>
+              <Button variant="outline" size="sm" className="gap-2" onClick={exportClientsReport} disabled={!visibleClients.length}>
+                <Download className="h-4 w-4" /> Excel
+              </Button>
+            </div>
+          </SheetHeader>
+          <div className="border-b px-6 py-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar por nome ou CPF/CNPJ" className="pl-9" />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            {loading ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">Carregando clientes...</p>
+            ) : visibleClients.length === 0 ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">Nenhum cliente nesta situação.</p>
+            ) : visibleClients.map(client => (
+              <div key={client.id} className="group mb-2 rounded-md border bg-card p-4 transition-colors hover:bg-muted/40">
+                <button type="button" className="w-full text-left" onClick={() => navigate(`/client/${client.id}`)}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">{client.name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{client.document} · {client.segment}</p>
+                    </div>
+                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="font-mono">{client.document}</span>
-                    <span>•</span>
-                    <span>{client.segment}</span>
-                    <span>•</span>
-                    <span>CS: {client.csResponsible}</span>
+                  <p className="mt-3 text-xs text-muted-foreground">CS responsável: {client.csResponsible || 'Não definido'}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <HealthScoreBadge score={client.healthScore} />
+                    <FinancialStatusBadge status={client.financialStatus} />
                   </div>
-                  {client.archived && client.archivedReason && (
-                    <p className="mt-1 text-xs text-muted-foreground italic truncate">
-                      Motivo: {client.archivedReason}
-                    </p>
+                </button>
+                <div className="mt-3 border-t pt-3 text-right">
+                  {client.archived ? (
+                    <Button variant="ghost" size="sm" className="gap-2" onClick={() => setUnarchiveTarget(client)}><ArchiveRestore className="h-4 w-4" /> Desarquivar</Button>
+                  ) : (
+                    <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => setArchiveTarget(client)}><Archive className="h-4 w-4" /> Arquivar</Button>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <HealthScoreBadge score={client.healthScore} />
-                  <FinancialStatusBadge status={client.financialStatus} />
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={e => e.stopPropagation()}>
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
-                      {client.archived ? (
-                        <DropdownMenuItem onClick={() => setUnarchiveTarget(client)} className="gap-2">
-                          <ArchiveRestore className="h-4 w-4" /> Desarquivar
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={() => setArchiveTarget(client)} className="gap-2">
-                          <Archive className="h-4 w-4" /> Arquivar
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </motion.div>
-            ))}
-            {filtered.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                {showArchived
-                  ? 'Nenhum cliente arquivado.'
-                  : 'Nenhum cliente encontrado com os filtros selecionados.'}
               </div>
-            )}
+            ))}
           </div>
-        )}
-      </div>
+        </SheetContent>
+      </Sheet>
 
-      {/* Archive Dialog */}
-      <Dialog open={!!archiveTarget} onOpenChange={(open) => !open && setArchiveTarget(null)}>
+      <Dialog open={!!archiveTarget} onOpenChange={open => { if (!open) setArchiveTarget(null); }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Archive className="h-5 w-5" /> Arquivar cliente
-            </DialogTitle>
-            <DialogDescription>
-              Você está prestes a arquivar <strong>{archiveTarget?.name}</strong>. O cliente será preservado no sistema mas não aparecerá nas listagens ativas nem em futuras sincronizações com o G-Click.
-            </DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Arquivar cliente</DialogTitle><DialogDescription>{archiveTarget?.name} deixará de aparecer na carteira ativa.</DialogDescription></DialogHeader>
           <div className="space-y-2">
             <label className="text-sm font-medium">Justificativa <span className="text-destructive">*</span></label>
-            <Textarea
-              placeholder="Ex.: Encerramento de contrato em 03/2025, cliente migrou para outro escritório..."
-              value={archiveReason}
-              onChange={e => setArchiveReason(e.target.value)}
-              rows={4}
-              autoFocus
-            />
-            <p className="text-xs text-muted-foreground">Mínimo 5 caracteres. Esta justificativa fica registrada.</p>
+            <Textarea value={archiveReason} onChange={event => setArchiveReason(event.target.value)} rows={4} placeholder="Informe o motivo do arquivamento" />
+            <p className="text-xs text-muted-foreground">Mínimo de 5 caracteres.</p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setArchiveTarget(null); setArchiveReason(''); }}>
-              Cancelar
-            </Button>
-            <Button onClick={handleArchive} disabled={archiving || archiveReason.trim().length < 5} className="gap-2">
-              <Archive className="h-4 w-4" />
-              {archiving ? 'Arquivando...' : 'Arquivar'}
-            </Button>
-          </DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setArchiveTarget(null)}>Cancelar</Button><Button onClick={handleArchive} disabled={archiving || archiveReason.trim().length < 5}>{archiving ? 'Arquivando...' : 'Arquivar'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Unarchive confirmation */}
-      <AlertDialog open={!!unarchiveTarget} onOpenChange={(open) => !open && setUnarchiveTarget(null)}>
+      <AlertDialog open={!!unarchiveTarget} onOpenChange={open => { if (!open) setUnarchiveTarget(null); }}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Desarquivar cliente?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{unarchiveTarget?.name}</strong> voltará para a lista ativa. A justificativa de arquivamento será apagada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleUnarchive}>Desarquivar</AlertDialogAction>
-          </AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>Desarquivar cliente?</AlertDialogTitle><AlertDialogDescription>{unarchiveTarget?.name} voltará para a carteira ativa.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleUnarchive}>Desarquivar</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </AppLayout>
   );
 }
 
-function StatCard({ icon: Icon, label, value, variant, onClick, active, percent, footer, emphasis }: {
-  icon: typeof Building2; label: string; value: number; variant?: 'warning' | 'danger' | 'success';
-  onClick?: () => void; active?: boolean; percent?: string; footer?: string; emphasis?: boolean;
+function StatCard({ icon: Icon, label, value, percent, footer, tone, emphasis, onClick, className }: {
+  icon: typeof Building2;
+  label: string;
+  value: number;
+  percent?: string;
+  footer?: string;
+  tone?: 'healthy' | 'attention' | 'critical';
+  emphasis?: boolean;
+  onClick: () => void;
+  className?: string;
 }) {
-  const colors = {
-    warning: 'text-health-attention',
-    danger: 'text-destructive',
-    success: 'text-health-healthy',
-  };
-  const interactive = !!onClick;
+  const toneClass = tone === 'healthy' ? 'text-health-healthy' : tone === 'attention' ? 'text-health-attention' : tone === 'critical' ? 'text-destructive' : 'text-foreground';
   return (
-    <div
-      onClick={onClick}
-      role={interactive ? 'button' : undefined}
-      tabIndex={interactive ? 0 : undefined}
-      onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
-      className={`rounded-lg border bg-card p-4 shadow-card transition-all ${
-        interactive ? 'cursor-pointer hover:shadow-card-hover hover:border-primary/30' : ''
-      } ${emphasis ? 'border-destructive/40 bg-destructive/5' : ''} ${active ? 'border-primary ring-2 ring-primary/20' : ''}`}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <Icon className={`h-4 w-4 ${variant ? colors[variant] : 'text-muted-foreground'}`} />
-        <span className="text-xs text-muted-foreground">{label}</span>
+    <button type="button" onClick={onClick} className={cn(
+      'group min-h-40 rounded-lg border bg-card p-5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover',
+      emphasis && 'border-destructive/40 bg-destructive/5 hover:border-destructive/60',
+      className,
+    )}>
+      <div className="flex items-start justify-between gap-3">
+        <span className={cn('flex h-10 w-10 items-center justify-center rounded-md bg-secondary', toneClass)}><Icon className="h-5 w-5" /></span>
+        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
       </div>
-      <div className="flex items-baseline gap-2">
-        <p className={`text-2xl font-bold ${variant ? colors[variant] : 'text-foreground'}`}>{value}</p>
-        {percent && <span className="text-xs text-muted-foreground">{percent}</span>}
-      </div>
-      {footer && <p className="mt-1 text-[11px] leading-tight text-muted-foreground">{footer}</p>}
-    </div>
+      <p className="mt-5 text-sm font-medium text-muted-foreground">{label}</p>
+      <div className="mt-1 flex items-baseline gap-2"><strong className={cn('text-3xl font-bold', toneClass)}>{value}</strong>{percent && <span className="text-xs text-muted-foreground">{percent} da carteira</span>}</div>
+      {footer && <p className="mt-3 text-xs text-muted-foreground">{footer}</p>}
+    </button>
   );
 }
