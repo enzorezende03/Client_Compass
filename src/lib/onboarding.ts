@@ -103,40 +103,6 @@ export function applyTemplateVars(text: string, vars: Record<string, string | un
   });
 }
 
-export const MESSAGE_TEMPLATES: Record<string, { title: string; text: string }[]> = {
-  etapa_1: [
-    {
-      title: 'Boas-vindas',
-      text: 'Olá! Seja muito bem-vindo(a) à 2M Saúde & Contabilidade. Sou {seu_nome}, do time de Customer Success, e serei seu ponto de contato durante todo o onboarding. Em breve te envio a lista de documentos e acessos iniciais. Qualquer dúvida, é só chamar por aqui!',
-    },
-    {
-      title: 'Solicitação de documentos',
-      text: 'Para iniciarmos seu cadastro, precisamos dos seguintes documentos:\n\n• Contrato social atualizado\n• Cartão CNPJ\n• Últimos balancetes\n• Acessos a sistemas (Sefaz, Receita, eSocial)\n\nPode nos enviar por aqui mesmo. Obrigado!',
-    },
-  ],
-  etapa_2: [
-    {
-      title: 'Procuração eletrônica',
-      text: 'Segue o link da procuração eletrônica para que possamos atuar nos órgãos em seu nome. O processo é 100% digital via gov.br. Qualquer dificuldade, me chama que ajudo no passo a passo.',
-    },
-    {
-      title: 'Pós-procuração',
-      text: 'Procuração validada com sucesso! Agora seguiremos com o diagnóstico fiscal e contábil. Em até 5 dias úteis te trazemos o panorama completo da sua operação.',
-    },
-  ],
-  etapa_3: [
-    {
-      title: 'Pós-reunião de integração',
-      text: 'Foi ótimo nosso alinhamento hoje! Conforme combinado, sua operação já está integrada ao nosso sistema. A partir de agora, o time operacional assume a rotina e eu sigo acompanhando estrategicamente. Qualquer ponto crítico, fale comigo.',
-    },
-  ],
-  etapa_4: [
-    {
-      title: 'Follow-up 7 dias',
-      text: 'Olá! Já se passou uma semana desde nosso início e queria saber: como tem sido sua experiência? Tem algum ponto que podemos melhorar? Sua opinião é fundamental para garantirmos uma parceria duradoura.',
-    },
-  ],
-};
 
 export type SlaTone = 'green' | 'orange' | 'red' | 'blocked';
 
