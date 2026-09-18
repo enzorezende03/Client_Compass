@@ -210,6 +210,35 @@ export default function TaskCenter() {
   // Indicator counts (onboarding view): real SLA separated from blocked noise.
   const onTimeTasks = activePending.filter(t => getDeadline(t) >= today);
 
+  // Calendar: respects search, responsible filter and the client/internal deadline toggle.
+  const calendarTasks = useMemo(() => tasks.filter(t => {
+    const cat = (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'regular';
+    if (!viewAll && cat !== activeTab) return false;
+    const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
+    const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
+    if (!matchSearch || !matchResp) return false;
+    if (t.locked && !showBlocked) return false;
+    return true;
+  }), [tasks, search, filterResponsible, activeTab, viewAll, showBlocked]);
+
+  const calendarEvents: CalendarEvent[] = useMemo(() => calendarTasks.map(t => {
+    const date = getDeadline(t);
+    return {
+      id: t.id,
+      date,
+      time: t.scheduled_time,
+      title: t.title,
+      subtitle: t.client_name,
+      status: eventStatusForDate(date, t.status === 'completed', !!t.locked),
+      kind: (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'task',
+    } as CalendarEvent;
+  }), [calendarTasks, deadlineView]);
+
+  const handleCalendarDrop = (event: CalendarEvent, newDate: string) => {
+    const task = tasks.find(t => t.id === event.id);
+    if (task) openReschedule(task, newDate);
+  };
+
   const openNew = () => { setForm(emptyForm); setEditId(null); setDialogOpen(true); };
   const openEdit = (task: TaskRow) => {
     setForm({
