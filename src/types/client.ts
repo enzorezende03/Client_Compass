@@ -62,6 +62,13 @@ export interface Client {
   taxation?: TaxationType;
 }
 
+export type ResponsibilityOrigin = 'escritorio' | 'cliente';
+
+export const RESPONSIBILITY_ORIGIN_LABELS: Record<ResponsibilityOrigin, string> = {
+  escritorio: 'Problema gerado pelo escritório',
+  cliente: 'Ocorrência gerada pelo cliente',
+};
+
 export interface TimelineEntry {
   id: string;
   clientId: string;
@@ -74,6 +81,10 @@ export interface TimelineEntry {
   demandStatus: DemandStatus;
   isRelevantEvent?: boolean;
   relevantEventType?: string;
+  responsibilityOrigin?: ResponsibilityOrigin | null;
+  createdBy?: string | null;
+  createdByName?: string | null;
+  createdAt?: string | null;
 }
 
 export interface Task {
@@ -85,7 +96,9 @@ export interface Task {
   scheduledTime?: string; // HH:mm
   status: TaskStatus;
   createdAt: string;
+  sourceTimelineEntryId?: string | null;
 }
+
 
 // Labels
 export const STATUS_LABELS: Record<ClientStatus, string> = {
