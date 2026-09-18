@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2, LayoutGrid, CalendarDays } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2, LayoutGrid, CalendarDays, BookOpen } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { OnboardingSlaPanel } from '@/components/OnboardingSlaPanel';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
@@ -13,6 +13,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { fetchProcedure } from '@/lib/procedures';
+import { ProcedureStageSheet } from '@/components/procedure/ProcedureStageSheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -24,7 +26,7 @@ import { cn } from '@/lib/utils';
 import { CalendarView, CalendarEvent, eventStatusForDate, isoDay } from '@/components/calendar/CalendarView';
 import {
   STAGES_EXISTING, STAGES_NOVA, STAGES_VMK, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
-  ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
+  ChecklistItem, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
   slaTone, aggregateSlaTone, advanceStage, toggleChecklistItem, updateProgressNotes,
   applyTemplateVars, MessageTemplate, cancelOnboarding, moveClientToStage,
 } from '@/lib/onboarding';
@@ -104,6 +106,7 @@ export default function Onboarding() {
   const [convertOpen, setConvertOpen] = useState(false);
   const [constInfoOpen, setConstInfoOpen] = useState(false);
   const [dbTemplates, setDbTemplates] = useState<MessageTemplate[]>([]);
+  const [procedureOpen, setProcedureOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -176,8 +179,23 @@ export default function Onboarding() {
 
   // Load all message templates once
   useEffect(() => {
-    supabase.from('message_templates' as any).select('*').then(({ data }) => {
-      setDbTemplates((data || []) as unknown as MessageTemplate[]);
+    fetchProcedure().then(({ phases, items }) => {
+      const phaseById = new Map(phases.filter(ph => ph.active).map(ph => [ph.id, ph]));
+      const mapped = items
+        .filter(i => i.active && i.kind === 'mensagem' && phaseById.has(i.phase_id))
+        .map(i => {
+          const ph = phaseById.get(i.phase_id)!;
+          return {
+            id: i.id,
+            onboarding_type: ph.onboarding_type || '',
+            stage: ph.linked_stage_key || '',
+            moment: '',
+            title: i.title,
+            content: i.content,
+            variables: [],
+          } as MessageTemplate;
+        });
+      setDbTemplates(mapped);
     });
   }, []);
 
@@ -604,6 +622,16 @@ export default function Onboarding() {
                 </SheetDescription>
               </SheetHeader>
 
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3 gap-1.5"
+                onClick={() => setProcedureOpen(true)}
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                Ver procedimento desta etapa
+              </Button>
+
               {/* Checklist */}
               <section className="mt-6">
                 <h3 className="text-sm font-semibold text-foreground mb-3">Checklist da etapa</h3>
@@ -686,7 +714,7 @@ export default function Onboarding() {
 
               {/* VMk — Dedicated orientation email button (no meeting scheduling) */}
               {selectedData.client.onboarding_type === 'vmk_parceria' && (() => {
-                const tpl = dbTemplates.find(t => t.onboarding_type === 'vmk_parceria' && t.stage === 'vmk_ativacao');
+                const tpl = dbTemplates.find(t => (t.onboarding_type === 'vmk_parceria' || !t.onboarding_type) && t.stage === 'vmk_ativacao');
                 if (!tpl) return null;
                 const c = selectedData.client;
                 const isSaude = /sa[uú]de|cl[íi]nic|m[ée]dic|odont|hospital|farm[áa]c/i
@@ -805,11 +833,10 @@ export default function Onboarding() {
               {/* Templates — DB-backed, filtered by onboarding_type + stage */}
               {(() => {
                 const cType = (selectedData.client.onboarding_type || 'empresa_existente') as OnboardingType;
-                const stageTpls = dbTemplates.filter(t => t.onboarding_type === cType && t.stage === selectedData.stage
+                const stageTpls = dbTemplates.filter(t => (t.onboarding_type === cType || !t.onboarding_type) && t.stage === selectedData.stage
                   // VMk orientation email is shown via its dedicated card above
                   && !(cType === 'vmk_parceria' && t.stage === 'vmk_ativacao'));
-                const legacy = MESSAGE_TEMPLATES[selectedData.stage] || [];
-                if (stageTpls.length === 0 && legacy.length === 0) return null;
+                if (stageTpls.length === 0) return null;
 
                 // Determine "2M Saúde" or "2M Contabilidade" from segment hints (fallback Saúde)
                 const isSaude = /sa[uú]de|cl[íi]nic|m[ée]dic|odont|hospital|farm[áa]c/i
@@ -842,17 +869,6 @@ export default function Onboarding() {
                           </div>
                         );
                       })}
-                      {legacy.map((tpl, i) => (
-                        <div key={`legacy-${i}`} className="border border-border rounded-lg p-3 bg-card">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs font-semibold text-foreground">{tpl.title}</span>
-                            <Button size="sm" variant="ghost" onClick={() => copyTemplate(tpl.text)} className="h-7 gap-1.5 text-xs">
-                              <Copy className="h-3 w-3" /> Copiar
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{tpl.text}</p>
-                        </div>
-                      ))}
                     </div>
                   </section>
                 );
@@ -985,6 +1001,20 @@ export default function Onboarding() {
           onConverted={() => { setSelectedClient(null); fetchAll(); }}
         />
       )}
+
+      <ProcedureStageSheet
+        open={procedureOpen}
+        onOpenChange={setProcedureOpen}
+        stage={selectedData?.stage || null}
+        onboardingType={(selectedData?.client.onboarding_type || 'empresa_existente') as OnboardingType}
+        clientContext={{
+          name: selectedData?.client.name,
+          document: (selectedData?.client as any)?.document,
+          cs_responsible: selectedData?.client.cs_responsible,
+          segment: (selectedData?.client as any)?.segment,
+        }}
+      />
+
 
       {/* Constituição info dialog */}
       <Dialog open={constInfoOpen} onOpenChange={setConstInfoOpen}>

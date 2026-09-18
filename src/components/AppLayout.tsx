@@ -2,7 +2,8 @@ import { NavLink } from '@/components/NavLink';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SlaCatalogSheet } from '@/components/SlaCatalogSheet';
 import { UrgentTaskAlert } from '@/components/UrgentTaskAlert';
-import { Users, Building2, LayoutDashboard, CalendarClock, LogOut, RefreshCw, Rocket } from 'lucide-react';
+import { Users, Building2, LayoutDashboard, CalendarClock, LogOut, RefreshCw, Rocket, BookOpen } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -72,6 +73,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </NavLink>
           <div className="ml-auto flex items-center gap-2">
             <SlaCatalogSheet />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Procedimento" onClick={() => navigate('/procedimento-onboarding')}>
+                  <BookOpen className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Procedimento de onboarding</TooltipContent>
+            </Tooltip>
             <NotificationBell />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
