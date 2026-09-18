@@ -441,6 +441,10 @@ export default function TaskCenter() {
             </p>
             <div className="flex items-center gap-1 flex-wrap mt-1">
               {task.category === 'onboarding' && task.onboarding_stage && (
+                <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                  {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
+                </Badge>
+              )}
               {task.source_timeline_entry_id && (
                 <button onClick={() => navigate(`/client/${task.client_id}`)}>
                   <Badge variant="outline" className="text-[10px] gap-1 border-primary/40 text-primary">
@@ -449,6 +453,7 @@ export default function TaskCenter() {
                 </button>
               )}
               {task.force_unlocked_by && (
+
 
                 <TooltipProvider>
                   <Tooltip>
