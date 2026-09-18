@@ -110,13 +110,6 @@ export default function ClientDetail() {
     setTermination((data as any) || null);
   }, [id]);
 
-  const afterTerminationChange = useCallback(async () => {
-    if (!id) return;
-    const { data } = await supabase.from('clients').select('*').eq('id', id).single();
-    if (data) setClient(mapClient(data));
-    await Promise.all([reloadTermination(), loadTimelineAndTasks()]);
-    setAuditRefreshKey(k => k + 1);
-  }, [id, reloadTermination]);
 
 
   const reloadHandoff = useCallback(async () => {
@@ -143,6 +136,16 @@ export default function ClientDetail() {
     }));
     setTasks(((tasksRes.data as any[]) || []).map(mapTask));
   }, [id]);
+
+  const afterTerminationChange = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase.from('clients').select('*').eq('id', id).single();
+    if (data) setClient(mapClient(data));
+    await Promise.all([reloadTermination(), loadTimelineAndTasks()]);
+    setAuditRefreshKey(k => k + 1);
+  }, [id, reloadTermination, loadTimelineAndTasks]);
+
+  useEffect(() => { reloadTermination(); }, [reloadTermination]);
 
   useEffect(() => {
     if (!id) return;
