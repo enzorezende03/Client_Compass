@@ -54,6 +54,9 @@ function mapTimeline(r: any): TimelineEntry {
     description: r.description, responsible: r.responsible, sector: r.sector,
     origin: r.origin, demandStatus: r.demand_status,
     isRelevantEvent: r.is_relevant_event, relevantEventType: r.relevant_event_type,
+    responsibilityOrigin: r.responsibility_origin ?? null,
+    createdBy: r.created_by ?? null,
+    createdAt: r.created_at ?? null,
   };
 }
 
@@ -61,9 +64,10 @@ function mapTask(r: any): Task {
   return {
     id: r.id, clientId: r.client_id, title: r.title, responsible: r.responsible,
     dueDate: r.due_date, scheduledTime: r.scheduled_time, status: r.status,
-    createdAt: r.created_at,
+    createdAt: r.created_at, sourceTimelineEntryId: r.source_timeline_entry_id ?? null,
   };
 }
+
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
