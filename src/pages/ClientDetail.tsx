@@ -260,6 +260,12 @@ export default function ClientDetail() {
                 <ServiceTierBadge profile={client.profile as ClientProfile} />
                 <HealthScoreBadge score={client.healthScore} size="lg" />
                 <FinancialStatusBadge status={client.financialStatus} />
+                {termination && (
+                  <Badge variant="outline" className="border-destructive/50 text-destructive">
+                    Distrato em {new Date(termination.request_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    {' · '}{TERMINATION_REASON_LABELS[termination.reason_category]}
+                  </Badge>
+                )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 <ProfileInfoCard label="Segmento" value={client.segment} />
@@ -281,6 +287,24 @@ export default function ClientDetail() {
               <Button onClick={() => setInteractionOpen(true)} className="gap-2 shadow-md">
                 <Plus className="h-4 w-4" /> Nova Interação
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="shadow-sm" aria-label="Mais ações">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {termination ? (
+                    <DropdownMenuItem onClick={() => setRevertTerminationOpen(true)}>
+                      Reverter distrato
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setRegisterTerminationOpen(true)}>
+                      Registrar distrato
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
