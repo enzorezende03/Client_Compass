@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { CalendarView, CalendarEvent, eventStatusForDate, isoDay } from '@/components/calendar/CalendarView';
 import {
   STAGES_EXISTING, STAGES_NOVA, STAGES_VMK, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
   ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
@@ -261,6 +262,30 @@ export default function Onboarding() {
   }, [visible, activeStages]);
 
   const totalActive = clients.filter(c => c.onboarding_status === 'active').length;
+
+  // Calendar: unlocked checklist items placed on their SLA due date.
+  const calendarEvents: CalendarEvent[] = useMemo(() => {
+    const visibleIds = new Set(visible.map(v => v.client.id));
+    const clientById = new Map(clients.map(c => [c.id, c]));
+    const out: CalendarEvent[] = [];
+    for (const p of progress) {
+      if (!visibleIds.has(p.client_id)) continue;
+      if (p.locked || !p.unlocked_at) continue;
+      const due = new Date(new Date(p.unlocked_at).getTime() + (p.item.sla_hours || 48) * 36e5);
+      const date = isoDay(due);
+      const client = clientById.get(p.client_id);
+      out.push({
+        id: p.id,
+        date,
+        title: `${client?.name || 'Cliente'} — ${p.item.title}`,
+        subtitle: STAGE_LABELS[p.item.stage as OnboardingStage] || p.item.stage,
+        status: eventStatusForDate(date, p.status === 'concluido'),
+        kind: 'onboarding',
+      });
+    }
+    return out;
+  }, [progress, visible, clients]);
+
 
   const selectedData = useMemo(() => {
     if (!selectedClient) return null;
