@@ -507,6 +507,45 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_user_permissions: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          internal_user_id: string
+          permission: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          internal_user_id: string
+          permission: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          internal_user_id?: string
+          permission?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_user_permissions_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_user_permissions_internal_user_id_fkey"
+            columns: ["internal_user_id"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_users: {
         Row: {
           access_profile: string
@@ -1068,6 +1107,7 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: undefined
       }
+      has_permission: { Args: { _permission: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_internal_user: { Args: never; Returns: boolean }
       link_auth_user: { Args: never; Returns: undefined }
