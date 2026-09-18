@@ -49,7 +49,10 @@ export default function InternalUsersRegistration() {
   const [saving, setSaving] = useState(false);
   const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string }>({ open: false, email: '', password: '' });
   const [copied, setCopied] = useState(false);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [permSaving, setPermSaving] = useState<string | null>(null);
   const { toast } = useToast();
+  const { isAdmin } = useIsAdmin();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -59,6 +62,40 @@ export default function InternalUsersRegistration() {
   };
 
   useEffect(() => { fetchUsers(); }, []);
+
+  const fetchPermissions = async (userId: string) => {
+    const { data } = await supabase
+      .from('internal_user_permissions' as any)
+      .select('permission')
+      .eq('internal_user_id', userId);
+    setPermissions(((data as any[]) ?? []).map(r => r.permission));
+  };
+
+  const togglePermission = async (permission: string, enabled: boolean) => {
+    if (!selectedId) return;
+    setPermSaving(permission);
+    let error: any = null;
+    if (enabled) {
+      const me = users.find(u => u.access_profile === 'admin' && u.id === selectedId);
+      void me;
+      ({ error } = await supabase
+        .from('internal_user_permissions' as any)
+        .insert({ internal_user_id: selectedId, permission } as any));
+    } else {
+      ({ error } = await supabase
+        .from('internal_user_permissions' as any)
+        .delete()
+        .eq('internal_user_id', selectedId)
+        .eq('permission', permission));
+    }
+    setPermSaving(null);
+    if (error) {
+      toast({ title: 'Erro ao atualizar permissão', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setPermissions(prev => enabled ? [...prev, permission] : prev.filter(p => p !== permission));
+    toast({ title: enabled ? 'Permissão concedida!' : 'Permissão removida!' });
+  };
 
   const filtered = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
