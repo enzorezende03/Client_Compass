@@ -473,6 +473,17 @@ export default function Onboarding() {
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
+        ) : viewMode === 'calendar' ? (
+          <CalendarView
+            events={calendarEvents}
+            storageKey="cshub:onboarding:calendarView"
+            emptyLabel="Nenhum item"
+            onEventClick={(ev) => {
+              const p = progress.find(x => x.id === ev.id);
+              const c = p ? clients.find(x => x.id === p.client_id) : null;
+              if (c) setSelectedClient(c);
+            }}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
             {activeStages.map(stage => {
