@@ -45,6 +45,8 @@ interface TaskRow {
   last_rescheduled_at?: string | null;
   internal_due_date?: string | null;
   client_due_date?: string | null;
+  source_timeline_entry_id?: string | null;
+
 }
 
 interface RescheduleRow {
