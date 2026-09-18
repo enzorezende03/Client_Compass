@@ -540,13 +540,13 @@ export default function ClientList() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, variant, onClick, active }: {
+function StatCard({ icon: Icon, label, value, variant, onClick, active, percent, footer, emphasis }: {
   icon: typeof Building2; label: string; value: number; variant?: 'warning' | 'danger' | 'success';
-  onClick?: () => void; active?: boolean;
+  onClick?: () => void; active?: boolean; percent?: string; footer?: string; emphasis?: boolean;
 }) {
   const colors = {
     warning: 'text-health-attention',
-    danger: 'text-health-critical',
+    danger: 'text-destructive',
     success: 'text-health-healthy',
   };
   const interactive = !!onClick;
@@ -558,7 +558,7 @@ function StatCard({ icon: Icon, label, value, variant, onClick, active }: {
       onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
       className={`rounded-lg border bg-card p-4 shadow-card transition-all ${
         interactive ? 'cursor-pointer hover:shadow-card-hover hover:border-primary/30' : ''
-      } ${active ? 'border-primary ring-2 ring-primary/20' : ''}`}
+      } ${emphasis ? 'border-destructive/40 bg-destructive/5' : ''} ${active ? 'border-primary ring-2 ring-primary/20' : ''}`}
     >
       <div className="flex items-center gap-2 mb-1">
         <Icon className={`h-4 w-4 ${variant ? colors[variant] : 'text-muted-foreground'}`} />
