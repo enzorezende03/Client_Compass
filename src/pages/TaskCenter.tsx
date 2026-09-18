@@ -629,20 +629,45 @@ export default function TaskCenter() {
           </div>
         </div>
 
-        <div className="inline-flex rounded-md border bg-muted p-1 mb-4">
-          <button
-            onClick={() => setActiveTab('regular')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'regular' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Tarefas do dia a dia
-          </button>
-          <button
-            onClick={() => setActiveTab('onboarding')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'onboarding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Tarefas de Onboarding
-          </button>
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <div className="inline-flex rounded-md border bg-muted p-1">
+            <button
+              onClick={() => setActiveTab('regular')}
+              className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'regular' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Tarefas do dia a dia
+            </button>
+            <button
+              onClick={() => setActiveTab('onboarding')}
+              className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'onboarding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Tarefas de Onboarding
+            </button>
+          </div>
+          <div className="inline-flex rounded-md border bg-muted p-1">
+            <button
+              onClick={() => changeViewMode('board')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5 ${viewMode === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Quadro
+            </button>
+            <button
+              onClick={() => changeViewMode('calendar')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5 ${viewMode === 'calendar' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> Calendário
+            </button>
+          </div>
+          {viewMode === 'calendar' && (
+            <div className="flex items-center gap-2">
+              <Switch id="view-all" checked={viewAll} onCheckedChange={setViewAll} />
+              <Label htmlFor="view-all" className="text-xs text-muted-foreground cursor-pointer">
+                Ver tudo (dia a dia + onboarding)
+              </Label>
+            </div>
+          )}
         </div>
+
 
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div className="relative flex-1 max-w-sm">
