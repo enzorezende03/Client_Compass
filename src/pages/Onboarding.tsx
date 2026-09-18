@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2 } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2, LayoutGrid, CalendarDays } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { OnboardingSlaPanel } from '@/components/OnboardingSlaPanel';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { CalendarView, CalendarEvent, eventStatusForDate, isoDay } from '@/components/calendar/CalendarView';
 import {
   STAGES_EXISTING, STAGES_NOVA, STAGES_VMK, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
   ChecklistItem, MESSAGE_TEMPLATES, ONBOARDING_TYPE_LABELS, ONBOARDING_TYPE_BADGE, stagesForType,
@@ -108,6 +109,13 @@ export default function Onboarding() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropStage, setDropStage] = useState<OnboardingStage | null>(null);
   const [overdueByClient, setOverdueByClient] = useState<Record<string, number>>({});
+  const [viewMode, setViewMode] = useState<'board' | 'calendar'>(() => {
+    try { return localStorage.getItem('cshub:onboarding:viewMode') === 'calendar' ? 'calendar' : 'board'; } catch { return 'board'; }
+  });
+  const changeViewMode = (mode: 'board' | 'calendar') => {
+    setViewMode(mode);
+    try { localStorage.setItem('cshub:onboarding:viewMode', mode); } catch { /* indisponível */ }
+  };
 
   const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -255,6 +263,30 @@ export default function Onboarding() {
 
   const totalActive = clients.filter(c => c.onboarding_status === 'active').length;
 
+  // Calendar: unlocked checklist items placed on their SLA due date.
+  const calendarEvents: CalendarEvent[] = useMemo(() => {
+    const visibleIds = new Set(visible.map(v => v.client.id));
+    const clientById = new Map(clients.map(c => [c.id, c]));
+    const out: CalendarEvent[] = [];
+    for (const p of progress) {
+      if (!visibleIds.has(p.client_id)) continue;
+      if (p.locked || !p.unlocked_at) continue;
+      const due = new Date(new Date(p.unlocked_at).getTime() + (p.item.sla_hours || 48) * 36e5);
+      const date = isoDay(due);
+      const client = clientById.get(p.client_id);
+      out.push({
+        id: p.id,
+        date,
+        title: `${client?.name || 'Cliente'} — ${p.item.title}`,
+        subtitle: STAGE_LABELS[p.item.stage as OnboardingStage] || p.item.stage,
+        status: eventStatusForDate(date, p.status === 'concluido'),
+        kind: 'onboarding',
+      });
+    }
+    return out;
+  }, [progress, visible, clients]);
+
+
   const selectedData = useMemo(() => {
     if (!selectedClient) return null;
     const e = enriched.find(x => x.client.id === selectedClient.id);
@@ -368,16 +400,35 @@ export default function Onboarding() {
           </div>
         </div>
 
-        {/* Type tabs */}
-        <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)} className="mb-4">
-          <TabsList>
-            <TabsTrigger value="all">Todos</TabsTrigger>
-            <TabsTrigger value="empresa_existente">Empresa Existente</TabsTrigger>
-            <TabsTrigger value="empresa_nova">Empresa Nova</TabsTrigger>
-            <TabsTrigger value="em_constituicao">Em Constituição</TabsTrigger>
-            <TabsTrigger value="vmk_parceria">Parceria VMk</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Type tabs + view toggle */}
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
+            <TabsList>
+              <TabsTrigger value="all">Todos</TabsTrigger>
+              <TabsTrigger value="empresa_existente">Empresa Existente</TabsTrigger>
+              <TabsTrigger value="empresa_nova">Empresa Nova</TabsTrigger>
+              <TabsTrigger value="em_constituicao">Em Constituição</TabsTrigger>
+              <TabsTrigger value="vmk_parceria">Parceria VMk</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="inline-flex rounded-md border bg-muted p-1">
+            <button
+              onClick={() => changeViewMode('board')}
+              className={cn('px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5',
+                viewMode === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Quadro
+            </button>
+            <button
+              onClick={() => changeViewMode('calendar')}
+              className={cn('px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5',
+                viewMode === 'calendar' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> Calendário
+            </button>
+          </div>
+        </div>
+
 
         <OnboardingSlaPanel
           typeFilter={typeFilter}
@@ -411,17 +462,30 @@ export default function Onboarding() {
           </Select>
         </div>
 
-        <p className="text-xs text-muted-foreground mb-3">
-          {dndEnabled
-            ? 'Arraste os cards entre as colunas para mudar a etapa do cliente — as tarefas são sincronizadas automaticamente.'
-            : 'Selecione um tipo de onboarding para arrastar os cards entre as etapas.'}
-        </p>
+        {viewMode === 'board' && (
+          <p className="text-xs text-muted-foreground mb-3">
+            {dndEnabled
+              ? 'Arraste os cards entre as colunas para mudar a etapa do cliente — as tarefas são sincronizadas automaticamente.'
+              : 'Selecione um tipo de onboarding para arrastar os cards entre as etapas.'}
+          </p>
+        )}
 
 
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
+        ) : viewMode === 'calendar' ? (
+          <CalendarView
+            events={calendarEvents}
+            storageKey="cshub:onboarding:calendarView"
+            emptyLabel="Nenhum item"
+            onEventClick={(ev) => {
+              const p = progress.find(x => x.id === ev.id);
+              const c = p ? clients.find(x => x.id === p.client_id) : null;
+              if (c) setSelectedClient(c);
+            }}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
             {activeStages.map(stage => {

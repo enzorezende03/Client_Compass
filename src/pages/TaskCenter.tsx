@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock, MessageSquare
+  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock, MessageSquare, LayoutGrid, CalendarDays
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { STAGE_LABELS as ONBOARDING_STAGE_LABELS, forceUnlockByChecklistItem } from '@/lib/onboarding';
+import { CalendarView, CalendarEvent, eventStatusForDate } from '@/components/calendar/CalendarView';
 
 interface TaskRow {
   id: string;
@@ -107,6 +108,14 @@ export default function TaskCenter() {
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [deadlineView, setDeadlineView] = useState<'client' | 'internal'>('client');
   const [activeTab, setActiveTab] = useState<'regular' | 'onboarding'>('regular');
+  const [viewMode, setViewMode] = useState<'board' | 'calendar'>(() => {
+    try { return localStorage.getItem('cshub:tasks:viewMode') === 'calendar' ? 'calendar' : 'board'; } catch { return 'board'; }
+  });
+  const [viewAll, setViewAll] = useState(false);
+  const changeViewMode = (mode: 'board' | 'calendar') => {
+    setViewMode(mode);
+    try { localStorage.setItem('cshub:tasks:viewMode', mode); } catch { /* indisponível */ }
+  };
 
   // Reschedule
   const [rescheduleTask, setRescheduleTask] = useState<TaskRow | null>(null);
@@ -201,6 +210,35 @@ export default function TaskCenter() {
   // Indicator counts (onboarding view): real SLA separated from blocked noise.
   const onTimeTasks = activePending.filter(t => getDeadline(t) >= today);
 
+  // Calendar: respects search, responsible filter and the client/internal deadline toggle.
+  const calendarTasks = useMemo(() => tasks.filter(t => {
+    const cat = (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'regular';
+    if (!viewAll && cat !== activeTab) return false;
+    const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
+    const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
+    if (!matchSearch || !matchResp) return false;
+    if (t.locked && !showBlocked) return false;
+    return true;
+  }), [tasks, search, filterResponsible, activeTab, viewAll, showBlocked]);
+
+  const calendarEvents: CalendarEvent[] = useMemo(() => calendarTasks.map(t => {
+    const date = getDeadline(t);
+    return {
+      id: t.id,
+      date,
+      time: t.scheduled_time,
+      title: t.title,
+      subtitle: t.client_name,
+      status: eventStatusForDate(date, t.status === 'completed', !!t.locked),
+      kind: (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'task',
+    } as CalendarEvent;
+  }), [calendarTasks, deadlineView]);
+
+  const handleCalendarDrop = (event: CalendarEvent, newDate: string) => {
+    const task = tasks.find(t => t.id === event.id);
+    if (task) openReschedule(task, newDate);
+  };
+
   const openNew = () => { setForm(emptyForm); setEditId(null); setDialogOpen(true); };
   const openEdit = (task: TaskRow) => {
     setForm({
@@ -288,12 +326,13 @@ export default function TaskCenter() {
     fetchData();
   };
 
-  const openReschedule = (task: TaskRow) => {
+  const openReschedule = (task: TaskRow, presetDate?: string) => {
     setRescheduleTask(task);
     setRescheduleReason('');
     const hasClient = !!task.client_due_date;
     const hasInternal = !!task.internal_due_date;
-    setRescheduleField(hasClient ? 'client' : hasInternal ? 'internal' : 'client');
+    setRescheduleField(presetDate ? deadlineView : hasClient ? 'client' : hasInternal ? 'internal' : 'client');
+    if (presetDate) { setRescheduleNewDate(presetDate); return; }
     const today = new Date();
     today.setDate(today.getDate() + 1);
     setRescheduleNewDate(today.toISOString().split('T')[0]);
@@ -590,20 +629,45 @@ export default function TaskCenter() {
           </div>
         </div>
 
-        <div className="inline-flex rounded-md border bg-muted p-1 mb-4">
-          <button
-            onClick={() => setActiveTab('regular')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'regular' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Tarefas do dia a dia
-          </button>
-          <button
-            onClick={() => setActiveTab('onboarding')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'onboarding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Tarefas de Onboarding
-          </button>
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <div className="inline-flex rounded-md border bg-muted p-1">
+            <button
+              onClick={() => setActiveTab('regular')}
+              className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'regular' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Tarefas do dia a dia
+            </button>
+            <button
+              onClick={() => setActiveTab('onboarding')}
+              className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'onboarding' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Tarefas de Onboarding
+            </button>
+          </div>
+          <div className="inline-flex rounded-md border bg-muted p-1">
+            <button
+              onClick={() => changeViewMode('board')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5 ${viewMode === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Quadro
+            </button>
+            <button
+              onClick={() => changeViewMode('calendar')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5 ${viewMode === 'calendar' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> Calendário
+            </button>
+          </div>
+          {viewMode === 'calendar' && (
+            <div className="flex items-center gap-2">
+              <Switch id="view-all" checked={viewAll} onCheckedChange={setViewAll} />
+              <Label htmlFor="view-all" className="text-xs text-muted-foreground cursor-pointer">
+                Ver tudo (dia a dia + onboarding)
+              </Label>
+            </div>
+          )}
         </div>
+
 
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div className="relative flex-1 max-w-sm">
@@ -634,7 +698,7 @@ export default function TaskCenter() {
               Prazo Interno
             </button>
           </div>
-          {activeTab === 'onboarding' && (
+          {(activeTab === 'onboarding' || (viewMode === 'calendar' && viewAll)) && (
             <div className="flex items-center gap-2 ml-auto">
               <Switch id="show-blocked" checked={showBlocked} onCheckedChange={setShowBlocked} />
               <Label htmlFor="show-blocked" className="text-xs text-muted-foreground cursor-pointer">
@@ -644,7 +708,7 @@ export default function TaskCenter() {
           )}
         </div>
 
-        {activeTab === 'onboarding' && (
+        {activeTab === 'onboarding' && viewMode === 'board' && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
             <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
               <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Em atraso</p>
@@ -667,6 +731,17 @@ export default function TaskCenter() {
 
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+        ) : viewMode === 'calendar' ? (
+          <CalendarView
+            events={calendarEvents}
+            storageKey="cshub:tasks:calendarView"
+            emptyLabel="Nenhuma tarefa"
+            onEventClick={(ev) => {
+              const task = tasks.find(t => t.id === ev.id);
+              if (task) openEdit(task);
+            }}
+            onEventDrop={handleCalendarDrop}
+          />
         ) : (
           <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-4', showBlocked && activeTab === 'onboarding' ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
             <KanbanColumn title="Atrasadas" icon={<AlertTriangle className="h-4 w-4" />} tasks={overdueTasks} variant="danger" dropStatus="pending" />
