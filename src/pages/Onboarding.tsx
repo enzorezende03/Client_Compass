@@ -1000,6 +1000,7 @@ export default function Onboarding() {
           clientName={selectedClient.name}
           onConverted={() => { setSelectedClient(null); fetchAll(); }}
         />
+      )}
 
       <ProcedureStageSheet
         open={procedureOpen}
