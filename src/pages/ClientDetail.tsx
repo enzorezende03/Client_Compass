@@ -164,6 +164,28 @@ export default function ClientDetail() {
 
   const clientTasks = useMemo(() => tasks.filter(t => t.clientId === id), [tasks, id]);
 
+  const tasksByEntry = useMemo(() => {
+    const map: Record<string, { id: string; title: string; status: string }> = {};
+    tasks.forEach(t => {
+      if (t.sourceTimelineEntryId) map[t.sourceTimelineEntryId] = { id: t.id, title: t.title, status: t.status };
+    });
+    return map;
+  }, [tasks]);
+
+  const handleClassify = useCallback(async (entry: TimelineEntry, value: 'escritorio' | 'cliente') => {
+    const { error } = await supabase
+      .from('timeline_entries')
+      .update({ responsibility_origin: value } as any)
+      .eq('id', entry.id);
+    if (error) {
+      toast({ title: 'Erro ao classificar', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setTimeline(prev => prev.map(e => e.id === entry.id ? { ...e, responsibilityOrigin: value } : e));
+    toast({ title: 'Classificação salva' });
+  }, [toast]);
+
+
   if (loading) {
     return <AppLayout><div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando...</div></AppLayout>;
   }
