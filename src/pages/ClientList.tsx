@@ -105,8 +105,22 @@ export default function ClientList() {
   const responsibles = [...new Set(clients.filter(c => !c.archived).map(c => c.csResponsible).filter(Boolean))];
   const archivedCount = clients.filter(c => c.archived).length;
 
+  const matchesCard = (c: ClientWithArchive) => {
+    if (!cardFilter || cardFilter === 'total') return c.status !== 'cancelled';
+    if (c.status === 'cancelled') return false;
+    switch (cardFilter) {
+      case 'healthy': return c.healthScore === 'healthy';
+      case 'attention': return c.healthScore === 'attention';
+      case 'critical': return c.healthScore === 'critical';
+      case 'treatment': return treatmentIds.has(c.id) || c.status === 'recovery';
+      case 'suspended': return c.financialStatus === 'suspended';
+      default: return true;
+    }
+  };
+
   const filtered = clients.filter(c => {
     if (showArchived ? !c.archived : !!c.archived) return false;
+    if (!showArchived && !matchesCard(c)) return false;
     const matchSearch = search === '' ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.document.includes(search);
@@ -118,12 +132,9 @@ export default function ClientList() {
     return matchSearch && matchFinancial && matchComplexity && matchHealth && matchResp && matchProfile;
   });
 
-  const activeClients = clients.filter(c => !c.archived);
-  const stats = {
-    total: activeClients.length,
-    atRisk: activeClients.filter(c => c.status === 'at_risk' || c.status === 'recovery' || c.healthScore === 'critical').length,
-    suspended: activeClients.filter(c => c.financialStatus === 'suspended').length,
-    archived: archivedCount,
+  const selectCard = (key: CardFilter) => {
+    setShowArchived(false);
+    setCardFilter(prev => (prev === key ? null : key));
   };
 
   const exportClientsReport = () => {
