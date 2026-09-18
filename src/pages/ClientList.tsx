@@ -69,6 +69,23 @@ export default function ClientList() {
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
   const [profileFilter, setProfileFilter] = useState<string>('all');
   const [showArchived, setShowArchived] = useState(false);
+  const [cardFilter, setCardFilter] = useState<CardFilter>(null);
+
+  const queryClient = useQueryClient();
+  const { data: counts } = useQuery({
+    queryKey: ['dashboard-health-counts'],
+    queryFn: async (): Promise<HealthCounts> => {
+      const { data, error } = await (supabase as any).rpc('dashboard_health_counts');
+      if (error) throw error;
+      return data as HealthCounts;
+    },
+  });
+  const treatmentIds = new Set<string>(counts?.treatment_ids ?? []);
+  const pct = (n: number) => {
+    const total = counts?.total ?? 0;
+    if (!total) return '0%';
+    return `${Math.round((n / total) * 100)}%`;
+  };
 
   // Archive dialog state
   const [archiveTarget, setArchiveTarget] = useState<ClientWithArchive | null>(null);
