@@ -247,7 +247,7 @@ export function SlaCatalogPanel({ compact = false }: { compact?: boolean }) {
                             {!item.active && <Badge variant="outline" className="text-xs">Inativa</Badge>}
                           </p>
                           <p className="text-sm text-primary font-semibold">{formatSla(item.sla_value, item.sla_unit)}</p>
-                          {item.notes && <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>}
+                          {item.notes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{item.notes}</p>}
                         </div>
                         {allowed && (
                           <div className="flex items-center gap-1 shrink-0">
