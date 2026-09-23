@@ -115,9 +115,7 @@ export default function ClientRegistration() {
                 <TableHead>Documento</TableHead>
                 <TableHead>Segmento</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>CS Responsável</TableHead>
-                <TableHead>Complexidade</TableHead>
-                <TableHead className="w-[160px]">Completude</TableHead>
+                <TableHead className="w-[140px]">Tier</TableHead>
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
