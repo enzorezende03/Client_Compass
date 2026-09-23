@@ -57,7 +57,7 @@ export default function ClientRegistration() {
     const rows = filtered.map(c => {
       return {
         Nome: c.name,
-        Documento: c.document,
+        Documento: formatDocument(c.document),
         Segmento: c.segment,
         Status: `${STATUS_EMOJIS[c.status as ClientStatus] ?? ''} ${STATUS_LABELS[c.status as ClientStatus] || c.status}`.trim(),
         Tier: `${PROFILE_ICONS[c.profile as ClientProfile] ?? ''} ${PROFILE_LABELS[c.profile as ClientProfile] || c.profile || ''}`.trim(),
