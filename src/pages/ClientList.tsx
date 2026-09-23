@@ -30,6 +30,7 @@ import {
   COMPLEXITY_LABELS, HEALTH_LABELS, PROFILE_LABELS,
 } from '@/types/client';
 import { cn } from '@/lib/utils';
+import { formatDocument } from '@/lib/document';
 
 interface ClientWithArchive extends Client {
   archived?: boolean;
