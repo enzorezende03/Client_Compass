@@ -1,7 +1,7 @@
 import { useLocation, useNavigate, NavLink as RouterNavLink } from 'react-router-dom';
 import {
   BookOpen, Building2, CalendarClock, Clock3, LayoutDashboard, LogOut,
-  RefreshCw, Rocket, Users,
+  Rocket, Users,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SlaCatalogSheet } from '@/components/SlaCatalogSheet';
