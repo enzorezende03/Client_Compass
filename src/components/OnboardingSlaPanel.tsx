@@ -224,15 +224,21 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
           <div className="flex items-start gap-1.5 text-[11px] leading-tight text-muted-foreground">
             <CheckCircle2 className="h-3.5 w-3.5 mt-[1px] shrink-0" /> Concluídos no período
           </div>
-          <div className="flex items-center justify-between gap-1.5">
-            <div className="text-xl font-bold leading-none text-foreground">{periodStats.count}</div>
-            <Input
-              type="month"
-              value={month}
-              onChange={e => setMonth(e.target.value || currentMonth())}
-              className="h-6 w-[108px] min-w-0 text-[10px] px-1 shrink"
-            />
-          </div>
+          <div className="text-xl font-bold leading-none text-foreground">{periodStats.count}</div>
+          <select
+            value={month}
+            onChange={e => setMonth(e.target.value || currentMonth())}
+            className="mt-1 h-6 w-full min-w-0 rounded-md border border-input bg-background px-1 text-[11px] text-foreground truncate"
+          >
+            {Array.from({ length: 24 }, (_, i) => {
+              const d = new Date();
+              d.setDate(1);
+              d.setMonth(d.getMonth() - i);
+              const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+              const label = d.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace('.', '');
+              return <option key={v} value={v}>{label}</option>;
+            })}
+          </select>
         </div>
         <Card
           title="Tempo médio de onboarding (dias)"
