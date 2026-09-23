@@ -9,10 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
-import { computeCompleteness, completenessTone } from '@/lib/clientCompleteness';
 import { cn } from '@/lib/utils';
 import {
-  STATUS_LABELS, COMPLEXITY_LABELS, STATUS_EMOJIS, COMPLEXITY_EMOJIS, ClientStatus, ComplexityLevel,
+  STATUS_LABELS, STATUS_EMOJIS, ClientStatus,
+  PROFILE_LABELS, PROFILE_ICONS, PROFILE_COLORS, ClientProfile,
 } from '@/types/client';
 
 export default function ClientRegistration() {
