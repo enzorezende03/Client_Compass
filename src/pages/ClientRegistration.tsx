@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Search, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Download, ArchiveRestore } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,8 @@ export default function ClientRegistration() {
   const [search, setSearch] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'ativos' | 'arquivados'>('ativos');
+  const [unarchiveTarget, setUnarchiveTarget] = useState<any | null>(null);
   const { toast } = useToast();
 
   const fetchClients = async () => {
@@ -47,10 +49,23 @@ export default function ClientRegistration() {
   useEffect(() => { fetchClients(); }, []);
 
   const searchDigits = search.replace(/\D/g, '');
+  const archivedCount = clients.filter(c => c.archived).length;
   const filtered = clients.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (searchDigits.length > 0 && c.document.replace(/\D/g, '').includes(searchDigits))
+    (tab === 'arquivados' ? !!c.archived : !c.archived) &&
+    (c.name.toLowerCase().includes(search.toLowerCase()) ||
+    (searchDigits.length > 0 && c.document.replace(/\D/g, '').includes(searchDigits)))
   );
+
+  const handleUnarchive = async () => {
+    if (!unarchiveTarget) return;
+    const { error } = await supabase.from('clients').update({
+      archived: false, archived_at: null, archived_reason: '', archived_by: '',
+    }).eq('id', unarchiveTarget.id);
+    if (error) { toast({ title: 'Erro ao desarquivar', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Cliente desarquivado', description: `${unarchiveTarget.name} voltou para a carteira ativa.` });
+    setUnarchiveTarget(null);
+    fetchClients();
+  };
 
   const openNew = () => navigate('/cadastro/clientes/novo');
   const openEdit = (client: any) => navigate(`/cadastro/clientes/${client.id}/editar`);
@@ -104,9 +119,27 @@ export default function ClientRegistration() {
           </div>
         </div>
 
-        <div className="relative mb-4 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome ou documento..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="inline-flex w-fit rounded-lg border bg-muted/40 p-1">
+            <button
+              type="button"
+              onClick={() => setTab('ativos')}
+              className={cn('rounded-md px-4 py-1.5 text-sm font-medium transition-colors', tab === 'ativos' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              Ativos
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('arquivados')}
+              className={cn('rounded-md px-4 py-1.5 text-sm font-medium transition-colors', tab === 'arquivados' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              Arquivados ({archivedCount})
+            </button>
+          </div>
+          <div className="relative max-w-sm flex-1 sm:flex-none sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por nome ou documento..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          </div>
         </div>
 
         <div className="rounded-lg border bg-card shadow-card overflow-hidden">
@@ -118,14 +151,15 @@ export default function ClientRegistration() {
                 <TableHead>Segmento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[140px]">Tier</TableHead>
+                {tab === 'arquivados' && <TableHead>Motivo do arquivamento</TableHead>}
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={tab === 'arquivados' ? 7 : 6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={tab === 'arquivados' ? 7 : 6} className="text-center py-8 text-muted-foreground">{tab === 'arquivados' ? 'Nenhum cliente arquivado.' : 'Nenhum cliente encontrado.'}</TableCell></TableRow>
               ) : (
                 filtered.map(c => {
                   const profile = c.profile as ClientProfile;
@@ -151,10 +185,24 @@ export default function ClientRegistration() {
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
+                      {tab === 'arquivados' && (
+                        <TableCell className="max-w-[260px]">
+                          <p className="truncate text-xs text-muted-foreground" title={c.archived_reason || ''}>{c.archived_reason || '—'}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {c.archived_at ? new Date(c.archived_at).toLocaleDateString('pt-BR') : ''}{c.archived_by ? ` · ${c.archived_by}` : ''}
+                          </p>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedId(c.id); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          {tab === 'arquivados' ? (
+                            <Button variant="ghost" size="icon" title="Desarquivar" onClick={() => setUnarchiveTarget(c)}><ArchiveRestore className="h-4 w-4" /></Button>
+                          ) : (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => { setSelectedId(c.id); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -175,6 +223,19 @@ export default function ClientRegistration() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
             <Button variant="destructive" onClick={handleDelete}>Excluir</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!unarchiveTarget} onOpenChange={open => { if (!open) setUnarchiveTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Desarquivar cliente?</DialogTitle>
+            <DialogDescription>{unarchiveTarget?.name} voltará para a carteira ativa.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUnarchiveTarget(null)}>Cancelar</Button>
+            <Button onClick={handleUnarchive}>Desarquivar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
