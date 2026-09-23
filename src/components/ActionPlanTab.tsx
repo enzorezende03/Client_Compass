@@ -57,7 +57,7 @@ const emptyForm = {
   next_step: '',
 };
 
-export function ActionPlanTab({ clientId }: { clientId: string }) {
+export function ActionPlanTab({ clientId, autoOpen }: { clientId: string; autoOpen?: boolean }) {
   const { toast } = useToast();
   const [plans, setPlans] = useState<ActionPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +80,7 @@ export function ActionPlanTab({ clientId }: { clientId: string }) {
   }, [clientId]);
 
   useEffect(() => { fetchPlans(); }, [fetchPlans]);
+  useEffect(() => { if (autoOpen) { setEditingId(null); setForm(emptyForm); setModalOpen(true); } }, [autoOpen]);
 
   const openNew = () => { setEditingId(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (p: ActionPlan) => {
