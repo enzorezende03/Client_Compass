@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock, MessageSquare, LayoutGrid, CalendarDays
+  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock, MessageSquare, LayoutGrid, CalendarDays, List as ListIcon
 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -108,11 +109,14 @@ export default function TaskCenter() {
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [deadlineView, setDeadlineView] = useState<'client' | 'internal'>('client');
   const [activeTab, setActiveTab] = useState<'regular' | 'onboarding'>('regular');
-  const [viewMode, setViewMode] = useState<'board' | 'calendar'>(() => {
-    try { return localStorage.getItem('cshub:tasks:viewMode') === 'calendar' ? 'calendar' : 'board'; } catch { return 'board'; }
+  const [viewMode, setViewMode] = useState<'board' | 'calendar' | 'list'>(() => {
+    try {
+      const saved = localStorage.getItem('cshub:tasks:viewMode');
+      return saved === 'calendar' || saved === 'list' ? saved : 'board';
+    } catch { return 'board'; }
   });
   const [viewAll, setViewAll] = useState(false);
-  const changeViewMode = (mode: 'board' | 'calendar') => {
+  const changeViewMode = (mode: 'board' | 'calendar' | 'list') => {
     setViewMode(mode);
     try { localStorage.setItem('cshub:tasks:viewMode', mode); } catch { /* indisponível */ }
   };
@@ -233,6 +237,17 @@ export default function TaskCenter() {
       kind: (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'task',
     } as CalendarEvent;
   }), [calendarTasks, deadlineView]);
+
+  // Lista: mesmas regras de filtro do quadro, ordenada pelo prazo selecionado.
+  const listTasks = useMemo(() => {
+    const rows = filtered.filter(t => (showBlocked || !isLocked(t)));
+    const rank = (t: TaskRow) => {
+      if (t.status === 'completed') return 3;
+      if (isLocked(t)) return 2;
+      return getDeadline(t) < today ? 0 : 1;
+    };
+    return [...rows].sort((a, b) => rank(a) - rank(b) || getDeadline(a).localeCompare(getDeadline(b)));
+  }, [filtered, showBlocked, deadlineView, today]);
 
   const handleCalendarDrop = (event: CalendarEvent, newDate: string) => {
     const task = tasks.find(t => t.id === event.id);
@@ -657,6 +672,12 @@ export default function TaskCenter() {
             >
               <CalendarDays className="h-3.5 w-3.5" /> Calendário
             </button>
+            <button
+              onClick={() => changeViewMode('list')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <ListIcon className="h-3.5 w-3.5" /> Lista
+            </button>
           </div>
           {viewMode === 'calendar' && (
             <div className="flex items-center gap-2">
@@ -742,6 +763,76 @@ export default function TaskCenter() {
             }}
             onEventDrop={handleCalendarDrop}
           />
+        ) : viewMode === 'list' ? (
+          <div className="rounded-xl border bg-card overflow-hidden">
+            {listTasks.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm">Nenhuma tarefa</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tarefa</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead>{deadlineView === 'internal' ? 'Prazo interno' : 'Prazo cliente'}</TableHead>
+                    <TableHead>Situação</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {listTasks.map(task => {
+                    const deadline = getDeadline(task);
+                    const done = task.status === 'completed';
+                    const locked = isLocked(task);
+                    const overdue = !done && !locked && deadline < today;
+                    const isToday = !done && !locked && deadline === today;
+                    return (
+                      <TableRow key={task.id}>
+                        <TableCell className="max-w-[320px]">
+                          <p className={`text-sm font-medium ${done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.title}</p>
+                          {task.category === 'onboarding' && task.onboarding_stage && (
+                            <Badge variant="outline" className="mt-1 text-[10px] border-primary/40 text-primary">
+                              {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <button onClick={() => navigate(`/client/${task.client_id}`)} className="text-xs text-primary hover:underline text-left">
+                            {task.client_name}
+                          </button>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{task.responsible || 'Sem responsável'}</TableCell>
+                        <TableCell className={`text-xs whitespace-nowrap ${overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                          {new Date(deadline + 'T12:00:00').toLocaleDateString('pt-BR')}
+                          {task.scheduled_time ? ` às ${task.scheduled_time.slice(0, 5)}` : ''}
+                        </TableCell>
+                        <TableCell>
+                          {done ? (
+                            <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-400">Concluída</Badge>
+                          ) : locked ? (
+                            <Badge variant="outline" className="text-[10px] gap-1 text-muted-foreground"><Lock className="h-2.5 w-2.5" /> Bloqueada</Badge>
+                          ) : overdue ? (
+                            <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">Atrasada</Badge>
+                          ) : isToday ? (
+                            <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Vence hoje</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground">No prazo</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(task)} className="h-6 px-2 text-xs">Editar</Button>
+                          {!locked && (
+                            <Button variant="ghost" size="sm" onClick={() => openReschedule(task)} className="h-6 px-2 text-xs text-amber-700 dark:text-amber-400">Remanejar</Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => deleteTask(task.id)} className="h-6 px-2 text-xs text-destructive hover:text-destructive">Remover</Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         ) : (
           <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-4', showBlocked && activeTab === 'onboarding' ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
             <KanbanColumn title="Atrasadas" icon={<AlertTriangle className="h-4 w-4" />} tasks={overdueTasks} variant="danger" dropStatus="pending" />
