@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock, MessageSquare, LayoutGrid, CalendarDays
+  CalendarClock, CheckSquare, Clock, Filter, Plus, Search, User, Building2, AlertTriangle, GripVertical, Check, ChevronsUpDown, History, CalendarPlus, Lock, Unlock, MessageSquare, LayoutGrid, CalendarDays, List as ListIcon
 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
