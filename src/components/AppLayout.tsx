@@ -14,14 +14,21 @@ import {
 } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
 
-const mainItems = [
+interface NavigationItem {
+  title: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+  end?: boolean;
+}
+
+const mainItems: NavigationItem[] = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard, end: true },
   { title: 'Clientes', url: '/cadastro/clientes', icon: Building2 },
   { title: 'Tarefas', url: '/tarefas', icon: CalendarClock },
   { title: 'Onboarding', url: '/onboarding', icon: Rocket },
 ];
 
-const managementItems = [
+const managementItems: NavigationItem[] = [
   { title: 'Usuários internos', url: '/cadastro/usuarios', icon: Users },
   { title: 'G-Click', url: '/gclick-sync', icon: RefreshCw },
   { title: 'Prazos', url: '/prazos', icon: Clock3 },
@@ -52,21 +59,24 @@ function Brand() {
   );
 }
 
-function NavigationGroup({ label, items }: { label: string; items: typeof mainItems }) {
+function NavigationGroup({ label, items }: { label: string; items: NavigationItem[] }) {
+  const { pathname } = useLocation();
   return (
     <SidebarGroup>
       <SidebarGroupLabel className="font-semibold uppercase text-sidebar-foreground/45">{label}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {items.map(item => (
+          {items.map(item => {
+            const isActive = item.end ? pathname === item.url : pathname.startsWith(item.url);
+            return (
             <SidebarMenuItem key={item.url}>
-              <SidebarMenuButton asChild tooltip={item.title} className="h-10 gap-3 rounded-md px-3 data-[active=true]:border-l-2 data-[active=true]:border-sidebar-primary data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-primary">
-                <RouterNavLink to={item.url} end={item.end} className={({ isActive }) => isActive ? 'active' : undefined}>
-                  {({ isActive }) => <><item.icon className="h-4 w-4" /><span className={isActive ? 'font-semibold' : ''}>{item.title}</span></>}
+              <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="h-10 gap-3 rounded-md px-3 data-[active=true]:border-l-2 data-[active=true]:border-sidebar-primary data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-primary">
+                <RouterNavLink to={item.url} end={item.end}>
+                  <item.icon className="h-4 w-4" /><span>{item.title}</span>
                 </RouterNavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          ))}
+          )})}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
