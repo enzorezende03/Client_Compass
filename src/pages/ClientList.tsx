@@ -353,7 +353,7 @@ function StatCard({ icon: Icon, label, value, percent, footer, tone, emphasis, o
   const toneClass = tone === 'healthy' ? 'text-health-healthy' : tone === 'attention' ? 'text-health-attention' : tone === 'critical' ? 'text-destructive' : 'text-foreground';
   return (
     <button type="button" onClick={onClick} className={cn(
-      'group min-h-32 rounded-lg border border-l-4 bg-card p-4 text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover',
+      'group rounded-lg border border-l-4 bg-card p-2.5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover',
       tone === 'healthy' && 'border-l-health-healthy',
       tone === 'attention' && 'border-l-health-attention',
       tone === 'critical' && 'border-l-destructive',
@@ -361,13 +361,15 @@ function StatCard({ icon: Icon, label, value, percent, footer, tone, emphasis, o
       emphasis && 'bg-destructive/5 hover:border-destructive/60',
       className,
     )}>
-      <div className="flex items-start justify-between gap-3">
-        <span className={cn('flex h-8 w-8 items-center justify-center rounded-md bg-secondary', toneClass)}><Icon className="h-4 w-4" /></span>
-        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-1.5">
+          <span className={cn('mt-[1px] shrink-0', toneClass)}><Icon className="h-3.5 w-3.5" /></span>
+          <p className="text-[11px] font-medium leading-tight text-muted-foreground">{label}</p>
+        </div>
+        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
       </div>
-      <p className="mt-3 text-sm font-medium text-muted-foreground">{label}</p>
-      <div className="flex items-baseline gap-2"><strong className={cn('text-2xl font-bold', toneClass)}>{value}</strong>{percent && <span className="text-xs text-muted-foreground">{percent} da carteira</span>}</div>
-      {footer && <p className="mt-1.5 text-xs text-muted-foreground">{footer}</p>}
+      <div className="mt-1 flex items-baseline gap-1.5"><strong className={cn('text-xl font-bold leading-none', toneClass)}>{value}</strong>{percent && <span className="text-[10px] text-muted-foreground">{percent} da carteira</span>}</div>
+      {footer && <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">{footer}</p>}
     </button>
   );
 }
