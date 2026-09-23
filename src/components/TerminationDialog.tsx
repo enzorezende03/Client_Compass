@@ -14,20 +14,32 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   clientId: string;
   onDone: () => void;
+  defaultArchive?: boolean;
 }
 
-export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone }: Props) {
+export const ERROR_SECTORS = ['Fiscal', 'Contábil', 'DP', 'Societário', 'Comercial', 'Financeiro', 'CS'];
+
+export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone, defaultArchive = false }: Props) {
   const { toast } = useToast();
   const today = new Date().toISOString().slice(0, 10);
   const [requestDate, setRequestDate] = useState(today);
   const [effectiveDate, setEffectiveDate] = useState('');
   const [category, setCategory] = useState<TerminationReason | ''>('');
   const [detail, setDetail] = useState('');
+  const [initiatedBy, setInitiatedBy] = useState<'cliente' | 'escritorio'>('cliente');
+  const [wasError, setWasError] = useState(false);
+  const [errorSector, setErrorSector] = useState('');
+  const [improvement, setImprovement] = useState('');
+  const [archive, setArchive] = useState(defaultArchive);
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!requestDate || !category) {
       toast({ title: 'Preencha a data do pedido e o motivo', variant: 'destructive' });
+      return;
+    }
+    if (wasError && !errorSector) {
+      toast({ title: 'Informe a área responsável pelo erro', variant: 'destructive' });
       return;
     }
     setSaving(true);
@@ -37,6 +49,11 @@ export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone
       effective_date: effectiveDate || null,
       reason_category: category,
       reason_detail: detail,
+      initiated_by: initiatedBy,
+      was_error: wasError,
+      error_sector: wasError ? errorSector : null,
+      improvement_notes: improvement,
+      archive_client: archive,
     } as any);
     setSaving(false);
     if (error) {
@@ -90,6 +107,48 @@ export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone
             <Textarea value={detail} onChange={e => setDetail(e.target.value)} rows={3}
               placeholder="Contexto do pedido de distrato" />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Quem originou</Label>
+              <Select value={initiatedBy} onValueChange={v => setInitiatedBy(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cliente">Cliente</SelectItem>
+                  <SelectItem value="escritorio">Contabilidade (escritório)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Houve erro nosso?</Label>
+              <Select value={wasError ? 'sim' : 'nao'} onValueChange={v => setWasError(v === 'sim')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nao">Não</SelectItem>
+                  <SelectItem value="sim">Sim</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {wasError && (
+            <div className="space-y-1.5">
+              <Label>Área do erro</Label>
+              <Select value={errorSector} onValueChange={setErrorSector}>
+                <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
+                <SelectContent>
+                  {ERROR_SECTORS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label>O que podemos melhorar na entrega?</Label>
+            <Textarea value={improvement} onChange={e => setImprovement(e.target.value)} rows={2}
+              placeholder="Aprendizado para evitar novos distratos" />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={archive} onChange={e => setArchive(e.target.checked)} />
+            Arquivar (desativar) o cliente agora
+          </label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
