@@ -310,6 +310,9 @@ export default function ClientList() {
                   </div>
                   <p className="mt-3 text-xs text-muted-foreground">CS responsável: {client.csResponsible || 'Não definido'}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
+                     <span className="inline-flex h-6 items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 text-xs font-semibold text-primary">
+                       Tier: {PROFILE_LABELS[client.profile] || client.profile}
+                     </span>
                     <HealthScoreBadge score={client.healthScore} />
                     <FinancialStatusBadge status={client.financialStatus} />
                   </div>
