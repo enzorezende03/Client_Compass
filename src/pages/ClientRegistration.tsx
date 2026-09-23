@@ -45,9 +45,10 @@ export default function ClientRegistration() {
 
   useEffect(() => { fetchClients(); }, []);
 
+  const searchDigits = search.replace(/\D/g, '');
   const filtered = clients.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.document.includes(search)
+    (searchDigits.length > 0 && c.document.replace(/\D/g, '').includes(searchDigits))
   );
 
   const openNew = () => navigate('/cadastro/clientes/novo');
