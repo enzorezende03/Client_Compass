@@ -762,6 +762,76 @@ export default function TaskCenter() {
             }}
             onEventDrop={handleCalendarDrop}
           />
+        ) : viewMode === 'list' ? (
+          <div className="rounded-xl border bg-card overflow-hidden">
+            {listTasks.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm">Nenhuma tarefa</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tarefa</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead>{deadlineView === 'internal' ? 'Prazo interno' : 'Prazo cliente'}</TableHead>
+                    <TableHead>Situação</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {listTasks.map(task => {
+                    const deadline = getDeadline(task);
+                    const done = task.status === 'completed';
+                    const locked = isLocked(task);
+                    const overdue = !done && !locked && deadline < today;
+                    const isToday = !done && !locked && deadline === today;
+                    return (
+                      <TableRow key={task.id}>
+                        <TableCell className="max-w-[320px]">
+                          <p className={`text-sm font-medium ${done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.title}</p>
+                          {task.category === 'onboarding' && task.onboarding_stage && (
+                            <Badge variant="outline" className="mt-1 text-[10px] border-primary/40 text-primary">
+                              {STAGE_LABEL[task.onboarding_stage] || task.onboarding_stage}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <button onClick={() => navigate(`/client/${task.client_id}`)} className="text-xs text-primary hover:underline text-left">
+                            {task.client_name}
+                          </button>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{task.responsible || 'Sem responsável'}</TableCell>
+                        <TableCell className={`text-xs whitespace-nowrap ${overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                          {new Date(deadline + 'T12:00:00').toLocaleDateString('pt-BR')}
+                          {task.scheduled_time ? ` às ${task.scheduled_time.slice(0, 5)}` : ''}
+                        </TableCell>
+                        <TableCell>
+                          {done ? (
+                            <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-400">Concluída</Badge>
+                          ) : locked ? (
+                            <Badge variant="outline" className="text-[10px] gap-1 text-muted-foreground"><Lock className="h-2.5 w-2.5" /> Bloqueada</Badge>
+                          ) : overdue ? (
+                            <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">Atrasada</Badge>
+                          ) : isToday ? (
+                            <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Vence hoje</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground">No prazo</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(task)} className="h-6 px-2 text-xs">Editar</Button>
+                          {!locked && (
+                            <Button variant="ghost" size="sm" onClick={() => openReschedule(task)} className="h-6 px-2 text-xs text-amber-700 dark:text-amber-400">Remanejar</Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => deleteTask(task.id)} className="h-6 px-2 text-xs text-destructive hover:text-destructive">Remover</Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         ) : (
           <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-4', showBlocked && activeTab === 'onboarding' ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
             <KanbanColumn title="Atrasadas" icon={<AlertTriangle className="h-4 w-4" />} tasks={overdueTasks} variant="danger" dropStatus="pending" />
