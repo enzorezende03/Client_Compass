@@ -41,6 +41,7 @@ export function formatSla(value: number, unit: SlaUnit): string {
   const labels = SLA_UNIT_LABELS[unit];
   const n = Number(value);
   const pretty = Number.isInteger(n) ? String(n) : n.toString().replace('.', ',');
+  if (n === 0 && unit === 'horas') return 'Imediato';
   return `${pretty} ${n === 1 ? labels.singular : labels.plural}`;
 }
 
