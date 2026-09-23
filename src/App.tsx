@@ -13,7 +13,6 @@ import ClientFormPage from "./pages/ClientFormPage";
 import InternalUsersRegistration from "./pages/InternalUsersRegistration";
 import TaskCenter from "./pages/TaskCenter";
 import Onboarding from "./pages/Onboarding";
-import GClickSync from "./pages/GClickSync";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -37,7 +36,6 @@ const App = () => (
           <Route path="/cadastro/usuarios" element={<AuthGuard><InternalUsersRegistration /></AuthGuard>} />
           <Route path="/tarefas" element={<AuthGuard><TaskCenter /></AuthGuard>} />
           <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
-          <Route path="/gclick-sync" element={<AuthGuard><GClickSync /></AuthGuard>} />
           <Route path="/prazos" element={<AuthGuard><SlaCatalogPage /></AuthGuard>} />
           <Route path="/procedimento-onboarding" element={<AuthGuard><OnboardingProcedure /></AuthGuard>} />
           <Route path="*" element={<NotFound />} />
