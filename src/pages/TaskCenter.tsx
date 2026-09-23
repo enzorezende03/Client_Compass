@@ -237,6 +237,17 @@ export default function TaskCenter() {
     } as CalendarEvent;
   }), [calendarTasks, deadlineView]);
 
+  // Lista: mesmas regras de filtro do quadro, ordenada pelo prazo selecionado.
+  const listTasks = useMemo(() => {
+    const rows = filtered.filter(t => (showBlocked || !isLocked(t)));
+    const rank = (t: TaskRow) => {
+      if (t.status === 'completed') return 3;
+      if (isLocked(t)) return 2;
+      return getDeadline(t) < today ? 0 : 1;
+    };
+    return [...rows].sort((a, b) => rank(a) - rank(b) || getDeadline(a).localeCompare(getDeadline(b)));
+  }, [filtered, showBlocked, deadlineView, today]);
+
   const handleCalendarDrop = (event: CalendarEvent, newDate: string) => {
     const task = tasks.find(t => t.id === event.id);
     if (task) openReschedule(task, newDate);
