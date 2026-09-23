@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Archive, ArchiveRestore, ArrowRight, Building2, Download, HeartPulse,
+  Archive, ArrowRight, Building2, Download, HeartPulse,
   Search, ShieldAlert, Stethoscope, TrendingDown, TrendingUp, Users,
   AlertTriangle,
 } from 'lucide-react';
@@ -14,10 +14,6 @@ import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -39,7 +35,7 @@ interface ClientWithArchive extends Client {
   archivedBy?: string;
 }
 
-type PortfolioView = 'total' | 'healthy' | 'attention' | 'critical' | 'treatment' | 'suspended' | 'archived';
+type PortfolioView = 'total' | 'healthy' | 'attention' | 'critical' | 'treatment' | 'suspended';
 
 interface HealthCounts {
   total: number;
@@ -59,7 +55,6 @@ const VIEW_LABELS: Record<PortfolioView, string> = {
   critical: 'Clientes críticos',
   treatment: 'Clientes em tratamento',
   suspended: 'Financeiro suspenso',
-  archived: 'Clientes arquivados',
 };
 
 const CHART_COLORS = {
@@ -110,7 +105,6 @@ export default function ClientList() {
   const [archiveTarget, setArchiveTarget] = useState<ClientWithArchive | null>(null);
   const [archiveReason, setArchiveReason] = useState('');
   const [archiving, setArchiving] = useState(false);
-  const [unarchiveTarget, setUnarchiveTarget] = useState<ClientWithArchive | null>(null);
 
   const { data: counts } = useQuery({
     queryKey: ['dashboard-health-counts'],
@@ -136,11 +130,9 @@ export default function ClientList() {
   useEffect(() => { loadClients(); }, [loadClients]);
 
   const treatmentIds = useMemo(() => new Set(counts?.treatment_ids ?? []), [counts?.treatment_ids]);
-  const archivedCount = clients.filter(client => client.archived).length;
   const percent = (value: number) => counts?.total ? `${Math.round((value / counts.total) * 100)}%` : '0%';
 
   const matchesView = useCallback((client: ClientWithArchive, view: PortfolioView) => {
-    if (view === 'archived') return !!client.archived;
     if (client.archived || client.status === 'cancelled') return false;
     if (view === 'total') return true;
     if (view === 'healthy') return client.healthScore === 'healthy';
@@ -181,11 +173,6 @@ export default function ClientList() {
       Tier: PROFILE_LABELS[client.profile] || client.profile,
       'Health Score': HEALTH_LABELS[client.healthScore as HealthScore] || client.healthScore,
       'Início do contrato': client.contractStartDate,
-      ...(selectedView === 'archived' ? {
-        'Justificativa arquivamento': client.archivedReason,
-        'Arquivado em': client.archivedAt ? new Date(client.archivedAt).toLocaleDateString('pt-BR') : '',
-        'Arquivado por': client.archivedBy,
-      } : {}),
     }));
     const worksheet = XLSX.utils.json_to_sheet(rows);
     worksheet['!cols'] = Array.from({ length: Object.keys(rows[0] || {}).length }, () => ({ wch: 24 }));
@@ -218,38 +205,18 @@ export default function ClientList() {
     }
   };
 
-  const handleUnarchive = async () => {
-    if (!unarchiveTarget) return;
-    try {
-      const { error } = await supabase.from('clients').update({
-        archived: false, archived_at: null, archived_reason: '', archived_by: '',
-      }).eq('id', unarchiveTarget.id);
-      if (error) throw error;
-      toast({ title: 'Cliente desarquivado', description: `${unarchiveTarget.name} voltou para a carteira ativa.` });
-      setUnarchiveTarget(null);
-      loadClients();
-    } catch (error: any) {
-      toast({ title: 'Erro ao desarquivar', description: error.message, variant: 'destructive' });
-    }
-  };
-
   return (
     <AppLayout>
       <main className="mx-auto w-full max-w-[1600px] px-4 py-5 md:px-6 lg:py-6">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/10 text-primary shadow-sm sm:flex">
-              <HeartPulse className="h-6 w-6" />
-            </span>
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase text-primary">Visão geral da carteira</p>
-              <h1 className="font-heading text-2xl font-bold text-foreground">Saúde dos clientes</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Clique em uma situação para consultar os clientes.</p>
-            </div>
+        <div className="mb-5 flex items-center gap-4">
+          <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/10 text-primary shadow-sm sm:flex">
+            <HeartPulse className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase text-primary">Visão geral da carteira</p>
+            <h1 className="font-heading text-2xl font-bold text-foreground">Saúde dos clientes</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Clique em uma situação para consultar os clientes.</p>
           </div>
-          <Button variant="outline" className="gap-2 self-start" onClick={() => openView('archived')}>
-            <Archive className="h-4 w-4" /> Arquivados ({archivedCount})
-          </Button>
         </div>
 
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-12">
@@ -348,11 +315,7 @@ export default function ClientList() {
                   </div>
                 </button>
                 <div className="mt-3 border-t pt-3 text-right">
-                  {client.archived ? (
-                    <Button variant="ghost" size="sm" className="gap-2" onClick={() => setUnarchiveTarget(client)}><ArchiveRestore className="h-4 w-4" /> Desarquivar</Button>
-                  ) : (
-                    <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => setArchiveTarget(client)}><Archive className="h-4 w-4" /> Arquivar</Button>
-                  )}
+                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => setArchiveTarget(client)}><Archive className="h-4 w-4" /> Arquivar</Button>
                 </div>
               </div>
             ))}
@@ -372,12 +335,6 @@ export default function ClientList() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!unarchiveTarget} onOpenChange={open => { if (!open) setUnarchiveTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Desarquivar cliente?</AlertDialogTitle><AlertDialogDescription>{unarchiveTarget?.name} voltará para a carteira ativa.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleUnarchive}>Desarquivar</AlertDialogAction></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AppLayout>
   );
 }
