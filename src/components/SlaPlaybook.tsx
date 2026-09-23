@@ -83,22 +83,6 @@ export function SlaPlaybook({ notes }: { notes: string }) {
         )}
       </div>
 
-      {p.reply && (
-        <div className="rounded-md border bg-secondary/50 p-2.5">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
-              <MessageSquareQuote className="h-3.5 w-3.5" /> Resposta sugerida ao cliente
-            </p>
-            <Button
-              size="sm" variant="ghost" className="h-6 px-2 text-xs"
-              onClick={() => { navigator.clipboard.writeText(p.reply!); toast.success('Resposta copiada'); }}
-            >
-              <Copy className="h-3 w-3 mr-1" /> Copiar
-            </Button>
-          </div>
-          <p className="text-xs italic text-foreground">“{p.reply}”</p>
-        </div>
-      )}
 
       {p.rest.length > 0 && <p className="text-xs text-muted-foreground whitespace-pre-line">{p.rest.join('\n')}</p>}
     </div>
