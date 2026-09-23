@@ -57,15 +57,15 @@ function Card({
 }) {
   return (
     <div className={cn(
-      'rounded-lg border bg-card p-4 flex flex-col gap-1',
+      'rounded-lg border bg-card p-2.5 flex flex-col gap-0.5',
       emphasis ? 'border-destructive/60 bg-destructive/5' : 'border-border',
       muted && 'border-dashed opacity-70',
     )}>
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {icon}<span className="truncate">{title}</span>
+      <div className="flex items-start gap-1.5 text-[11px] leading-tight text-muted-foreground">
+        <span className="mt-[1px] shrink-0">{icon}</span><span>{title}</span>
       </div>
-      <div className={cn('text-2xl font-bold', emphasis ? 'text-destructive' : 'text-foreground')}>{value}</div>
-      {subtitle && <div className="text-[11px] text-muted-foreground leading-tight">{subtitle}</div>}
+      <div className={cn('text-xl font-bold leading-none', emphasis ? 'text-destructive' : 'text-foreground')}>{value}</div>
+      {subtitle && <div className="text-[10px] text-muted-foreground leading-tight">{subtitle}</div>}
     </div>
   );
 }
