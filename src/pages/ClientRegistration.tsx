@@ -9,10 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
-import { computeCompleteness, completenessTone } from '@/lib/clientCompleteness';
 import { cn } from '@/lib/utils';
 import {
-  STATUS_LABELS, COMPLEXITY_LABELS, STATUS_EMOJIS, COMPLEXITY_EMOJIS, ClientStatus, ComplexityLevel,
+  STATUS_LABELS, STATUS_EMOJIS, ClientStatus,
+  PROFILE_LABELS, PROFILE_ICONS, PROFILE_COLORS, ClientProfile,
 } from '@/types/client';
 
 export default function ClientRegistration() {
@@ -55,15 +55,12 @@ export default function ClientRegistration() {
 
   const exportClientsReport = () => {
     const rows = filtered.map(c => {
-      const pct = computeCompleteness(c, contactCounts[c.id] || 0);
       return {
         Nome: c.name,
         Documento: c.document,
         Segmento: c.segment,
         Status: `${STATUS_EMOJIS[c.status as ClientStatus] ?? ''} ${STATUS_LABELS[c.status as ClientStatus] || c.status}`.trim(),
-        'CS Responsável': c.cs_responsible,
-        Complexidade: `${COMPLEXITY_EMOJIS[c.complexity as ComplexityLevel] ?? ''} ${COMPLEXITY_LABELS[c.complexity as ComplexityLevel] || c.complexity}`.trim(),
-        'Completude (%)': pct,
+        Tier: `${PROFILE_ICONS[c.profile as ClientProfile] ?? ''} ${PROFILE_LABELS[c.profile as ClientProfile] || c.profile || ''}`.trim(),
         'Contatos cadastrados': contactCounts[c.id] || 0,
         'Início do contrato': c.contract_start_date,
       };
@@ -118,21 +115,19 @@ export default function ClientRegistration() {
                 <TableHead>Documento</TableHead>
                 <TableHead>Segmento</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>CS Responsável</TableHead>
-                <TableHead>Complexidade</TableHead>
-                <TableHead className="w-[160px]">Completude</TableHead>
+                <TableHead className="w-[140px]">Tier</TableHead>
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>
               ) : (
                 filtered.map(c => {
-                  const pct = computeCompleteness(c, contactCounts[c.id] || 0);
-                  const tone = completenessTone(pct);
+                  const profile = c.profile as ClientProfile;
+                  const profileTone = PROFILE_COLORS[profile];
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.name}</TableCell>
@@ -144,22 +139,15 @@ export default function ClientRegistration() {
                           {STATUS_LABELS[c.status as ClientStatus] || c.status}
                         </span>
                       </TableCell>
-                      <TableCell>{c.cs_responsible}</TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center gap-1.5">
-                          <span aria-hidden>{COMPLEXITY_EMOJIS[c.complexity as ComplexityLevel] ?? ''}</span>
-                          {COMPLEXITY_LABELS[c.complexity as ComplexityLevel] || c.complexity}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden min-w-[60px]">
-                            <div className={cn('h-full transition-all', tone.barClass)} style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className={cn('text-xs font-semibold tabular-nums px-1.5 py-0.5 rounded border', tone.badgeClass)}>
-                            {pct}%
+                        {profileTone ? (
+                          <span className={cn('inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-semibold', profileTone.bg, profileTone.text, profileTone.border)}>
+                            <span aria-hidden>{PROFILE_ICONS[profile]}</span>
+                            {PROFILE_LABELS[profile]}
                           </span>
-                        </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
