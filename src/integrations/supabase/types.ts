@@ -1428,6 +1428,7 @@ export type Database = {
           demand_status: string
           description: string
           id: string
+          is_occurrence: boolean
           is_relevant_event: boolean
           occurred_at: string
           origin: string
@@ -1446,6 +1447,7 @@ export type Database = {
           demand_status?: string
           description?: string
           id?: string
+          is_occurrence?: boolean
           is_relevant_event?: boolean
           occurred_at?: string
           origin?: string
@@ -1464,6 +1466,7 @@ export type Database = {
           demand_status?: string
           description?: string
           id?: string
+          is_occurrence?: boolean
           is_relevant_event?: boolean
           occurred_at?: string
           origin?: string
