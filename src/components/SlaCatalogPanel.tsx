@@ -242,7 +242,7 @@ export function SlaCatalogPanel({ compact = false }: { compact?: boolean }) {
                   {items.map(item => (
                     <div key={item.id} className={`rounded-md border p-3 ${item.active ? 'bg-card' : 'bg-muted/40'}`}>
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-foreground flex items-center gap-2">
                             {item.demand_name}
                             {!item.active && <Badge variant="outline" className="text-xs">Inativa</Badge>}
