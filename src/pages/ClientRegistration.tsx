@@ -114,7 +114,7 @@ export default function ClientRegistration() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Documento</TableHead>
+                <TableHead className="w-[180px] whitespace-nowrap">Documento</TableHead>
                 <TableHead>Segmento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[140px]">Tier</TableHead>
