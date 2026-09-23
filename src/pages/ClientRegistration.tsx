@@ -139,22 +139,15 @@ export default function ClientRegistration() {
                           {STATUS_LABELS[c.status as ClientStatus] || c.status}
                         </span>
                       </TableCell>
-                      <TableCell>{c.cs_responsible}</TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center gap-1.5">
-                          <span aria-hidden>{COMPLEXITY_EMOJIS[c.complexity as ComplexityLevel] ?? ''}</span>
-                          {COMPLEXITY_LABELS[c.complexity as ComplexityLevel] || c.complexity}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden min-w-[60px]">
-                            <div className={cn('h-full transition-all', tone.barClass)} style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className={cn('text-xs font-semibold tabular-nums px-1.5 py-0.5 rounded border', tone.badgeClass)}>
-                            {pct}%
+                        {profileTone ? (
+                          <span className={cn('inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-semibold', profileTone.bg, profileTone.text, profileTone.border)}>
+                            <span aria-hidden>{PROFILE_ICONS[profile]}</span>
+                            {PROFILE_LABELS[profile]}
                           </span>
-                        </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
