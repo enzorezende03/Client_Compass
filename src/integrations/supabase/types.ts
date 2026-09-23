@@ -244,11 +244,15 @@ export type Database = {
       }
       client_terminations: {
         Row: {
+          archive_client: boolean
           client_id: string
           created_at: string
           during_onboarding: boolean
           effective_date: string | null
+          error_sector: string | null
           id: string
+          improvement_notes: string
+          initiated_by: string
           monthly_fee_at_termination: number | null
           reason_category: string
           reason_detail: string
@@ -257,13 +261,18 @@ export type Database = {
           revert_reason: string | null
           reverted_at: string | null
           reverted_by: string | null
+          was_error: boolean
         }
         Insert: {
+          archive_client?: boolean
           client_id: string
           created_at?: string
           during_onboarding?: boolean
           effective_date?: string | null
+          error_sector?: string | null
           id?: string
+          improvement_notes?: string
+          initiated_by?: string
           monthly_fee_at_termination?: number | null
           reason_category: string
           reason_detail?: string
@@ -272,13 +281,18 @@ export type Database = {
           revert_reason?: string | null
           reverted_at?: string | null
           reverted_by?: string | null
+          was_error?: boolean
         }
         Update: {
+          archive_client?: boolean
           client_id?: string
           created_at?: string
           during_onboarding?: boolean
           effective_date?: string | null
+          error_sector?: string | null
           id?: string
+          improvement_notes?: string
+          initiated_by?: string
           monthly_fee_at_termination?: number | null
           reason_category?: string
           reason_detail?: string
@@ -287,6 +301,7 @@ export type Database = {
           revert_reason?: string | null
           reverted_at?: string | null
           reverted_by?: string | null
+          was_error?: boolean
         }
         Relationships: [
           {
