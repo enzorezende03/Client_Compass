@@ -234,12 +234,17 @@ export default function ClientList() {
 
   return (
     <AppLayout>
-      <main className="container mx-auto px-6 py-8 lg:py-10">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Visão geral da carteira</p>
-            <h1 className="text-3xl font-bold text-foreground">Saúde dos clientes</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Clique em uma situação para consultar os clientes.</p>
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-5 md:px-6 lg:py-6">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/10 text-primary shadow-sm sm:flex">
+              <HeartPulse className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase text-primary">Visão geral da carteira</p>
+              <h1 className="font-heading text-2xl font-bold text-foreground">Saúde dos clientes</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Clique em uma situação para consultar os clientes.</p>
+            </div>
           </div>
           <Button variant="outline" className="gap-2 self-start" onClick={() => openView('archived')}>
             <Archive className="h-4 w-4" /> Arquivados ({archivedCount})
@@ -282,20 +287,20 @@ export default function ClientList() {
             </div>
           </div>
 
-          <button type="button" onClick={() => navigate('/onboarding')} className="group rounded-lg border bg-card p-5 text-left shadow-card transition-all hover:border-primary/30 hover:shadow-card-hover">
+          <button type="button" onClick={() => navigate('/onboarding')} className="group rounded-lg border border-primary/20 bg-primary p-5 text-left text-primary-foreground shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
             <div className="flex h-full min-h-56 flex-col">
               <div className="flex items-center justify-between">
-                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-secondary-foreground"><TrendingDown className="h-5 w-5" /></span>
-                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary-foreground/10 text-primary-foreground"><TrendingDown className="h-5 w-5" /></span>
+                <ArrowRight className="h-4 w-4 text-primary-foreground/60 transition-transform group-hover:translate-x-1" />
               </div>
-              <p className="mt-7 text-sm font-medium text-muted-foreground">Churn do mês</p>
+              <p className="mt-7 text-sm font-medium text-primary-foreground/70">Churn do mês</p>
               <div className="mt-2 flex items-end gap-2">
-                <strong className={cn('text-4xl font-bold', (churn?.distratos_periodo ?? 0) > 0 ? 'text-destructive' : 'text-foreground')}>
+                <strong className={cn('text-4xl font-bold', (churn?.distratos_periodo ?? 0) > 0 ? 'text-destructive-foreground' : 'text-primary-foreground')}>
                   {(churn?.taxa_churn ?? 0).toString().replace('.', ',')}%
                 </strong>
-                <span className="pb-1 text-xs text-muted-foreground">{churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'}</span>
+                <span className="pb-1 text-xs text-primary-foreground/60">{churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'}</span>
               </div>
-              <p className="mt-auto pt-5 text-xs text-muted-foreground">{formatBRL(churn?.receita_mensal_perdida)} de mensalidade perdida</p>
+              <p className="mt-auto pt-5 text-xs text-primary-foreground/60">{formatBRL(churn?.receita_mensal_perdida)} de mensalidade perdida</p>
             </div>
           </button>
         </section>
@@ -390,8 +395,12 @@ function StatCard({ icon: Icon, label, value, percent, footer, tone, emphasis, o
   const toneClass = tone === 'healthy' ? 'text-health-healthy' : tone === 'attention' ? 'text-health-attention' : tone === 'critical' ? 'text-destructive' : 'text-foreground';
   return (
     <button type="button" onClick={onClick} className={cn(
-      'group min-h-32 rounded-lg border bg-card p-4 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover',
-      emphasis && 'border-destructive/40 bg-destructive/5 hover:border-destructive/60',
+      'group min-h-32 rounded-lg border border-l-4 bg-card p-4 text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover',
+      tone === 'healthy' && 'border-l-health-healthy',
+      tone === 'attention' && 'border-l-health-attention',
+      tone === 'critical' && 'border-l-destructive',
+      !tone && 'border-l-primary',
+      emphasis && 'bg-destructive/5 hover:border-destructive/60',
       className,
     )}>
       <div className="flex items-start justify-between gap-3">
