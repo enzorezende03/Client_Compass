@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
 import { cn } from '@/lib/utils';
+import { formatDocument } from '@/lib/document';
 import {
   STATUS_LABELS, STATUS_EMOJIS, ClientStatus,
   PROFILE_LABELS, PROFILE_ICONS, PROFILE_COLORS, ClientProfile,
