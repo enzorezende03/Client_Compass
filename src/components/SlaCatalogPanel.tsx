@@ -14,6 +14,7 @@ import {
   SLA_SECTORS, SLA_UNITS, SLA_UNIT_LABELS, formatSla, validateImportRow,
   type SlaCatalogRow, type SlaHistoryRow, type SlaSector, type SlaUnit, type ImportRow,
 } from '@/lib/slaCatalog';
+import { SlaPlaybook } from '@/components/SlaPlaybook';
 
 const db = supabase as any;
 
@@ -241,13 +242,13 @@ export function SlaCatalogPanel({ compact = false }: { compact?: boolean }) {
                   {items.map(item => (
                     <div key={item.id} className={`rounded-md border p-3 ${item.active ? 'bg-card' : 'bg-muted/40'}`}>
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-foreground flex items-center gap-2">
                             {item.demand_name}
                             {!item.active && <Badge variant="outline" className="text-xs">Inativa</Badge>}
                           </p>
                           <p className="text-sm text-primary font-semibold">{formatSla(item.sla_value, item.sla_unit)}</p>
-                          {item.notes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{item.notes}</p>}
+                          {item.notes && <SlaPlaybook notes={item.notes} />}
                         </div>
                         {allowed && (
                           <div className="flex items-center gap-1 shrink-0">
