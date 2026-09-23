@@ -458,20 +458,21 @@ export default function Onboarding() {
               <CalendarDays className="h-3.5 w-3.5" /> Calendário
             </button>
           </div>
+          )}
         </div>
 
+        {mainTab === 'overview' && (
+          <OnboardingSlaPanel
+            typeFilter={typeFilter}
+            onOverdueChange={setOverdueByClient}
+            onSelectClient={(clientId) => {
+              const c = clients.find(x => x.id === clientId);
+              if (c) setSelectedClient(c);
+            }}
+          />
+        )}
 
-        <OnboardingSlaPanel
-          typeFilter={typeFilter}
-          onOverdueChange={setOverdueByClient}
-          onSelectClient={(clientId) => {
-            const c = clients.find(x => x.id === clientId);
-            if (c) setSelectedClient(c);
-          }}
-        />
-
-
-
+        {mainTab === 'operation' && (<>
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
           <div className="relative flex-1 min-w-[220px] max-w-sm">
