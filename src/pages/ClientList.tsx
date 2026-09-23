@@ -235,7 +235,7 @@ export default function ClientList() {
   return (
     <AppLayout>
       <main className="container mx-auto px-6 py-8 lg:py-10">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Visão geral da carteira</p>
             <h1 className="text-3xl font-bold text-foreground">Saúde dos clientes</h1>
@@ -246,7 +246,7 @@ export default function ClientList() {
           </Button>
         </div>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-12">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-12">
           <StatCard className="xl:col-span-4" icon={Building2} label="Total de clientes" value={counts?.total ?? 0} onClick={() => openView('total')} footer={counts?.unclassified ? `${counts.unclassified} sem classificação` : 'Carteira ativa'} />
           <StatCard className="xl:col-span-4" icon={HeartPulse} label="Saudáveis" value={counts?.healthy ?? 0} percent={percent(counts?.healthy ?? 0)} tone="healthy" onClick={() => openView('healthy')} footer="Carteira estável" />
           <StatCard className="xl:col-span-4" icon={ShieldAlert} label="Críticos" value={counts?.critical ?? 0} percent={percent(counts?.critical ?? 0)} tone="critical" emphasis onClick={() => openView('critical')} footer="Exigem atenção imediata" />
@@ -255,7 +255,7 @@ export default function ClientList() {
           <StatCard className="xl:col-span-4" icon={TrendingUp} label="Financeiro suspenso" value={counts?.suspended ?? 0} percent={percent(counts?.suspended ?? 0)} tone="attention" onClick={() => openView('suspended')} />
         </section>
 
-        <section className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+        <section className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
           <div className="rounded-lg border bg-card p-5 shadow-card">
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
@@ -390,17 +390,17 @@ function StatCard({ icon: Icon, label, value, percent, footer, tone, emphasis, o
   const toneClass = tone === 'healthy' ? 'text-health-healthy' : tone === 'attention' ? 'text-health-attention' : tone === 'critical' ? 'text-destructive' : 'text-foreground';
   return (
     <button type="button" onClick={onClick} className={cn(
-      'group min-h-40 rounded-lg border bg-card p-5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover',
+      'group min-h-32 rounded-lg border bg-card p-4 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card-hover',
       emphasis && 'border-destructive/40 bg-destructive/5 hover:border-destructive/60',
       className,
     )}>
       <div className="flex items-start justify-between gap-3">
-        <span className={cn('flex h-10 w-10 items-center justify-center rounded-md bg-secondary', toneClass)}><Icon className="h-5 w-5" /></span>
+        <span className={cn('flex h-8 w-8 items-center justify-center rounded-md bg-secondary', toneClass)}><Icon className="h-4 w-4" /></span>
         <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
       </div>
-      <p className="mt-5 text-sm font-medium text-muted-foreground">{label}</p>
-      <div className="mt-1 flex items-baseline gap-2"><strong className={cn('text-3xl font-bold', toneClass)}>{value}</strong>{percent && <span className="text-xs text-muted-foreground">{percent} da carteira</span>}</div>
-      {footer && <p className="mt-3 text-xs text-muted-foreground">{footer}</p>}
+      <p className="mt-3 text-sm font-medium text-muted-foreground">{label}</p>
+      <div className="flex items-baseline gap-2"><strong className={cn('text-2xl font-bold', toneClass)}>{value}</strong>{percent && <span className="text-xs text-muted-foreground">{percent} da carteira</span>}</div>
+      {footer && <p className="mt-1.5 text-xs text-muted-foreground">{footer}</p>}
     </button>
   );
 }
