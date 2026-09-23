@@ -62,6 +62,11 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        rework: {
+          office: "hsl(var(--rework-office))",
+          client: "hsl(var(--rework-client))",
+          neutral: "hsl(var(--rework-neutral))",
+        },
         health: {
           healthy: "hsl(var(--health-healthy))",
           attention: "hsl(var(--health-attention))",

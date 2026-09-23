@@ -1,7 +1,7 @@
 import { useLocation, useNavigate, NavLink as RouterNavLink } from 'react-router-dom';
 import {
   BookOpen, Building2, CalendarClock, Clock3, LayoutDashboard, LogOut,
-  Rocket, Users,
+  Rocket, Users, MessageSquareWarning,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SlaCatalogSheet } from '@/components/SlaCatalogSheet';
@@ -25,6 +25,7 @@ const mainItems: NavigationItem[] = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard, end: true },
   { title: 'Clientes', url: '/cadastro/clientes', icon: Building2 },
   { title: 'Tarefas', url: '/tarefas', icon: CalendarClock },
+  { title: 'Ocorrências', url: '/ocorrencias', icon: MessageSquareWarning },
   { title: 'Onboarding', url: '/onboarding', icon: Rocket },
 ];
 
@@ -36,7 +37,7 @@ const managementItems: NavigationItem[] = [
 
 const pageLabels: Array<[string, string]> = [
   ['/cadastro/clientes', 'Clientes'], ['/cadastro/usuarios', 'Usuários internos'],
-  ['/tarefas', 'Central de tarefas'], ['/onboarding', 'Onboarding'],
+  ['/tarefas', 'Central de tarefas'], ['/onboarding', 'Onboarding'], ['/ocorrencias', 'Ocorrências'],
   ['/prazos', 'Prazos das demandas'],
   ['/procedimento-onboarding', 'Procedimento de onboarding'], ['/', 'Dashboard'],
 ];

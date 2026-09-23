@@ -5,7 +5,7 @@ export type FinancialStatus = 'active_financial' | 'suspended';
 export type HealthScore = 'healthy' | 'attention' | 'critical';
 
 export type InteractionType = 'service' | 'complaint' | 'request' | 'meeting' | 'critical_issue' | 'feedback' | 'opportunity';
-export type Sector = 'fiscal' | 'accounting' | 'hr' | 'corporate' | 'commercial';
+export type Sector = 'fiscal' | 'accounting' | 'hr' | 'corporate' | 'commercial' | 'cs';
 export type DemandOrigin = 'client' | 'internal' | 'error' | 'preventive';
 export type DemandStatus = 'open' | 'in_progress' | 'waiting_client' | 'resolved';
 export type RiskType = 'operational' | 'financial' | 'relationship';
@@ -62,11 +62,24 @@ export interface Client {
   taxation?: TaxationType;
 }
 
-export type ResponsibilityOrigin = 'escritorio' | 'cliente';
+export type ResponsibilityOrigin = 'escritorio' | 'cliente' | 'neutro';
+export type Severity = 'baixa' | 'media' | 'alta';
+export const SEVERITY_LABELS: Record<Severity, string> = { baixa: 'Baixa', media: 'Média', alta: 'Alta' };
 
 export const RESPONSIBILITY_ORIGIN_LABELS: Record<ResponsibilityOrigin, string> = {
   escritorio: 'Problema gerado pelo escritório',
   cliente: 'Ocorrência gerada pelo cliente',
+  neutro: 'Registro informativo (sem retrabalho)',
+};
+
+export const RESPONSIBILITY_ORIGIN_SHORT: Record<ResponsibilityOrigin, string> = {
+  escritorio: 'Escritório', cliente: 'Cliente', neutro: 'Informativo',
+};
+
+export const RESPONSIBILITY_ORIGIN_CLASSES: Record<ResponsibilityOrigin, string> = {
+  escritorio: 'bg-rework-office/10 text-rework-office border-rework-office/30',
+  cliente: 'bg-rework-client/10 text-rework-client border-rework-client/30',
+  neutro: 'bg-rework-neutral/10 text-rework-neutral border-rework-neutral/30',
 };
 
 export interface TimelineEntry {
@@ -85,6 +98,8 @@ export interface TimelineEntry {
   createdBy?: string | null;
   createdByName?: string | null;
   createdAt?: string | null;
+  severity?: Severity | null;
+  occurredAt?: string | null;
 }
 
 export interface Task {
@@ -188,6 +203,7 @@ export const SECTOR_LABELS: Record<Sector, string> = {
   hr: 'Depto. Pessoal',
   corporate: 'Societário',
   commercial: 'Comercial',
+  cs: 'CS',
 };
 
 export const ORIGIN_LABELS: Record<DemandOrigin, string> = {

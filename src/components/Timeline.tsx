@@ -39,8 +39,9 @@ const demandStatusColors: Record<string, string> = {
 };
 
 const responsibilityColors: Record<ResponsibilityOrigin, string> = {
-  escritorio: 'bg-destructive/10 text-destructive',
-  cliente: 'bg-sidebar-primary/10 text-sidebar-primary',
+  escritorio: 'bg-rework-office/10 text-rework-office',
+  cliente: 'bg-rework-client/10 text-rework-client',
+  neutro: 'bg-rework-neutral/10 text-rework-neutral',
 };
 
 const TZ = 'America/Sao_Paulo';
@@ -179,7 +180,7 @@ export function Timeline({ entries, tasksByEntry = {}, onClassify, onGenerateTas
                   </span>
                 </div>
 
-                {(onClassify || onGenerateTask) && (
+                {(onClassify || onGenerateTask) && entry.origin !== ('system' as any) && (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {onClassify && (
                       <Select
@@ -192,6 +193,7 @@ export function Timeline({ entries, tasksByEntry = {}, onClassify, onGenerateTas
                         <SelectContent>
                           <SelectItem value="escritorio">{RESPONSIBILITY_ORIGIN_LABELS.escritorio}</SelectItem>
                           <SelectItem value="cliente">{RESPONSIBILITY_ORIGIN_LABELS.cliente}</SelectItem>
+                          <SelectItem value="neutro">{RESPONSIBILITY_ORIGIN_LABELS.neutro}</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
