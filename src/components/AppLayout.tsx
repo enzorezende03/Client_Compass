@@ -13,6 +13,7 @@ import {
   SidebarProvider, SidebarRail, SidebarTrigger, useSidebar,
 } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
+import brandLogo from '@/assets/logo-cshub.png';
 
 interface NavigationItem {
   title: string;
@@ -45,14 +46,20 @@ const pageLabels: Array<[string, string]> = [
 function Brand() {
   const { state } = useSidebar();
   return (
-    <div className="flex h-16 items-center gap-3 px-3">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
-        <LayoutDashboard className="h-5 w-5" />
-      </span>
+    <div className="flex h-16 items-center gap-3 px-2">
+      <img
+        src={brandLogo}
+        alt="Logo 2M"
+        className="h-11 w-11 shrink-0 object-contain"
+      />
       {state === 'expanded' && (
         <div className="min-w-0">
-          <p className="font-heading text-lg font-bold text-sidebar-primary-foreground">CS HUB</p>
-          <p className="truncate text-[10px] font-medium uppercase text-sidebar-foreground/50">2M Saúde & Contabilidade</p>
+          <p className="font-heading text-lg font-bold leading-tight text-sidebar-primary-foreground">CS HUB</p>
+          <div className="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-[9px] font-semibold uppercase text-sidebar-foreground/60">
+            <span>2M Saúde</span>
+            <span aria-hidden="true" className="h-2.5 w-px bg-sidebar-border" />
+            <span>2M Contabilidade</span>
+          </div>
         </div>
       )}
     </div>
