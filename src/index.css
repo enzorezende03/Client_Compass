@@ -38,6 +38,9 @@
     --health-healthy: 152 60% 42%;
     --health-attention: 38 92% 50%;
     --health-critical: 0 72% 51%;
+    --rework-office: 0 72% 51%;
+    --rework-client: 205 70% 42%;
+    --rework-neutral: 215 15% 50%;
 
     --status-active: 152 60% 42%;
     --status-risk: 38 92% 50%;

@@ -12,6 +12,7 @@ import ClientRegistration from "./pages/ClientRegistration";
 import ClientFormPage from "./pages/ClientFormPage";
 import InternalUsersRegistration from "./pages/InternalUsersRegistration";
 import TaskCenter from "./pages/TaskCenter";
+import Occurrences from "./pages/Occurrences";
 import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/cadastro/clientes/:id/editar" element={<AuthGuard><ClientFormPage /></AuthGuard>} />
           <Route path="/cadastro/usuarios" element={<AuthGuard><InternalUsersRegistration /></AuthGuard>} />
           <Route path="/tarefas" element={<AuthGuard><TaskCenter /></AuthGuard>} />
+          <Route path="/ocorrencias" element={<AuthGuard><Occurrences /></AuthGuard>} />
           <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
           <Route path="/prazos" element={<AuthGuard><SlaCatalogPage /></AuthGuard>} />
           <Route path="/procedimento-onboarding" element={<AuthGuard><OnboardingProcedure /></AuthGuard>} />

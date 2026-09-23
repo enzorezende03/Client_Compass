@@ -1,6 +1,6 @@
 import { formatDocument } from '@/lib/document';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/AppLayout';
 import {
@@ -14,7 +14,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { HealthScoreBadge } from '@/components/HealthScoreBadge';
 import { FinancialStatusBadge } from '@/components/StatusBadges';
 import { Timeline } from '@/components/Timeline';
-import { QuickInteractionModal } from '@/components/QuickInteractionModal';
+import { OccurrenceModal } from '@/components/occurrences/OccurrenceModal';
+import { OccurrenceList } from '@/components/occurrences/OccurrenceList';
+import { MessageSquareWarning } from 'lucide-react';
 import { GenerateTaskFromEntryDialog } from '@/components/GenerateTaskFromEntryDialog';
 import { RegisterTerminationDialog, RevertTerminationDialog } from '@/components/TerminationDialog';
 import { TERMINATION_REASON_LABELS, Termination } from '@/lib/churn';
@@ -65,6 +67,8 @@ function mapTimeline(r: any): TimelineEntry {
     responsibilityOrigin: r.responsibility_origin ?? null,
     createdBy: r.created_by ?? null,
     createdAt: r.created_at ?? null,
+    severity: r.severity ?? null,
+    occurredAt: r.occurred_at ?? null,
   };
 }
 
@@ -81,6 +85,8 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'timeline';
   const [client, setClient] = useState<Client | null>(null);
   const [onboardingStatus, setOnboardingStatus] = useState<string>('pending_handoff');
   const [handoffOpen, setHandoffOpen] = useState(false);
@@ -147,6 +153,15 @@ export default function ClientDetail() {
   }, [id, reloadTermination, loadTimelineAndTasks]);
 
   useEffect(() => { reloadTermination(); }, [reloadTermination]);
+
+  useEffect(() => {
+    if (!id) return;
+    const ch = supabase.channel(`client-${id}-timeline`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'timeline_entries', filter: `client_id=eq.${id}` }, () => loadTimelineAndTasks())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `client_id=eq.${id}` }, () => loadTimelineAndTasks())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [id, loadTimelineAndTasks]);
 
   useEffect(() => {
     if (!id) return;
@@ -351,9 +366,10 @@ export default function ClientDetail() {
           </motion.div>
         )}
 
-        <Tabs defaultValue="timeline" className="mt-4">
+        <Tabs value={activeTab} onValueChange={v => setSearchParams({ tab: v }, { replace: true })} className="mt-4">
           <TabsList>
             <TabsTrigger value="timeline" className="gap-2"><Clock className="h-4 w-4" /> Histórico ({timeline.length})</TabsTrigger>
+            <TabsTrigger value="ocorrencias" className="gap-2"><MessageSquareWarning className="h-4 w-4" /> Ocorrências</TabsTrigger>
             <TabsTrigger value="repasse" className="gap-2"><Briefcase className="h-4 w-4" /> Repasse</TabsTrigger>
             <TabsTrigger value="action-plan" className="gap-2"><Target className="h-4 w-4" /> Plano de Ação</TabsTrigger>
             <TabsTrigger value="tasks" className="gap-2"><CheckSquare className="h-4 w-4" /> Tarefas ({clientTasks.filter(t => t.status === 'pending').length})</TabsTrigger>
@@ -373,12 +389,16 @@ export default function ClientDetail() {
 
           </TabsContent>
 
+          <TabsContent value="ocorrencias" className="mt-4">
+            <OccurrenceList clientId={client.id} clientName={client.name} highlightId={searchParams.get('entry')} />
+          </TabsContent>
+
           <TabsContent value="repasse" className="mt-4">
             <HandoffSummary handoff={handoff} contacts={contacts} onEdit={() => setHandoffOpen(true)} expanded={notesExpanded} setExpanded={setNotesExpanded} />
           </TabsContent>
 
           <TabsContent value="action-plan" className="mt-4">
-            <ActionPlanTab clientId={client.id} />
+            <ActionPlanTab clientId={client.id} autoOpen={searchParams.get('new') === '1'} />
           </TabsContent>
 
           <TabsContent value="tasks" className="mt-4 space-y-2">
@@ -400,7 +420,7 @@ export default function ClientDetail() {
         </Tabs>
       </div>
 
-      <QuickInteractionModal
+      <OccurrenceModal
         open={interactionOpen}
         onOpenChange={setInteractionOpen}
         clientId={client.id}

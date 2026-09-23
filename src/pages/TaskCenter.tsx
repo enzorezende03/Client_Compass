@@ -485,7 +485,7 @@ export default function TaskCenter() {
                 </Badge>
               )}
               {task.source_timeline_entry_id && (
-                <button onClick={() => navigate(`/client/${task.client_id}`)}>
+                <button onClick={() => navigate(`/client/${task.client_id}?tab=ocorrencias&entry=${task.source_timeline_entry_id}`)}>
                   <Badge variant="outline" className="text-[10px] gap-1 border-primary/40 text-primary">
                     <MessageSquare className="h-2.5 w-2.5" /> Origem: ocorrência
                   </Badge>
