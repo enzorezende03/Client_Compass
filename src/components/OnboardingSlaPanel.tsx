@@ -221,18 +221,18 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
           emphasis={riskList.length > 0}
         />
         <div className="rounded-lg border border-border bg-card p-2.5 flex flex-col gap-0.5">
-          <div className="flex items-start justify-between gap-1.5">
-            <div className="flex items-start gap-1.5 text-[11px] leading-tight text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 mt-[1px] shrink-0" /> Concluídos no período
-            </div>
+          <div className="flex items-start gap-1.5 text-[11px] leading-tight text-muted-foreground">
+            <CheckCircle2 className="h-3.5 w-3.5 mt-[1px] shrink-0" /> Concluídos no período
+          </div>
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="text-xl font-bold leading-none text-foreground">{periodStats.count}</div>
             <Input
               type="month"
               value={month}
               onChange={e => setMonth(e.target.value || currentMonth())}
-              className="h-6 w-[112px] text-[10px] px-1.5 shrink-0"
+              className="h-6 w-[108px] min-w-0 text-[10px] px-1 shrink"
             />
           </div>
-          <div className="text-xl font-bold leading-none text-foreground">{periodStats.count}</div>
         </div>
         <Card
           title="Tempo médio de onboarding (dias)"
