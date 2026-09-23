@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2, LayoutGrid, CalendarDays, BookOpen } from 'lucide-react';
+import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2, LayoutGrid, CalendarDays, BookOpen, Gauge } from 'lucide-react';
 import { OnboardingHandoffDialog } from '@/components/OnboardingHandoffDialog';
 import { OnboardingSlaPanel } from '@/components/OnboardingSlaPanel';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
@@ -118,6 +118,13 @@ export default function Onboarding() {
   const changeViewMode = (mode: 'board' | 'calendar') => {
     setViewMode(mode);
     try { localStorage.setItem('cshub:onboarding:viewMode', mode); } catch { /* indisponível */ }
+  };
+  const [mainTab, setMainTab] = useState<'overview' | 'operation'>(() => {
+    try { return localStorage.getItem('cshub:onboarding:mainTab') === 'operation' ? 'operation' : 'overview'; } catch { return 'overview'; }
+  });
+  const changeMainTab = (tab: 'overview' | 'operation') => {
+    setMainTab(tab);
+    try { localStorage.setItem('cshub:onboarding:mainTab', tab); } catch { /* indisponível */ }
   };
 
   const fetchAll = useCallback(async (silent = false) => {
@@ -418,6 +425,18 @@ export default function Onboarding() {
           </div>
         </div>
 
+        {/* Main tabs: overview vs operation */}
+        <Tabs value={mainTab} onValueChange={(v) => changeMainTab(v as 'overview' | 'operation')} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="overview" className="gap-1.5">
+              <Gauge className="h-3.5 w-3.5" /> Visão geral
+            </TabsTrigger>
+            <TabsTrigger value="operation" className="gap-1.5">
+              <LayoutGrid className="h-3.5 w-3.5" /> Operação
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         {/* Type tabs + view toggle */}
         <div className="flex items-center gap-3 mb-4 flex-wrap">
           <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
@@ -429,6 +448,7 @@ export default function Onboarding() {
               <TabsTrigger value="vmk_parceria">Parceria VMk</TabsTrigger>
             </TabsList>
           </Tabs>
+          {mainTab === 'operation' && (
           <div className="inline-flex rounded-md border bg-muted p-1">
             <button
               onClick={() => changeViewMode('board')}
@@ -445,20 +465,21 @@ export default function Onboarding() {
               <CalendarDays className="h-3.5 w-3.5" /> Calendário
             </button>
           </div>
+          )}
         </div>
 
+        {mainTab === 'overview' && (
+          <OnboardingSlaPanel
+            typeFilter={typeFilter}
+            onOverdueChange={setOverdueByClient}
+            onSelectClient={(clientId) => {
+              const c = clients.find(x => x.id === clientId);
+              if (c) setSelectedClient(c);
+            }}
+          />
+        )}
 
-        <OnboardingSlaPanel
-          typeFilter={typeFilter}
-          onOverdueChange={setOverdueByClient}
-          onSelectClient={(clientId) => {
-            const c = clients.find(x => x.id === clientId);
-            if (c) setSelectedClient(c);
-          }}
-        />
-
-
-
+        {mainTab === 'operation' && (<>
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
           <div className="relative flex-1 min-w-[220px] max-w-sm">
@@ -608,6 +629,7 @@ export default function Onboarding() {
             })}
           </div>
         )}
+        </>)}
       </div>
 
       {/* Lateral panel */}
