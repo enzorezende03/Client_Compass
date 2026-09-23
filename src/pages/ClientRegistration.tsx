@@ -131,7 +131,7 @@ export default function ClientRegistration() {
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{c.document}</TableCell>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">{formatDocument(c.document)}</TableCell>
                       <TableCell>{c.segment}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5">
