@@ -108,11 +108,14 @@ export default function TaskCenter() {
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [deadlineView, setDeadlineView] = useState<'client' | 'internal'>('client');
   const [activeTab, setActiveTab] = useState<'regular' | 'onboarding'>('regular');
-  const [viewMode, setViewMode] = useState<'board' | 'calendar'>(() => {
-    try { return localStorage.getItem('cshub:tasks:viewMode') === 'calendar' ? 'calendar' : 'board'; } catch { return 'board'; }
+  const [viewMode, setViewMode] = useState<'board' | 'calendar' | 'list'>(() => {
+    try {
+      const saved = localStorage.getItem('cshub:tasks:viewMode');
+      return saved === 'calendar' || saved === 'list' ? saved : 'board';
+    } catch { return 'board'; }
   });
   const [viewAll, setViewAll] = useState(false);
-  const changeViewMode = (mode: 'board' | 'calendar') => {
+  const changeViewMode = (mode: 'board' | 'calendar' | 'list') => {
     setViewMode(mode);
     try { localStorage.setItem('cshub:tasks:viewMode', mode); } catch { /* indisponível */ }
   };
