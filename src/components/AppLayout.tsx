@@ -30,7 +30,6 @@ const mainItems: NavigationItem[] = [
 
 const managementItems: NavigationItem[] = [
   { title: 'Usuários internos', url: '/cadastro/usuarios', icon: Users },
-  { title: 'G-Click', url: '/gclick-sync', icon: RefreshCw },
   { title: 'Prazos', url: '/prazos', icon: Clock3 },
   { title: 'Procedimento', url: '/procedimento-onboarding', icon: BookOpen },
 ];
@@ -38,7 +37,7 @@ const managementItems: NavigationItem[] = [
 const pageLabels: Array<[string, string]> = [
   ['/cadastro/clientes', 'Clientes'], ['/cadastro/usuarios', 'Usuários internos'],
   ['/tarefas', 'Central de tarefas'], ['/onboarding', 'Onboarding'],
-  ['/gclick-sync', 'Integração G-Click'], ['/prazos', 'Prazos das demandas'],
+  ['/prazos', 'Prazos das demandas'],
   ['/procedimento-onboarding', 'Procedimento de onboarding'], ['/', 'Dashboard'],
 ];
 
