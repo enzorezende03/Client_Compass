@@ -55,7 +55,6 @@ export default function ClientRegistration() {
 
   const exportClientsReport = () => {
     const rows = filtered.map(c => {
-      const pct = computeCompleteness(c, contactCounts[c.id] || 0);
       return {
         Nome: c.name,
         Documento: c.document,
