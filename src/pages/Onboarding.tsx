@@ -418,6 +418,18 @@ export default function Onboarding() {
           </div>
         </div>
 
+        {/* Main tabs: overview vs operation */}
+        <Tabs value={mainTab} onValueChange={(v) => changeMainTab(v as 'overview' | 'operation')} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="overview" className="gap-1.5">
+              <Gauge className="h-3.5 w-3.5" /> Visão geral
+            </TabsTrigger>
+            <TabsTrigger value="operation" className="gap-1.5">
+              <LayoutGrid className="h-3.5 w-3.5" /> Operação
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         {/* Type tabs + view toggle */}
         <div className="flex items-center gap-3 mb-4 flex-wrap">
           <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
