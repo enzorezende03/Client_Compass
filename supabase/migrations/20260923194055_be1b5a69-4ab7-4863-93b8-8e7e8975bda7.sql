@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.archive_on_termination() FROM PUBLIC, anon, authenticated;
