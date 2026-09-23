@@ -1301,6 +1301,7 @@ export type Database = {
           created_at: string
           description: string
           due_date: string
+          external_task_id: string | null
           force_unlock_reason: string | null
           force_unlocked_by: string | null
           id: string
@@ -1327,6 +1328,7 @@ export type Database = {
           created_at?: string
           description?: string
           due_date?: string
+          external_task_id?: string | null
           force_unlock_reason?: string | null
           force_unlocked_by?: string | null
           id?: string
@@ -1353,6 +1355,7 @@ export type Database = {
           created_at?: string
           description?: string
           due_date?: string
+          external_task_id?: string | null
           force_unlock_reason?: string | null
           force_unlocked_by?: string | null
           id?: string
@@ -1426,11 +1429,13 @@ export type Database = {
           description: string
           id: string
           is_relevant_event: boolean
+          occurred_at: string
           origin: string
           relevant_event_type: string | null
           responsibility_origin: string | null
           responsible: string
           sector: string
+          severity: string | null
           type: string
         }
         Insert: {
@@ -1442,11 +1447,13 @@ export type Database = {
           description?: string
           id?: string
           is_relevant_event?: boolean
+          occurred_at?: string
           origin?: string
           relevant_event_type?: string | null
           responsibility_origin?: string | null
           responsible?: string
           sector?: string
+          severity?: string | null
           type?: string
         }
         Update: {
@@ -1458,11 +1465,13 @@ export type Database = {
           description?: string
           id?: string
           is_relevant_event?: boolean
+          occurred_at?: string
           origin?: string
           relevant_event_type?: string | null
           responsibility_origin?: string | null
           responsible?: string
           sector?: string
+          severity?: string | null
           type?: string
         }
         Relationships: [
@@ -1531,11 +1540,13 @@ export type Database = {
           p_demand_status: string
           p_description: string
           p_is_relevant?: boolean
+          p_occurred_at?: string
           p_origin: string
           p_relevant_type?: string
           p_responsibility_origin?: string
           p_responsible: string
           p_sector: string
+          p_severity?: string
           p_task_client_due_date?: string
           p_task_due_date?: string
           p_task_internal_due_date?: string
@@ -1560,6 +1571,15 @@ export type Database = {
       revert_termination: {
         Args: { p_reason: string; p_termination_id: string }
         Returns: undefined
+      }
+      rework_metrics: {
+        Args: {
+          p_end: string
+          p_responsible?: string
+          p_sector?: string
+          p_start: string
+        }
+        Returns: Json
       }
       seed_onboarding_stage: {
         Args: { p_client_id: string; p_locked?: boolean; p_stage: string }
