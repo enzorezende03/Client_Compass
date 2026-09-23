@@ -57,15 +57,15 @@ function Card({
 }) {
   return (
     <div className={cn(
-      'rounded-lg border bg-card p-4 flex flex-col gap-1',
+      'rounded-lg border bg-card p-2.5 flex flex-col gap-0.5',
       emphasis ? 'border-destructive/60 bg-destructive/5' : 'border-border',
       muted && 'border-dashed opacity-70',
     )}>
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {icon}<span className="truncate">{title}</span>
+      <div className="flex items-start gap-1.5 text-[11px] leading-tight text-muted-foreground">
+        <span className="mt-[1px] shrink-0">{icon}</span><span>{title}</span>
       </div>
-      <div className={cn('text-2xl font-bold', emphasis ? 'text-destructive' : 'text-foreground')}>{value}</div>
-      {subtitle && <div className="text-[11px] text-muted-foreground leading-tight">{subtitle}</div>}
+      <div className={cn('text-xl font-bold leading-none', emphasis ? 'text-destructive' : 'text-foreground')}>{value}</div>
+      {subtitle && <div className="text-[10px] text-muted-foreground leading-tight">{subtitle}</div>}
     </div>
   );
 }
@@ -220,19 +220,19 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
           icon={<AlertTriangle className="h-3.5 w-3.5" />}
           emphasis={riskList.length > 0}
         />
-        <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-1">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Concluídos no período
+        <div className="rounded-lg border border-border bg-card p-2.5 flex flex-col gap-0.5">
+          <div className="flex items-start justify-between gap-1.5">
+            <div className="flex items-start gap-1.5 text-[11px] leading-tight text-muted-foreground">
+              <CheckCircle2 className="h-3.5 w-3.5 mt-[1px] shrink-0" /> Concluídos no período
             </div>
             <Input
               type="month"
               value={month}
               onChange={e => setMonth(e.target.value || currentMonth())}
-              className="h-6 w-[120px] text-[11px] px-1.5"
+              className="h-6 w-[112px] text-[10px] px-1.5 shrink-0"
             />
           </div>
-          <div className="text-2xl font-bold text-foreground">{periodStats.count}</div>
+          <div className="text-xl font-bold leading-none text-foreground">{periodStats.count}</div>
         </div>
         <Card
           title="Tempo médio de onboarding (dias)"
@@ -244,18 +244,18 @@ export function OnboardingSlaPanel({ typeFilter, onSelectClient, onOverdueChange
           type="button"
           onClick={() => setChurnOpen(true)}
           className={cn(
-            'rounded-lg border bg-card p-4 flex flex-col gap-1 text-left transition-colors hover:bg-muted/40',
+            'rounded-lg border bg-card p-2.5 flex flex-col gap-0.5 text-left transition-colors hover:bg-muted/40',
             (churn?.distratos_periodo ?? 0) > 0 ? 'border-destructive/60 bg-destructive/5' : 'border-border',
           )}
         >
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <TrendingDown className="h-3.5 w-3.5" /><span className="truncate">Churn do período</span>
+          <div className="flex items-start gap-1.5 text-[11px] leading-tight text-muted-foreground">
+            <TrendingDown className="h-3.5 w-3.5 mt-[1px] shrink-0" /><span>Churn do período</span>
           </div>
-          <div className={cn('text-2xl font-bold',
+          <div className={cn('text-xl font-bold leading-none',
             (churn?.distratos_periodo ?? 0) > 0 ? 'text-destructive' : 'text-foreground')}>
             {(churn?.taxa_churn ?? 0).toString().replace('.', ',')}%
           </div>
-          <div className="text-[11px] text-muted-foreground leading-tight">
+          <div className="text-[10px] text-muted-foreground leading-tight">
             {churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'} ·{' '}
             {formatBRL(churn?.receita_mensal_perdida)} · {churn?.distratos_durante_onboarding ?? 0} durante o onboarding
           </div>
