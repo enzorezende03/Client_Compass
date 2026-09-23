@@ -441,6 +441,7 @@ export default function Onboarding() {
               <TabsTrigger value="vmk_parceria">Parceria VMk</TabsTrigger>
             </TabsList>
           </Tabs>
+          {mainTab === 'operation' && (
           <div className="inline-flex rounded-md border bg-muted p-1">
             <button
               onClick={() => changeViewMode('board')}
