@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
 import { cn } from '@/lib/utils';
+import { formatDocument } from '@/lib/document';
 import {
   STATUS_LABELS, STATUS_EMOJIS, ClientStatus,
   PROFILE_LABELS, PROFILE_ICONS, PROFILE_COLORS, ClientProfile,
@@ -45,9 +46,10 @@ export default function ClientRegistration() {
 
   useEffect(() => { fetchClients(); }, []);
 
+  const searchDigits = search.replace(/\D/g, '');
   const filtered = clients.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.document.includes(search)
+    (searchDigits.length > 0 && c.document.replace(/\D/g, '').includes(searchDigits))
   );
 
   const openNew = () => navigate('/cadastro/clientes/novo');
@@ -57,7 +59,7 @@ export default function ClientRegistration() {
     const rows = filtered.map(c => {
       return {
         Nome: c.name,
-        Documento: c.document,
+        Documento: formatDocument(c.document),
         Segmento: c.segment,
         Status: `${STATUS_EMOJIS[c.status as ClientStatus] ?? ''} ${STATUS_LABELS[c.status as ClientStatus] || c.status}`.trim(),
         Tier: `${PROFILE_ICONS[c.profile as ClientProfile] ?? ''} ${PROFILE_LABELS[c.profile as ClientProfile] || c.profile || ''}`.trim(),
@@ -112,7 +114,7 @@ export default function ClientRegistration() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Documento</TableHead>
+                <TableHead className="w-[180px] whitespace-nowrap">Documento</TableHead>
                 <TableHead>Segmento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[140px]">Tier</TableHead>
@@ -131,7 +133,7 @@ export default function ClientRegistration() {
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{c.document}</TableCell>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">{formatDocument(c.document)}</TableCell>
                       <TableCell>{c.segment}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5">
