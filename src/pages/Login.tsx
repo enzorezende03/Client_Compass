@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import logoGrupo from '@/assets/logo-grupo.png';
+import officialLogo from '@/assets/logo-grupo.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -65,7 +65,7 @@ export default function Login() {
       <Card className="w-full max-w-md shadow-xl border-0 bg-card/95 backdrop-blur-sm overflow-hidden">
         <div className="flex flex-col items-center pt-0 pb-2">
           <div className="w-full bg-primary flex items-center justify-center py-8 rounded-b-none">
-            <img src={logoGrupo} alt="Grupo" className="h-32" />
+            <img src={officialLogo} alt="2M Grupo — Saúde e Contabilidade" className="h-32 w-auto object-contain" />
           </div>
           <h1 className="text-xl font-bold text-foreground mt-4">CS HUB</h1>
           <p className="text-sm text-muted-foreground mt-1">Acesse sua conta para continuar</p>
