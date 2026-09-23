@@ -671,6 +671,12 @@ export default function TaskCenter() {
             >
               <CalendarDays className="h-3.5 w-3.5" /> Calendário
             </button>
+            <button
+              onClick={() => changeViewMode('list')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <ListIcon className="h-3.5 w-3.5" /> Lista
+            </button>
           </div>
           {viewMode === 'calendar' && (
             <div className="flex items-center gap-2">
