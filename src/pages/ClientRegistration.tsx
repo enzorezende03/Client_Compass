@@ -61,9 +61,7 @@ export default function ClientRegistration() {
         Documento: c.document,
         Segmento: c.segment,
         Status: `${STATUS_EMOJIS[c.status as ClientStatus] ?? ''} ${STATUS_LABELS[c.status as ClientStatus] || c.status}`.trim(),
-        'CS Responsável': c.cs_responsible,
-        Complexidade: `${COMPLEXITY_EMOJIS[c.complexity as ComplexityLevel] ?? ''} ${COMPLEXITY_LABELS[c.complexity as ComplexityLevel] || c.complexity}`.trim(),
-        'Completude (%)': pct,
+        Tier: `${PROFILE_ICONS[c.profile as ClientProfile] ?? ''} ${PROFILE_LABELS[c.profile as ClientProfile] || c.profile || ''}`.trim(),
         'Contatos cadastrados': contactCounts[c.id] || 0,
         'Início do contrato': c.contract_start_date,
       };
