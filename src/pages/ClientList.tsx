@@ -172,7 +172,7 @@ export default function ClientList() {
     if (!selectedView) return;
     const rows = visibleClients.map(client => ({
       Nome: client.name,
-      Documento: client.document,
+      Documento: formatDocument(client.document),
       Segmento: client.segment,
       Status: STATUS_LABELS[client.status as ClientStatus] || client.status,
       'CS Responsável': client.csResponsible,
@@ -336,7 +336,7 @@ export default function ClientList() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-foreground">{client.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{client.document} · {client.segment}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatDocument(client.document)} · {client.segment}</p>
                     </div>
                     <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
                   </div>

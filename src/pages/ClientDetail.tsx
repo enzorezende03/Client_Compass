@@ -253,7 +253,7 @@ export default function ClientDetail() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-foreground tracking-tight">{client.name}</h1>
-                  <p className="text-sm text-muted-foreground font-mono">{client.document}</p>
+                  <p className="text-sm text-muted-foreground font-mono whitespace-nowrap">{formatDocument(client.document)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap mb-4">
