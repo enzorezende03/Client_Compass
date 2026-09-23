@@ -13,7 +13,7 @@ import {
   SidebarProvider, SidebarRail, SidebarTrigger, useSidebar,
 } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
-import officialLogo from '@/assets/grupo-2-logo-oficial.png.asset.json';
+import officialLogo from '@/assets/logo-grupo.png';
 
 interface NavigationItem {
   title: string;
@@ -48,7 +48,7 @@ function Brand() {
   return (
     <div className="flex h-16 items-center gap-2 px-1">
       <img
-        src={officialLogo.url}
+        src={officialLogo}
         alt="2M Grupo — Saúde e Contabilidade"
         className="h-12 w-16 shrink-0 object-contain object-center"
       />
