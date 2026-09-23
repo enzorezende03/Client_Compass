@@ -77,7 +77,7 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
   const load = useCallback(async () => {
     let q = supabase.from('timeline_entries' as any)
       .select('*, clients(name, document)')
-      .neq('origin', 'system')
+      .eq('is_occurrence', true)
       .gte('occurred_at', `${start}T00:00:00-03:00`)
       .lte('occurred_at', `${end}T23:59:59-03:00`)
       .order('occurred_at', { ascending: false })

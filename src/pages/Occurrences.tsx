@@ -28,7 +28,7 @@ function PendingTab() {
   const load = useCallback(async () => {
     const [{ data }, { data: users }] = await Promise.all([
       supabase.from('timeline_entries' as any).select('*, clients(name, document)')
-        .neq('origin', 'system').is('responsibility_origin', null)
+        .eq('is_occurrence', true).is('responsibility_origin', null)
         .order('occurred_at', { ascending: false }).limit(500),
       supabase.from('internal_users').select('id, name'),
     ]);
