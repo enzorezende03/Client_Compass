@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Search, Download, ArchiveRestore } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Download, ArchiveRestore, UserX } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
 import { cn } from '@/lib/utils';
 import { formatDocument } from '@/lib/document';
+import { RegisterTerminationDialog } from '@/components/TerminationDialog';
+import { TERMINATION_REASON_LABELS } from '@/lib/churn';
 import {
   STATUS_LABELS, STATUS_EMOJIS, ClientStatus,
   PROFILE_LABELS, PROFILE_ICONS, PROFILE_COLORS, ClientProfile,
@@ -24,7 +26,9 @@ export default function ClientRegistration() {
   const [search, setSearch] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'ativos' | 'arquivados'>('ativos');
+  const [tab, setTab] = useState<'ativos' | 'arquivados' | 'distratos'>('ativos');
+  const [terminateTarget, setTerminateTarget] = useState<any | null>(null);
+  const [terms, setTerms] = useState<any[]>([]);
   const [unarchiveTarget, setUnarchiveTarget] = useState<any | null>(null);
   const { toast } = useToast();
 
@@ -43,6 +47,9 @@ export default function ClientRegistration() {
         }
       }
     }
+    const { data: t } = await supabase.from('client_terminations' as any)
+      .select('*, clients(name, document)').order('request_date', { ascending: false });
+    setTerms((t as any[]) || []);
     setLoading(false);
   };
 
@@ -135,6 +142,13 @@ export default function ClientRegistration() {
             >
               Arquivados ({archivedCount})
             </button>
+            <button
+              type="button"
+              onClick={() => setTab('distratos')}
+              className={cn('rounded-md px-4 py-1.5 text-sm font-medium transition-colors', tab === 'distratos' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              Distratos ({terms.length})
+            </button>
           </div>
           <div className="relative max-w-sm flex-1 sm:flex-none sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -142,6 +156,7 @@ export default function ClientRegistration() {
           </div>
         </div>
 
+        {tab === 'distratos' ? <TerminationsReport terms={terms} search={search} /> : (
         <div className="rounded-lg border bg-card shadow-card overflow-hidden">
           <Table>
             <TableHeader>
@@ -200,6 +215,7 @@ export default function ClientRegistration() {
                           ) : (
                             <>
                               <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" title="Desativar por distrato" onClick={() => setTerminateTarget(c)}><UserX className="h-4 w-4" /></Button>
                               <Button variant="ghost" size="icon" onClick={() => { setSelectedId(c.id); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </>
                           )}
@@ -212,6 +228,7 @@ export default function ClientRegistration() {
             </TableBody>
           </Table>
         </div>
+        )}
       </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -239,6 +256,98 @@ export default function ClientRegistration() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {terminateTarget && (
+        <RegisterTerminationDialog
+          open={!!terminateTarget}
+          onOpenChange={o => { if (!o) setTerminateTarget(null); }}
+          clientId={terminateTarget.id}
+          defaultArchive
+          onDone={() => { setTerminateTarget(null); fetchClients(); }}
+        />
+      )}
     </AppLayout>
+  );
+}
+
+function TerminationsReport({ terms, search }: { terms: any[]; search: string }) {
+  const q = search.toLowerCase();
+  const rows = terms.filter(t => !q || (t.clients?.name || '').toLowerCase().includes(q));
+  const active = rows.filter(t => !t.reverted_at);
+  const byClient = active.filter(t => t.initiated_by === 'cliente').length;
+  const byOffice = active.filter(t => t.initiated_by === 'escritorio').length;
+  const errors = active.filter(t => t.was_error);
+  const sectors: Record<string, number> = {};
+  errors.forEach(t => { if (t.error_sector) sectors[t.error_sector] = (sectors[t.error_sector] || 0) + 1; });
+  const reasons: Record<string, number> = {};
+  active.forEach(t => { reasons[t.reason_category] = (reasons[t.reason_category] || 0) + 1; });
+  const label = (k: string) => (TERMINATION_REASON_LABELS as any)[k] || k;
+
+  const exportXlsx = () => {
+    const data = rows.map(t => ({
+      Cliente: t.clients?.name, Documento: formatDocument(t.clients?.document || ''),
+      'Data do pedido': t.request_date, Motivo: label(t.reason_category), Detalhe: t.reason_detail,
+      Origem: t.initiated_by === 'escritorio' ? 'Contabilidade' : 'Cliente',
+      'Erro nosso': t.was_error ? 'Sim' : 'Não', 'Área do erro': t.error_sector || '',
+      Melhoria: t.improvement_notes, Mensalidade: t.monthly_fee_at_termination ?? '',
+      Situação: t.reverted_at ? 'Revertido' : 'Ativo',
+    }));
+    const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Distratos');
+    XLSX.writeFile(wb, `distratos-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const Stat = ({ title, value, sub }: { title: string; value: string | number; sub?: string }) => (
+    <div className="rounded-lg border bg-card p-4 shadow-card">
+      <p className="text-xs text-muted-foreground">{title}</p>
+      <p className="font-heading text-2xl font-bold text-foreground">{value}</p>
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat title="Distratos ativos" value={active.length} sub={`${rows.length - active.length} revertidos`} />
+        <Stat title="Originados pelo cliente" value={byClient} />
+        <Stat title="Originados pela contabilidade" value={byOffice} />
+        <Stat title="Com erro nosso" value={errors.length}
+          sub={Object.entries(sectors).sort((a, b) => b[1] - a[1]).map(([s, n]) => `${s}: ${n}`).join(' · ') || undefined} />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(reasons).sort((a, b) => b[1] - a[1]).map(([k, n]) => (
+            <span key={k} className="rounded-full border bg-muted/40 px-3 py-1 text-xs">{label(k)}: <b>{n}</b></span>
+          ))}
+        </div>
+        <Button variant="outline" size="sm" className="gap-2" onClick={exportXlsx} disabled={!rows.length}>
+          <Download className="h-4 w-4" /> Baixar Excel
+        </Button>
+      </div>
+      <div className="rounded-lg border bg-card shadow-card overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cliente</TableHead><TableHead>Pedido</TableHead><TableHead>Motivo</TableHead>
+              <TableHead>Origem</TableHead><TableHead>Erro</TableHead><TableHead>Melhoria</TableHead><TableHead>Situação</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Nenhum distrato registrado.</TableCell></TableRow>
+            ) : rows.map(t => (
+              <TableRow key={t.id}>
+                <TableCell className="font-medium">{t.clients?.name}</TableCell>
+                <TableCell className="whitespace-nowrap">{new Date(t.request_date + 'T12:00').toLocaleDateString('pt-BR')}</TableCell>
+                <TableCell className="max-w-[220px]"><p>{label(t.reason_category)}</p><p className="truncate text-xs text-muted-foreground" title={t.reason_detail}>{t.reason_detail}</p></TableCell>
+                <TableCell>{t.initiated_by === 'escritorio' ? 'Contabilidade' : 'Cliente'}</TableCell>
+                <TableCell>{t.was_error ? <span className="text-destructive">Sim{t.error_sector ? ` · ${t.error_sector}` : ''}</span> : 'Não'}</TableCell>
+                <TableCell className="max-w-[240px] truncate text-xs text-muted-foreground" title={t.improvement_notes}>{t.improvement_notes || '—'}</TableCell>
+                <TableCell>{t.reverted_at ? 'Revertido' : 'Ativo'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
   );
 }
