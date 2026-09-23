@@ -119,6 +119,13 @@ export default function Onboarding() {
     setViewMode(mode);
     try { localStorage.setItem('cshub:onboarding:viewMode', mode); } catch { /* indisponível */ }
   };
+  const [mainTab, setMainTab] = useState<'overview' | 'operation'>(() => {
+    try { return localStorage.getItem('cshub:onboarding:mainTab') === 'operation' ? 'operation' : 'overview'; } catch { return 'overview'; }
+  });
+  const changeMainTab = (tab: 'overview' | 'operation') => {
+    setMainTab(tab);
+    try { localStorage.setItem('cshub:onboarding:mainTab', tab); } catch { /* indisponível */ }
+  };
 
   const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
