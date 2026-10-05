@@ -515,7 +515,8 @@ export default function Onboarding() {
           )}
         </div>
 
-        {mainTab === 'overview' && (
+        {mainTab === 'overview' && (<>
+          <FeedbackIndicators />
           <OnboardingSlaPanel
             typeFilter={typeFilter}
             onOverdueChange={setOverdueByClient}
@@ -524,7 +525,7 @@ export default function Onboarding() {
               if (c) setSelectedClient(c);
             }}
           />
-        )}
+        </>)}
 
         {mainTab === 'operation' && (<>
         {/* Filters */}
