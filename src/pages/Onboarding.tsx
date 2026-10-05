@@ -7,6 +7,8 @@ import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/compon
 import { ConvertToNewCompanyDialog } from '@/components/ConvertToNewCompanyDialog';
 import { AppLayout } from '@/components/AppLayout';
 import { ChecklistItemRow } from '@/components/onboarding/ChecklistItemRow';
+import { FeedbackSurveyDialog } from '@/components/onboarding/FeedbackSurveyDialog';
+import { FeedbackIndicators } from '@/components/onboarding/FeedbackIndicators';
 import { useAccessProfile, usePermission } from '@/hooks/usePermission';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -103,6 +105,7 @@ export default function Onboarding() {
   const [advancing, setAdvancing] = useState(false);
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [surveyOpen, setSurveyOpen] = useState(false);
   const [reportsByClient, setReportsByClient] = useState<Record<string, ReportRow[]>>({});
   const [viewReport, setViewReport] = useState<ReportRow | null>(null);
   const [convertOpen, setConvertOpen] = useState(false);
@@ -247,7 +250,7 @@ export default function Onboarding() {
   // Load monthly reports when opening a client on Etapa 4
   useEffect(() => {
     if (!selectedClient) return;
-    if (selectedClient.onboarding_stage === 'etapa_4' || selectedClient.onboarding_status === 'completed') {
+    if (selectedClient.onboarding_stage === 'etapa_4' || selectedClient.onboarding_stage === 'etapa_3_nova' || selectedClient.onboarding_status === 'completed') {
       loadReports(selectedClient.id);
     }
   }, [selectedClient, loadReports]);
@@ -259,9 +262,13 @@ export default function Onboarding() {
 
   const enriched = useMemo(() => clients.map(c => {
     const stage = (c.onboarding_stage || 'etapa_1') as OnboardingStage;
-    const stageItems = items.filter(i => i.stage === stage);
-    const stageProg = progress.filter(p => p.client_id === c.id && p.item.stage === stage);
-    const completed = stageProg.filter(p => p.status === 'concluido').length;
+    const cType = c.onboarding_type || 'empresa_existente';
+    const applies = (i: ChecklistItem) => i.active !== false && (!i.applies_to_types || i.applies_to_types.includes(cType));
+    const stageItems = items.filter(i => i.stage === stage && applies(i));
+    // inactive items stay visible as history at the end of the list, but never count toward progress
+    const stageProg = progress.filter(p => p.client_id === c.id && p.item.stage === stage)
+      .sort((a, b) => Number(a.item.active === false) - Number(b.item.active === false) || a.item.order_index - b.item.order_index);
+    const completed = stageProg.filter(p => applies(p.item) && p.status === 'concluido').length;
     const sla = aggregateSlaTone(stageProg.map(p => ({
       unlocked_at: p.unlocked_at, completed_at: p.completed_at, sla_hours: p.item.sla_hours, locked: p.locked,
     })));
@@ -338,9 +345,27 @@ export default function Onboarding() {
     if (!selectedClient) return null;
     const e = enriched.find(x => x.client.id === selectedClient.id);
     if (!e) return null;
-    const requiredDone = e.stageProg.filter(p => p.item.is_required).every(p => p.status === 'concluido');
+    const requiredDone = e.stageProg.filter(p => p.item.is_required && p.item.active !== false).every(p => p.status === 'concluido');
     return { ...e, requiredDone };
   }, [enriched, selectedClient]);
+
+  // Items completed by a form/survey/report get a dedicated action instead of a manual checkbox.
+  const ruleAction = (p: ProgressFull) => {
+    const rule = p.item.completion_rule;
+    if (!rule || p.locked) return null;
+    const done = p.status === 'concluido';
+    const cfg = rule === 'handoff_form'
+      ? { text: done ? 'Formulário enviado ao Operacional.' : 'Concluído ao salvar e enviar o Formulário de Repasse.', label: done ? 'Ver formulário' : 'Abrir formulário', onClick: () => setHandoffOpen(true) }
+      : rule === 'feedback_survey'
+      ? { text: done ? 'Pesquisa registrada.' : 'Concluído ao registrar as respostas da pesquisa.', label: done ? 'Registrar nova pesquisa' : 'Aplicar pesquisa', onClick: () => setSurveyOpen(true) }
+      : { text: done ? `Relatório do mês ${p.item.report_month || 1} recebido.` : `Concluído quando o relatório do mês ${p.item.report_month || 1} do Operacional for recebido.`, label: 'Enviar relatório mensal', onClick: () => setReportOpen(true) };
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+        <span className="text-xs text-foreground">{cfg.text}</span>
+        {(canWriteClients || done) && <Button size="sm" variant="outline" className="h-7 text-xs" onClick={cfg.onClick}>{cfg.label}</Button>}
+      </div>
+    );
+  };
 
   const handleToggle = async (p: ProgressFull, checked: boolean) => {
     await toggleChecklistItem(p.id, p.client_id, p.item.title, checked);
@@ -490,7 +515,8 @@ export default function Onboarding() {
           )}
         </div>
 
-        {mainTab === 'overview' && (
+        {mainTab === 'overview' && (<>
+          <FeedbackIndicators />
           <OnboardingSlaPanel
             typeFilter={typeFilter}
             onOverdueChange={setOverdueByClient}
@@ -499,7 +525,7 @@ export default function Onboarding() {
               if (c) setSelectedClient(c);
             }}
           />
-        )}
+        </>)}
 
         {mainTab === 'operation' && (<>
         {/* Filters */}
@@ -701,6 +727,7 @@ export default function Onboarding() {
                       canWrite={canWriteClients}
                       canEditContent={canEditContent}
                       onDefinitionSaved={() => fetchAll(true)}
+                      extra={ruleAction(p)}
                     />
                   ))}
                   {selectedData.stageProg.length === 0 && (
@@ -711,7 +738,7 @@ export default function Onboarding() {
 
               {/* Convert constituição → empresa nova */}
               {selectedData.client.onboarding_type === 'em_constituicao' && (() => {
-                const cnpjItem = selectedData.stageProg.find(p => /CNPJ/i.test(p.item.title) && /receb/i.test(p.item.title));
+                const cnpjItem = selectedData.stageProg.find(p => p.item.active !== false && /CNPJ foi emitido/i.test(p.item.title));
                 const ready = cnpjItem?.status === 'concluido';
                 return (
                   <section className="mt-6">
@@ -728,7 +755,7 @@ export default function Onboarding() {
                           <p className="text-xs text-muted-foreground mt-1">
                             {ready
                               ? 'CNPJ recebido. Confirme para iniciar o onboarding de Empresa Nova.'
-                              : 'Marque o item "Registrar recebimento de CNPJ" para liberar a conversão.'}
+                              : 'Marque o item "Confirmar com o Societário que o CNPJ foi emitido" para liberar a conversão.'}
                           </p>
                         </div>
                         <Button
@@ -794,7 +821,7 @@ export default function Onboarding() {
 
               {/* Handoff form (only on Etapa 2) */}
               {selectedData.stage === 'etapa_2' && (() => {
-                const handoffProg = selectedData.stageProg.find(p => /repasse/i.test(p.item.title));
+                const handoffProg = selectedData.stageProg.find(p => p.item.completion_rule === 'handoff_form');
                 const handoffDone = handoffProg?.status === 'concluido';
                 return (
                   <section className="mt-6">
@@ -808,7 +835,7 @@ export default function Onboarding() {
                           <p className="text-xs text-muted-foreground mt-1">
                             {handoffDone
                               ? 'Repasse já registrado. Você pode visualizar ou editar.'
-                              : 'Preencha os dados de repasse para liberar o avanço da etapa.'}
+                              : 'A Etapa 3 só é liberada depois que o formulário é salvo e enviado ao Operacional.'}
                           </p>
                         </div>
                         <Button size="sm" onClick={() => setHandoffOpen(true)} className="gap-1.5 shrink-0">
@@ -822,7 +849,7 @@ export default function Onboarding() {
               })()}
 
               {/* Monthly Reports (only on Etapa 4 / concluido) */}
-              {(selectedData.stage === 'etapa_4' || selectedData.client.onboarding_status === 'completed') && (
+              {(selectedData.stage === 'etapa_4' || selectedData.stage === 'etapa_3_nova' || selectedData.client.onboarding_status === 'completed') && (
                 <section className="mt-6">
                   <div className="border border-border rounded-lg p-4 bg-card">
                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -992,9 +1019,6 @@ export default function Onboarding() {
           open={handoffOpen}
           onOpenChange={setHandoffOpen}
           clientId={selectedClient.id}
-          handoffProgressId={
-            progress.find(p => p.client_id === selectedClient.id && /repasse/i.test(p.item.title))?.id
-          }
           onSaved={fetchAll}
         />
       )}
@@ -1006,14 +1030,7 @@ export default function Onboarding() {
           clientId={selectedClient.id}
           clientName={selectedClient.name}
           csResponsibleName={selectedClient.cs_responsible}
-          monthlyProgressId={
-            progress.find(p =>
-              p.client_id === selectedClient.id
-              && p.item.stage === 'etapa_4'
-              && p.status !== 'concluido'
-              && /relat[óo]rio|mensal|fechamento/i.test(p.item.title)
-            )?.id
-          }
+          monthlyProgressId={undefined}
           onSaved={() => { loadReports(selectedClient.id); fetchAll(); }}
         />
       )}
@@ -1025,6 +1042,17 @@ export default function Onboarding() {
         clientName={selectedClient?.name || ''}
         viewReport={viewReport}
       />
+
+      {selectedClient && (
+        <FeedbackSurveyDialog
+          open={surveyOpen}
+          onOpenChange={setSurveyOpen}
+          clientId={selectedClient.id}
+          office={/sa[uú]de|cl[íi]nic|m[ée]dic|odont|hospital/i.test(`${selectedClient.segment || ''} ${selectedClient.name}`) ? 'a 2M Saúde' : 'a 2M Contabilidade'}
+          onSaved={() => fetchAll(true)}
+          onSuggestActionPlan={() => navigate(`/client/${selectedClient.id}?tab=action-plan`)}
+        />
+      )}
 
       {selectedClient && (
         <ConvertToNewCompanyDialog

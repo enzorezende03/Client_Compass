@@ -1,0 +1,1 @@
+- Onboarding checklist items are never deleted: retired items get `active=false` (kept as history, ignored by stage advance); `applies_to_types` restricts an item to onboarding types; `completion_rule` (handoff_form / feedback_survey / monthly_report) items are concluded only by DB triggers — why: preserve in-flight client history and enforce gates server-side.

@@ -1,4 +1,5 @@
 import { formatDocument } from '@/lib/document';
+import { ClientOnboardingRecords } from '@/components/onboarding/ClientOnboardingRecords';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -371,6 +372,7 @@ export default function ClientDetail() {
             <TabsTrigger value="timeline" className="gap-2"><Clock className="h-4 w-4" /> Histórico ({timeline.length})</TabsTrigger>
             <TabsTrigger value="ocorrencias" className="gap-2"><MessageSquareWarning className="h-4 w-4" /> Ocorrências</TabsTrigger>
             <TabsTrigger value="repasse" className="gap-2"><Briefcase className="h-4 w-4" /> Repasse</TabsTrigger>
+            <TabsTrigger value="onboarding" className="gap-2"><FileText className="h-4 w-4" /> Onboarding</TabsTrigger>
             <TabsTrigger value="action-plan" className="gap-2"><Target className="h-4 w-4" /> Plano de Ação</TabsTrigger>
             <TabsTrigger value="tasks" className="gap-2"><CheckSquare className="h-4 w-4" /> Tarefas ({clientTasks.filter(t => t.status === 'pending').length})</TabsTrigger>
             <TabsTrigger value="audit" className="gap-2"><FileText className="h-4 w-4" /> Auditoria</TabsTrigger>
@@ -395,6 +397,10 @@ export default function ClientDetail() {
 
           <TabsContent value="repasse" className="mt-4">
             <HandoffSummary handoff={handoff} contacts={contacts} onEdit={() => setHandoffOpen(true)} expanded={notesExpanded} setExpanded={setNotesExpanded} />
+          </TabsContent>
+
+          <TabsContent value="onboarding" className="mt-4">
+            <ClientOnboardingRecords clientId={client.id} />
           </TabsContent>
 
           <TabsContent value="action-plan" className="mt-4">

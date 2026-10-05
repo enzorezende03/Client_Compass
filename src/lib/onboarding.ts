@@ -11,7 +11,8 @@ export type OnboardingType = 'empresa_existente' | 'empresa_nova' | 'em_constitu
 export const STAGES_EXISTING: OnboardingStage[] = ['etapa_1', 'etapa_2', 'etapa_3', 'etapa_4', 'concluido'];
 export const STAGES_NOVA: OnboardingStage[] = ['constituicao', 'etapa_1_nova', 'etapa_2_nova', 'etapa_3_nova', 'concluido'];
 export const STAGES_CONSTITUICAO: OnboardingStage[] = ['constituicao', 'concluido'];
-export const STAGES_VMK: OnboardingStage[] = ['constituicao', 'vmk_ativacao', 'concluido'];
+// VMk follows the Empresa Nova flow; 'vmk_ativacao' is kept only for clients that started before the change.
+export const STAGES_VMK: OnboardingStage[] = ['constituicao', 'etapa_1_nova', 'etapa_2_nova', 'etapa_3_nova', 'vmk_ativacao', 'concluido'];
 
 export function stagesForType(type: OnboardingType): OnboardingStage[] {
   if (type === 'empresa_nova') return STAGES_NOVA;
@@ -40,10 +41,10 @@ export const STAGE_LABELS: Record<OnboardingStage, string> = {
   etapa_3: 'Etapa 3 — Integração',
   etapa_4: 'Etapa 4 — Acompanhamento',
   constituicao: 'Constituição',
-  etapa_1_nova: 'Etapa 1 — Cadastro',
-  etapa_2_nova: 'Etapa 2 — Onboarding',
+  etapa_1_nova: 'Etapa 1 — Ativação',
+  etapa_2_nova: 'Etapa 2 — Apresentação',
   etapa_3_nova: 'Etapa 3 — Acompanhamento 60d',
-  vmk_ativacao: 'Ativação VMk',
+  vmk_ativacao: 'Ativação VMk (fluxo antigo)',
   concluido: 'Concluído',
 };
 
@@ -53,8 +54,8 @@ export const STAGE_SHORT: Record<OnboardingStage, string> = {
   etapa_3: 'Integração',
   etapa_4: 'Acompanhamento',
   constituicao: 'Constituição',
-  etapa_1_nova: 'Cadastro',
-  etapa_2_nova: 'Onboarding',
+  etapa_1_nova: 'Ativação',
+  etapa_2_nova: 'Apresentação',
   etapa_3_nova: 'Acomp. 60d',
   vmk_ativacao: 'Ativação VMk',
   concluido: 'Concluído',
@@ -67,6 +68,10 @@ export interface ChecklistItem {
   title: string;
   sla_hours: number;
   is_required: boolean;
+  active?: boolean;
+  applies_to_types?: string[] | null;
+  completion_rule?: string | null;
+  report_month?: number | null;
 }
 
 export interface ProgressRow {
@@ -268,10 +273,10 @@ export async function startOnboarding(
   const effectiveType: OnboardingType = isVmk ? 'vmk_parceria' : type;
 
   const stage: OnboardingStage = isVmk
-    ? (type === 'em_constituicao' ? 'constituicao' : 'vmk_ativacao')
+    ? (type === 'em_constituicao' ? 'constituicao' : 'etapa_1_nova')
     : type === 'empresa_nova' ? 'etapa_1_nova'
     : type === 'em_constituicao' ? 'constituicao'
-    : type === 'vmk_parceria' ? 'vmk_ativacao'
+    : type === 'vmk_parceria' ? 'etapa_1_nova'
     : 'etapa_1';
 
   await supabase.from('clients').update({
@@ -344,7 +349,7 @@ export async function convertConstitutionToNewCompany(
   const isVmk = (clientPre as any)?.parceria === 'vmk';
 
   const targetType: OnboardingType = isVmk ? 'vmk_parceria' : 'empresa_nova';
-  const targetStage: OnboardingStage = isVmk ? 'vmk_ativacao' : 'etapa_1_nova';
+  const targetStage: OnboardingStage = 'etapa_1_nova';
   const flowLabel = isVmk ? 'Parceria VMk' : 'Empresa Nova';
 
   await supabase.from('clients').update({
