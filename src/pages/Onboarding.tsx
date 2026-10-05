@@ -6,6 +6,8 @@ import { OnboardingSlaPanel } from '@/components/OnboardingSlaPanel';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
 import { ConvertToNewCompanyDialog } from '@/components/ConvertToNewCompanyDialog';
 import { AppLayout } from '@/components/AppLayout';
+import { ChecklistItemRow } from '@/components/onboarding/ChecklistItemRow';
+import { useAccessProfile, usePermission } from '@/hooks/usePermission';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -125,6 +127,26 @@ export default function Onboarding() {
   const changeMainTab = (tab: 'overview' | 'operation') => {
     setMainTab(tab);
     try { localStorage.setItem('cshub:onboarding:mainTab', tab); } catch { /* indisponível */ }
+  };
+
+  const { canWriteClients } = useAccessProfile();
+  const { allowed: canEditContent } = usePermission('manage_onboarding_procedures');
+  const [expandKey, setExpandKey] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const key = `cshub:onboarding:expanded:${data.user?.id ?? 'anon'}`;
+      setExpandKey(key);
+      try { setExpandedItems(new Set(JSON.parse(localStorage.getItem(key) || '[]'))); } catch { /* indisponível */ }
+    });
+  }, []);
+  const setExpandedMany = (ids: string[], open: boolean) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => open ? next.add(id) : next.delete(id));
+      if (expandKey) { try { localStorage.setItem(expandKey, JSON.stringify([...next].slice(-300))); } catch { /* indisponível */ } }
+      return next;
+    });
   };
 
   const fetchAll = useCallback(async (silent = false) => {
