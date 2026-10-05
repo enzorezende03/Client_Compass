@@ -134,8 +134,13 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">;
 
+const RLS_PATTERN = /row-level security|permission denied|violates row level/i;
+
 function toast({ ...props }: Toast) {
   const id = genId();
+  if (typeof props.description === "string" && RLS_PATTERN.test(props.description)) {
+    props.description = "Seu perfil não permite esta ação";
+  }
 
   const update = (props: ToasterToast) =>
     dispatch({

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
+import { useAccessProfile } from '@/hooks/usePermission';
 import { cn } from '@/lib/utils';
 import { formatDocument } from '@/lib/document';
 import { RegisterTerminationDialog } from '@/components/TerminationDialog';
@@ -31,6 +32,7 @@ export default function ClientRegistration() {
   const [terms, setTerms] = useState<any[]>([]);
   const [unarchiveTarget, setUnarchiveTarget] = useState<any | null>(null);
   const { toast } = useToast();
+  const { canWriteClients } = useAccessProfile();
 
   const fetchClients = async () => {
     setLoading(true);
@@ -120,9 +122,11 @@ export default function ClientRegistration() {
             <Button variant="outline" onClick={exportClientsReport} className="gap-2" disabled={loading || filtered.length === 0}>
               <Download className="h-4 w-4" /> Baixar Excel
             </Button>
-            <Button onClick={openNew} className="gap-2">
-              <Plus className="h-4 w-4" /> Novo Cliente
-            </Button>
+            {canWriteClients && (
+              <Button onClick={openNew} className="gap-2">
+                <Plus className="h-4 w-4" /> Novo Cliente
+              </Button>
+            )}
           </div>
         </div>
 
@@ -210,7 +214,7 @@ export default function ClientRegistration() {
                       )}
                       <TableCell>
                         <div className="flex gap-1">
-                          {tab === 'arquivados' ? (
+                          {!canWriteClients ? null : tab === 'arquivados' ? (
                             <Button variant="ghost" size="icon" title="Desarquivar" onClick={() => setUnarchiveTarget(c)}><ArchiveRestore className="h-4 w-4" /></Button>
                           ) : (
                             <>
