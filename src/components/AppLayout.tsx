@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useLocation, useNavigate, NavLink as RouterNavLink } from 'react-router-dom';
+import { useAccessProfile } from '@/hooks/usePermission';
 import {
   BookOpen, Building2, CalendarClock, Clock3, LayoutDashboard, LogOut,
   Rocket, Users, MessageSquareWarning,
@@ -92,6 +94,7 @@ function NavigationGroup({ label, items }: { label: string; items: NavigationIte
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { profile, isLoading } = useAccessProfile();
   const pageTitle = pageLabels.find(([path]) => path === '/' ? pathname === '/' : pathname.startsWith(path))?.[1] ?? 'CS HUB';
 
   const handleLogout = async () => {
@@ -99,14 +102,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     navigate('/login', { replace: true });
   };
 
+  const restrictedPaths: Record<string, string[]> = {
+    viewer: ['/', '/cadastro/clientes', '/ocorrencias', '/client/'],
+    operacional: ['/', '/cadastro/clientes', '/ocorrencias', '/tarefas', '/client/'],
+  };
+  const allowed = profile ? restrictedPaths[profile] : undefined;
+  const filterItems = (items: NavigationItem[]) => allowed ? items.filter(i => allowed.includes(i.url)) : items;
+  const visibleMain = filterItems(mainItems);
+  const visibleManagement = filterItems(managementItems);
+  const pathAllowed = !allowed || allowed.some(p => p === '/' ? pathname === '/' : pathname.startsWith(p));
+
+  useEffect(() => {
+    if (!isLoading && !pathAllowed) navigate('/', { replace: true });
+  }, [isLoading, pathAllowed, navigate]);
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <Sidebar collapsible="icon" className="border-sidebar-border">
           <SidebarHeader className="border-b border-sidebar-border p-2"><Brand /></SidebarHeader>
           <SidebarContent className="py-3">
-            <NavigationGroup label="Operação" items={mainItems} />
-            <NavigationGroup label="Gestão" items={managementItems} />
+            <NavigationGroup label="Operação" items={visibleMain} />
+            {visibleManagement.length > 0 && <NavigationGroup label="Gestão" items={visibleManagement} />}
           </SidebarContent>
           <SidebarFooter className="border-t border-sidebar-border p-3">
             <SidebarMenu>
