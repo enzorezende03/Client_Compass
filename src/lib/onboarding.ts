@@ -68,6 +68,10 @@ export interface ChecklistItem {
   title: string;
   sla_hours: number;
   is_required: boolean;
+  active?: boolean;
+  applies_to_types?: string[] | null;
+  completion_rule?: string | null;
+  report_month?: number | null;
 }
 
 export interface ProgressRow {
