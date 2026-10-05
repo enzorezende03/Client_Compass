@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown, Copy, Download, FileText, Link2, Paperclip, Pencil, Plus, Trash2, Upload,
@@ -42,6 +42,8 @@ export interface ItemDefinition {
   execution_notes_md?: string | null;
   internal_standards_md?: string | null;
   links?: { label: string; url: string }[] | null;
+  active?: boolean;
+  completion_rule?: string | null;
 }
 
 export interface ChecklistProgress {
@@ -96,7 +98,7 @@ function useUsersMap() {
 }
 
 export function ChecklistItemRow({
-  p, client, open, onOpenChange, onToggle, canWrite, canEditContent, onDefinitionSaved,
+  p, client, open, onOpenChange, onToggle, canWrite, canEditContent, onDefinitionSaved, extra,
 }: {
   p: ChecklistProgress;
   client: ChecklistClient;
@@ -106,6 +108,7 @@ export function ChecklistItemRow({
   canWrite: boolean;
   canEditContent: boolean;
   onDefinitionSaved: () => void;
+  extra?: ReactNode;
 }) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -237,7 +240,7 @@ export function ChecklistItemRow({
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} className="rounded-lg border border-border bg-card">
       <div className="flex items-center gap-3 px-3 py-2.5">
-        <Checkbox checked={done} disabled={!canWrite} onCheckedChange={v => onToggle(!!v)} />
+        <Checkbox checked={done} disabled={!canWrite || (!!p.item.completion_rule && !done)} title={p.item.completion_rule && !done ? 'Concluído automaticamente pelo formulário/pesquisa/relatório' : undefined} onCheckedChange={v => onToggle(!!v)} />
         <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 text-left">
           <div className="min-w-0 flex-1">
             <p className={cn('truncate text-sm font-medium', done && 'text-muted-foreground line-through')}>
@@ -251,6 +254,7 @@ export function ChecklistItemRow({
           <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
             {hasContent && <FileText className="h-3.5 w-3.5" aria-label="Possui orientações" />}
             {attachments.length > 0 && <span className="flex items-center gap-0.5 text-[11px]"><Paperclip className="h-3.5 w-3.5" />{attachments.length}</span>}
+            {p.item.active === false && <Badge variant="secondary" className="text-[10px]" title="Item retirado do fluxo. Mantido apenas como histórico; não trava a etapa.">Inativo</Badge>}
             <Badge variant="outline" className="text-[10px]">{statusLabel}</Badge>
             <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
           </span>
@@ -271,6 +275,7 @@ export function ChecklistItemRow({
           )}
         </div>
 
+        {extra}
         {p.item.guidance_md && <Section title="Orientações e procedimentos"><Markdown>{fillPlaceholders(p.item.guidance_md, vars)}</Markdown></Section>}
         {p.item.execution_notes_md && <Section title="Informações importantes"><Markdown>{fillPlaceholders(p.item.execution_notes_md, vars)}</Markdown></Section>}
         {templates.length > 0 && (
