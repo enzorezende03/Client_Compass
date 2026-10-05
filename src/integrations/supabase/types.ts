@@ -1535,6 +1535,7 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: undefined
       }
+      can_write_clients: { Args: never; Returns: boolean }
       churn_metrics: { Args: { p_end: string; p_start: string }; Returns: Json }
       create_interaction_with_task: {
         Args: {
@@ -1561,10 +1562,15 @@ export type Database = {
         }
         Returns: Json
       }
+      current_access_profile: { Args: never; Returns: string }
+      current_internal_user_id: { Args: never; Returns: string }
       dashboard_health_counts: { Args: never; Returns: Json }
       has_permission: { Args: { _permission: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_internal_user: { Args: never; Returns: boolean }
+      is_operacional: { Args: never; Returns: boolean }
+      is_viewer: { Args: never; Returns: boolean }
+      is_writer: { Args: never; Returns: boolean }
       link_auth_user: { Args: never; Returns: undefined }
       onboarding_next_stage: {
         Args: { p_stage: string; p_type: string }
