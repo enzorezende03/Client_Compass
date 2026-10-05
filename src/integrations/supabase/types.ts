@@ -88,6 +88,7 @@ export type Database = {
           id: string
           new_value: string
           old_value: string
+          record_id: string | null
         }
         Insert: {
           changed_by?: string
@@ -97,6 +98,7 @@ export type Database = {
           id?: string
           new_value?: string
           old_value?: string
+          record_id?: string | null
         }
         Update: {
           changed_by?: string
@@ -106,6 +108,7 @@ export type Database = {
           id?: string
           new_value?: string
           old_value?: string
+          record_id?: string | null
         }
         Relationships: [
           {
@@ -946,6 +949,51 @@ export type Database = {
           },
         ]
       }
+      occurrence_treatments: {
+        Row: {
+          author_id: string | null
+          author_name: string
+          content: string
+          created_at: string
+          entry_id: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          author_id?: string | null
+          author_name?: string
+          content?: string
+          created_at?: string
+          entry_id: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          author_id?: string | null
+          author_name?: string
+          content?: string
+          created_at?: string
+          entry_id?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "occurrence_treatments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "occurrence_treatments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "timeline_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       onboarding_checklist_items: {
         Row: {
           active: boolean
@@ -1685,6 +1733,13 @@ export type Database = {
       }
       timeline_entries: {
         Row: {
+          assigned_cs_id: string | null
+          assumed_at: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_charged: boolean | null
+          client_charged_at: string | null
           client_id: string
           created_at: string
           created_by: string | null
@@ -1692,11 +1747,18 @@ export type Database = {
           demand_status: string
           description: string
           id: string
+          initial_followup: boolean
           is_occurrence: boolean
           is_relevant_event: boolean
+          missing_info: string | null
           occurred_at: string
+          occurrence_category: string | null
           origin: string
+          raised_by_area: string | null
           relevant_event_type: string | null
+          resolution_outcome: string | null
+          resolution_status: string
+          resolved_at: string | null
           responsibility_origin: string | null
           responsible: string
           sector: string
@@ -1704,6 +1766,13 @@ export type Database = {
           type: string
         }
         Insert: {
+          assigned_cs_id?: string | null
+          assumed_at?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_charged?: boolean | null
+          client_charged_at?: string | null
           client_id: string
           created_at?: string
           created_by?: string | null
@@ -1711,11 +1780,18 @@ export type Database = {
           demand_status?: string
           description?: string
           id?: string
+          initial_followup?: boolean
           is_occurrence?: boolean
           is_relevant_event?: boolean
+          missing_info?: string | null
           occurred_at?: string
+          occurrence_category?: string | null
           origin?: string
+          raised_by_area?: string | null
           relevant_event_type?: string | null
+          resolution_outcome?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
           responsibility_origin?: string | null
           responsible?: string
           sector?: string
@@ -1723,6 +1799,13 @@ export type Database = {
           type?: string
         }
         Update: {
+          assigned_cs_id?: string | null
+          assumed_at?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          client_charged?: boolean | null
+          client_charged_at?: string | null
           client_id?: string
           created_at?: string
           created_by?: string | null
@@ -1730,11 +1813,18 @@ export type Database = {
           demand_status?: string
           description?: string
           id?: string
+          initial_followup?: boolean
           is_occurrence?: boolean
           is_relevant_event?: boolean
+          missing_info?: string | null
           occurred_at?: string
+          occurrence_category?: string | null
           origin?: string
+          raised_by_area?: string | null
           relevant_event_type?: string | null
+          resolution_outcome?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
           responsibility_origin?: string | null
           responsible?: string
           sector?: string
@@ -1742,6 +1832,20 @@ export type Database = {
           type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "timeline_entries_assigned_cs_id_fkey"
+            columns: ["assigned_cs_id"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timeline_entries_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "timeline_entries_client_id_fkey"
             columns: ["client_id"]
@@ -1808,6 +1912,10 @@ export type Database = {
         Returns: undefined
       }
       can_write_clients: { Args: never; Returns: boolean }
+      cancel_occurrence: {
+        Args: { p_entry_id: string; p_reason: string }
+        Returns: undefined
+      }
       churn_metrics: { Args: { p_end: string; p_start: string }; Returns: Json }
       complete_items_by_rule: {
         Args: { p_client_id: string; p_max_month?: number; p_rule: string }
@@ -1841,6 +1949,18 @@ export type Database = {
       current_access_profile: { Args: never; Returns: string }
       current_internal_user_id: { Args: never; Returns: string }
       dashboard_health_counts: { Args: never; Returns: Json }
+      edit_occurrence: {
+        Args: {
+          p_category: string
+          p_description: string
+          p_entry_id: string
+          p_reason: string
+          p_responsibility_origin: string
+          p_sector: string
+          p_severity: string
+        }
+        Returns: undefined
+      }
       has_permission: { Args: { _permission: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_internal_user: { Args: never; Returns: boolean }
@@ -1848,6 +1968,17 @@ export type Database = {
       is_viewer: { Args: never; Returns: boolean }
       is_writer: { Args: never; Returns: boolean }
       link_auth_user: { Args: never; Returns: undefined }
+      occ_me: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      occurrence_action: {
+        Args: { p_action: string; p_entry_id: string; p_text?: string }
+        Returns: undefined
+      }
       onboarding_feedback_metrics: { Args: { p_days?: number }; Returns: Json }
       onboarding_item_applies: {
         Args: { p_item_id: string; p_type: string }
@@ -1871,6 +2002,20 @@ export type Database = {
         Returns: string
       }
       onboarding_stage_sequence: { Args: { p_type: string }; Returns: string[] }
+      register_operational_deviation: {
+        Args: {
+          p_client_charged: boolean
+          p_client_charged_at: string
+          p_client_id: string
+          p_create_task: boolean
+          p_description: string
+          p_missing_info: string
+          p_occurred_at: string
+          p_sector: string
+          p_severity: string
+        }
+        Returns: Json
+      }
       revert_termination: {
         Args: { p_reason: string; p_termination_id: string }
         Returns: undefined
