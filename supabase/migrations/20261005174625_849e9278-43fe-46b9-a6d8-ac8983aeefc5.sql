@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.current_access_profile(), public.current_internal_user_id(), public.is_viewer(), public.is_operacional(), public.can_write_clients(), public.is_writer() FROM PUBLIC, anon;
