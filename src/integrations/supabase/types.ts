@@ -158,6 +158,60 @@ export type Database = {
           },
         ]
       }
+      client_feedback_surveys: {
+        Row: {
+          applied_at: string
+          applied_by: string | null
+          clarity: number
+          client_id: string
+          created_at: string
+          id: string
+          improvement_point: string
+          nps: number
+          security: string
+          suggestion: string
+        }
+        Insert: {
+          applied_at?: string
+          applied_by?: string | null
+          clarity: number
+          client_id: string
+          created_at?: string
+          id?: string
+          improvement_point?: string
+          nps: number
+          security: string
+          suggestion?: string
+        }
+        Update: {
+          applied_at?: string
+          applied_by?: string | null
+          clarity?: number
+          client_id?: string
+          created_at?: string
+          id?: string
+          improvement_point?: string
+          nps?: number
+          security?: string
+          suggestion?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_feedback_surveys_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "internal_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_feedback_surveys_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_onboarding_progress: {
         Row: {
           checklist_item_id: string
@@ -894,7 +948,10 @@ export type Database = {
       }
       onboarding_checklist_items: {
         Row: {
+          active: boolean
+          applies_to_types: string[] | null
           channel: string | null
+          completion_rule: string | null
           created_at: string
           description: string
           execution_notes_md: string | null
@@ -904,6 +961,7 @@ export type Database = {
           is_required: boolean
           links: Json
           order_index: number
+          report_month: number | null
           responsible_role: string
           role: string | null
           sla_days: number | null
@@ -918,7 +976,10 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          active?: boolean
+          applies_to_types?: string[] | null
           channel?: string | null
+          completion_rule?: string | null
           created_at?: string
           description?: string
           execution_notes_md?: string | null
@@ -928,6 +989,7 @@ export type Database = {
           is_required?: boolean
           links?: Json
           order_index: number
+          report_month?: number | null
           responsible_role?: string
           role?: string | null
           sla_days?: number | null
@@ -942,7 +1004,10 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          active?: boolean
+          applies_to_types?: string[] | null
           channel?: string | null
+          completion_rule?: string | null
           created_at?: string
           description?: string
           execution_notes_md?: string | null
@@ -952,6 +1017,7 @@ export type Database = {
           is_required?: boolean
           links?: Json
           order_index?: number
+          report_month?: number | null
           responsible_role?: string
           role?: string | null
           sla_days?: number | null
@@ -971,59 +1037,92 @@ export type Database = {
         Row: {
           activity: string
           client_id: string
+          cnpj: string
+          contact_email: string
+          contact_name: string
+          contact_phone: string
           created_at: string
           created_by: string | null
           employee_count: number | null
+          financial_contact: string
           fiscal_issues: string
           has_employees: boolean
           has_fixed_assets: string
           id: string
+          legal_name: string
           next_steps: string
           nf_types: string
           notes: string
           organization_level: number | null
           pending_docs: string
+          profit_distribution_minutes: boolean | null
           received_docs: string
+          rented_hq: string
+          sent_at: string | null
           start_competency: string
           tax_regime: string
+          updated_at: string
+          worker_risk_programs: boolean | null
         }
         Insert: {
           activity?: string
           client_id: string
+          cnpj?: string
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string
           created_at?: string
           created_by?: string | null
           employee_count?: number | null
+          financial_contact?: string
           fiscal_issues?: string
           has_employees?: boolean
           has_fixed_assets?: string
           id?: string
+          legal_name?: string
           next_steps?: string
           nf_types?: string
           notes?: string
           organization_level?: number | null
           pending_docs?: string
+          profit_distribution_minutes?: boolean | null
           received_docs?: string
+          rented_hq?: string
+          sent_at?: string | null
           start_competency?: string
           tax_regime?: string
+          updated_at?: string
+          worker_risk_programs?: boolean | null
         }
         Update: {
           activity?: string
           client_id?: string
+          cnpj?: string
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string
           created_at?: string
           created_by?: string | null
           employee_count?: number | null
+          financial_contact?: string
           fiscal_issues?: string
           has_employees?: boolean
           has_fixed_assets?: string
           id?: string
+          legal_name?: string
           next_steps?: string
           nf_types?: string
           notes?: string
           organization_level?: number | null
           pending_docs?: string
+          profit_distribution_minutes?: boolean | null
           received_docs?: string
+          rented_hq?: string
+          sent_at?: string | null
           start_competency?: string
           tax_regime?: string
+          updated_at?: string
+          worker_risk_programs?: boolean | null
         }
         Relationships: [
           {
@@ -1710,6 +1809,10 @@ export type Database = {
       }
       can_write_clients: { Args: never; Returns: boolean }
       churn_metrics: { Args: { p_end: string; p_start: string }; Returns: Json }
+      complete_items_by_rule: {
+        Args: { p_client_id: string; p_max_month?: number; p_rule: string }
+        Returns: undefined
+      }
       create_interaction_with_task: {
         Args: {
           p_client_id: string
@@ -1745,6 +1848,11 @@ export type Database = {
       is_viewer: { Args: never; Returns: boolean }
       is_writer: { Args: never; Returns: boolean }
       link_auth_user: { Args: never; Returns: undefined }
+      onboarding_feedback_metrics: { Args: { p_days?: number }; Returns: Json }
+      onboarding_item_applies: {
+        Args: { p_item_id: string; p_type: string }
+        Returns: boolean
+      }
       onboarding_item_due_at: {
         Args: { p_progress_id: string }
         Returns: string
