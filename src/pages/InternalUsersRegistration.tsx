@@ -14,17 +14,23 @@ import { AppLayout } from '@/components/AppLayout';
 import { useIsAdmin, type AppPermission } from '@/hooks/usePermission';
 
 const SPECIAL_PERMISSIONS: { key: AppPermission; label: string }[] = [
+  { key: 'manage_occurrences', label: 'Gerenciar ocorrências (editar e cancelar)' },
   { key: 'manage_sla_catalog', label: 'Gerenciar prazos de demandas' },
   { key: 'manage_onboarding_procedures', label: 'Gerenciar procedimento de onboarding' },
 ];
 
-
-
 const ACCESS_PROFILE_LABELS: Record<string, string> = {
   admin: 'Administrador',
   cs: 'Customer Success',
-  comercial: 'Comercial',
-  diretoria: 'Diretoria',
+  operacional: 'Operacional',
+  viewer: 'Liderança (somente leitura)',
+};
+
+const ACCESS_PROFILE_DESCRIPTIONS: Record<string, string> = {
+  admin: 'Acesso total, incluindo usuários e permissões.',
+  cs: 'Gerencia clientes, tarefas, onboarding e ocorrências.',
+  operacional: 'Consulta clientes, registra ocorrências e atualiza as próprias tarefas.',
+  viewer: 'Somente leitura do painel de clientes e das ocorrências.',
 };
 
 interface UserForm {
@@ -250,6 +256,7 @@ export default function InternalUsersRegistration() {
                   {Object.entries(ACCESS_PROFILE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">{ACCESS_PROFILE_DESCRIPTIONS[form.access_profile]}</p>
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={form.active} onCheckedChange={v => updateField('active', v)} />
