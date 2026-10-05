@@ -28,7 +28,7 @@ function PendingTab() {
   const load = useCallback(async () => {
     const [{ data }, { data: users }] = await Promise.all([
       supabase.from('timeline_entries' as any).select('*, clients(name, document)')
-        .eq('is_occurrence', true).is('responsibility_origin', null)
+        .eq('is_occurrence', true).is('responsibility_origin', null).neq('resolution_status' as any, 'cancelada')
         .order('occurred_at', { ascending: false }).limit(500),
       supabase.from('internal_users').select('id, name'),
     ]);
@@ -94,6 +94,11 @@ interface Metrics {
   monthly: { month: string; escritorio: number; cliente: number; neutro: number }[];
   by_sector: { sector: string; escritorio: number; cliente: number; neutro: number; total: number }[];
   recurrence: { client_id: string; client_name: string; total: number; escritorio: number; cliente: number; neutro: number }[];
+  deviations?: {
+    total: number; initial_followup: number; open: number; avg_treatment_hours: number | null;
+    top_clients: { client_id: string; client_name: string; total: number }[];
+    by_sector: { sector: string; total: number; open: number }[];
+  };
 }
 
 function AnalysisTab() {
@@ -119,6 +124,8 @@ function AnalysisTab() {
     const [y, mo] = x.month.split('-');
     return { ...x, label: new Date(+y, +mo - 1, 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }) };
   }), [m]);
+  const dv = m?.deviations;
+  const fmtH = (h: number | null) => h == null ? '—' : h >= 24 ? `${(h / 24).toFixed(1).replace('.', ',')} dias` : `${h.toFixed(1).replace('.', ',')} h`;
   const hours = m?.avg_resolution_hours;
   const avgLabel = hours == null ? '—' : hours >= 24 ? `${(hours / 24).toFixed(1).replace('.', ',')} dias` : `${hours.toFixed(1).replace('.', ',')} h`;
   const predominant = (r: Metrics['recurrence'][number]): ResponsibilityOrigin =>
@@ -154,6 +161,43 @@ function AnalysisTab() {
         <Stat title="Do cliente" value={pct(m?.cliente ?? 0)} sub={`${m?.cliente ?? 0} registros · ${m?.neutro ?? 0} informativos`} tone="text-rework-client" />
         <Stat title="Em aberto" value={m?.open ?? 0} />
         <Stat title="Tempo médio até a resolução" value={avgLabel} sub="do registro à conclusão da tarefa" />
+      </div>
+
+      <div className="space-y-3 rounded-lg border bg-card p-4 shadow-card">
+        <p className="font-heading text-sm font-semibold">Desvios registrados pelo operacional</p>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat title="Total no período" value={dv?.total ?? 0} sub={`${dv?.open ?? 0} ainda sem resolução`} />
+          <Stat title="Durante acompanhamento inicial" value={dv?.initial_followup ?? 0} />
+          <Stat title="Tempo médio de tratativa" value={fmtH(dv?.avg_treatment_hours ?? null)} sub="do registro à resolução pelo CS" />
+          <Stat title="Clientes com desvios" value={dv?.top_clients.length ?? 0} sub="entre os 5 com mais registros" />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Table>
+            <TableHeader><TableRow><TableHead>Clientes com mais desvios</TableHead><TableHead className="text-right">Desvios</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {!dv?.top_clients.length ? <TableRow><TableCell colSpan={2} className="py-6 text-center text-muted-foreground">—</TableCell></TableRow>
+                : dv.top_clients.map(c => (
+                  <TableRow key={c.client_id}>
+                    <TableCell><Link className="hover:underline" to={`/client/${c.client_id}?tab=ocorrencias`}>{c.client_name}</Link></TableCell>
+                    <TableCell className="text-right font-semibold">{c.total}</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+          <Table>
+            <TableHeader><TableRow><TableHead>Setor impactado</TableHead><TableHead className="text-right">Desvios</TableHead><TableHead className="text-right">Sem resolução</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {!dv?.by_sector.length ? <TableRow><TableCell colSpan={3} className="py-6 text-center text-muted-foreground">—</TableCell></TableRow>
+                : dv.by_sector.map(x => (
+                  <TableRow key={x.sector}>
+                    <TableCell>{(SECTOR_LABELS as any)[x.sector] ?? x.sector}</TableCell>
+                    <TableCell className="text-right font-semibold">{x.total}</TableCell>
+                    <TableCell className="text-right text-health-attention">{x.open}</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <div className="rounded-lg border bg-card p-4 shadow-card">
