@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAccessProfile, usePermission } from '@/hooks/usePermission';
 import { cn } from '@/lib/utils';
 import { formatDocument } from '@/lib/document';
 import { GenerateTaskFromEntryDialog } from '@/components/GenerateTaskFromEntryDialog';
@@ -50,6 +51,8 @@ interface Props { clientId?: string; clientName?: string; highlightId?: string |
 
 export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
   const { toast } = useToast();
+  const { isViewer, canWriteClients } = useAccessProfile();
+  const { allowed: canManage } = usePermission('manage_occurrences');
   const navigate = useNavigate();
   const [rows, setRows] = useState<Occurrence[]>([]);
   const [tasks, setTasks] = useState<Record<string, OccurrenceTask>>({});
@@ -193,7 +196,7 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-2" onClick={exportCsv} disabled={!visible.length}><Download className="h-4 w-4" /> Exportar CSV</Button>
-          <Button size="sm" className="gap-2" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> Nova ocorrência</Button>
+          {!isViewer && <Button size="sm" className="gap-2" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> Nova ocorrência</Button>}
         </div>
       </div>
 
@@ -261,7 +264,7 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
                         <CheckSquare className="h-3 w-3" /> {t.status === 'completed' ? 'Concluída' : 'Pendente'}
                       </button>
                     ) : (
-                      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setGenTask(r)}><Plus className="h-3 w-3" /> Gerar</Button>
+                      canWriteClients ? <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setGenTask(r)}><Plus className="h-3 w-3" /> Gerar</Button> : <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -291,7 +294,7 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
                   {detail.severity && <span className={cn('rounded-full bg-secondary px-2 py-0.5 text-xs', severityClass[detail.severity])}>Gravidade {SEVERITY_LABELS[detail.severity]}</span>}
                   <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{DEMAND_STATUS_LABELS[detail.demandStatus]}</span>
                 </div>
-                <Textarea rows={5} value={editText} onChange={e => setEditText(e.target.value)} />
+                <Textarea rows={5} value={editText} readOnly={!canManage} onChange={e => setEditText(e.target.value)} />
                 <p className="text-xs text-muted-foreground">Registrado por {detail.createdByName ?? 'Sistema'} em {formatDateTime(detail.createdAt)}</p>
                 {Math.abs(new Date(detail.occurredAt).getTime() - new Date(detail.createdAt).getTime()) > 60000 && (
                   <p className="text-xs text-muted-foreground">Data do fato: {formatDateTime(detail.occurredAt)}</p>
@@ -300,7 +303,7 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
               </div>
               <DialogFooter>
                 {!clientId && <Button variant="outline" onClick={() => navigate(`/client/${detail.clientId}?tab=ocorrencias`)}>Abrir ficha</Button>}
-                <Button onClick={saveEdit}>Salvar</Button>
+                {canManage && <Button onClick={saveEdit}>Salvar</Button>}
               </DialogFooter>
             </>
           )}
