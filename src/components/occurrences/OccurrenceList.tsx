@@ -14,8 +14,11 @@ import { cn } from '@/lib/utils';
 import { formatDocument } from '@/lib/document';
 import { GenerateTaskFromEntryDialog } from '@/components/GenerateTaskFromEntryDialog';
 import { OccurrenceModal } from './OccurrenceModal';
+import { DeviationModal } from './DeviationModal';
+import { OccurrenceDetailDialog } from './OccurrenceDetailDialog';
 import {
   Occurrence, OccurrenceTask, mapOccurrence, formatDateTime, downloadCsv, getCurrentInternalUser,
+  CATEGORY_LABELS, AREA_LABELS, RESOLUTION_LABELS, RESOLUTION_CLASSES,
 } from '@/lib/occurrences';
 import {
   INTERACTION_LABELS, SECTOR_LABELS, DEMAND_STATUS_LABELS, SEVERITY_LABELS,
@@ -51,7 +54,7 @@ interface Props { clientId?: string; clientName?: string; highlightId?: string |
 
 export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
   const { toast } = useToast();
-  const { isViewer, canWriteClients } = useAccessProfile();
+  const { isViewer, isOperacional, canWriteClients } = useAccessProfile();
   const { allowed: canManage } = usePermission('manage_occurrences');
   const navigate = useNavigate();
   const [rows, setRows] = useState<Occurrence[]>([]);
@@ -69,10 +72,16 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
   const [fSector, setFSector] = useState('all');
   const [fSeverity, setFSeverity] = useState('all');
   const [fStatus, setFStatus] = useState('all');
-  const [chip, setChip] = useState<'all' | 'escritorio' | 'cliente' | 'open' | 'mine'>('all');
+  const [fArea, setFArea] = useState('all');
+  const [fCat, setFCat] = useState('all');
+  const [fRes, setFRes] = useState('all');
+  const [fCs, setFCs] = useState('all');
+  const [fInit, setFInit] = useState('all');
+  const [csUsers, setCsUsers] = useState<{ id: string; name: string }[]>([]);
+  const [devOpen, setDevOpen] = useState(false);
+  const [chip, setChip] = useState<'all' | 'escritorio' | 'cliente' | 'open' | 'mine' | 'desvios'>('all');
   const [newOpen, setNewOpen] = useState(false);
   const [detail, setDetail] = useState<Occurrence | null>(null);
-  const [editText, setEditText] = useState('');
   const [genTask, setGenTask] = useState<Occurrence | null>(null);
 
   useEffect(() => { getCurrentInternalUser().then(u => setMe(u?.id ?? null)); }, []);
@@ -88,6 +97,7 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
     if (clientId) q = q.eq('client_id', clientId);
     const [{ data }, { data: users }] = await Promise.all([q, supabase.from('internal_users').select('id, name')]);
     const map = Object.fromEntries(((users as any[]) || []).map(u => [u.id, u.name]));
+    setCsUsers(((users as any[]) || []).slice().sort((a, b) => a.name.localeCompare(b.name)));
     const list = ((data as any[]) || []);
     setHasMore(list.length > limit);
     const mapped = list.slice(0, limit).map(r => mapOccurrence(r, map));
@@ -125,15 +135,22 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
       if (fStatus !== 'all' && r.demandStatus !== fStatus) return false;
       if (chip === 'escritorio' && r.responsibilityOrigin !== 'escritorio') return false;
       if (chip === 'cliente' && r.responsibilityOrigin !== 'cliente') return false;
-      if (chip === 'open' && r.demandStatus === 'resolved') return false;
-      if (chip === 'mine' && !(r.createdBy === me || (me && tasks[r.id]?.responsibleId === me))) return false;
+      if (chip === 'open' && (r.demandStatus === 'resolved' || r.resolutionStatus === 'resolvida' || r.resolutionStatus === 'cancelada')) return false;
+      if (chip === 'desvios' && !(r.category === 'desvio_operacional' && r.raisedByArea === 'operacional')) return false;
+      if (fArea !== 'all' && r.raisedByArea !== fArea) return false;
+      if (fCat !== 'all' && r.category !== fCat) return false;
+      if (fRes !== 'all' && r.resolutionStatus !== fRes) return false;
+      if (fCs !== 'all' && r.assignedCsId !== fCs) return false;
+      if (fInit === 'sim' && !r.initialFollowup) return false;
+      if (fInit === 'nao' && r.initialFollowup) return false;
+      if (chip === 'mine' && !(r.createdBy === me || r.assignedCsId === me || (me && tasks[r.id]?.responsibleId === me))) return false;
       return true;
     });
-  }, [rows, clientQ, text, fClass, fType, fSector, fSeverity, fStatus, chip, me, tasks]);
+  }, [rows, clientQ, text, fClass, fType, fSector, fSeverity, fStatus, fArea, fCat, fRes, fCs, fInit, chip, me, tasks]);
 
   const summary = useMemo(() => {
     const lim = Date.now() - 90 * 864e5;
-    const recent = rows.filter(r => new Date(r.occurredAt).getTime() >= lim);
+    const recent = rows.filter(r => r.resolutionStatus !== 'cancelada' && new Date(r.occurredAt).getTime() >= lim);
     return {
       esc: recent.filter(r => r.responsibilityOrigin === 'escritorio').length,
       cli: recent.filter(r => r.responsibilityOrigin === 'cliente').length,
@@ -147,23 +164,17 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
     else load();
   };
 
-  const saveEdit = async () => {
-    if (!detail || !editText.trim() || editText === detail.description) { setDetail(null); return; }
-    const { error } = await supabase.from('timeline_entries').update({ description: editText.trim() }).eq('id', detail.id);
-    if (error) { toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Descrição atualizada', description: 'A alteração ficou registrada na auditoria.' });
-    setDetail(null); load();
-  };
-
   const exportCsv = () => downloadCsv(`ocorrencias-${new Date().toISOString().slice(0, 10)}.csv`, visible.map(r => ({
     'Data do fato': formatDateTime(r.occurredAt), Cliente: r.clientName, CNPJ: formatDocument(r.clientDocument),
     Tipo: INTERACTION_LABELS[r.type], Classificação: r.responsibilityOrigin ? RESPONSIBILITY_ORIGIN_LABELS[r.responsibilityOrigin] : '',
     Setor: SECTOR_LABELS[r.sector] ?? r.sector, Gravidade: r.severity ? SEVERITY_LABELS[r.severity] : '',
     Descrição: r.description, 'Registrado por': r.createdByName ?? 'Sistema', 'Registrado em': formatDateTime(r.createdAt),
+    Categoria: r.category ? CATEGORY_LABELS[r.category] : '', 'Área que registrou': r.raisedByArea ? AREA_LABELS[r.raisedByArea] : '',
+    'CS responsável': r.assignedCsName ?? '', Tratativa: RESOLUTION_LABELS[r.resolutionStatus] ?? '', 'Acompanhamento inicial': r.initialFollowup ? 'Sim' : 'Não',
     Status: DEMAND_STATUS_LABELS[r.demandStatus] ?? r.demandStatus, Tarefa: tasks[r.id] ? (tasks[r.id].status === 'completed' ? 'Concluída' : 'Pendente') : '',
   })));
 
-  const chips: Array<[typeof chip, string]> = [['all', 'Todas'], ['escritorio', 'Do escritório'], ['cliente', 'Do cliente'], ['open', 'Em aberto'], ['mine', 'Minhas']];
+  const chips: Array<[typeof chip, string]> = [['all', 'Todas'], ['escritorio', 'Do escritório'], ['cliente', 'Do cliente'], ['open', 'Em aberto'], ['desvios', 'Desvios do operacional'], ['mine', 'Minhas']];
   const sel = (value: string, set: (v: string) => void, placeholder: string, opts: Record<string, string>, extra?: [string, string]) => (
     <Select value={value} onValueChange={set}>
       <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
@@ -196,7 +207,8 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-2" onClick={exportCsv} disabled={!visible.length}><Download className="h-4 w-4" /> Exportar CSV</Button>
-          {!isViewer && <Button size="sm" className="gap-2" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> Nova ocorrência</Button>}
+          {(isOperacional || canWriteClients) && <Button size="sm" variant={isOperacional ? 'default' : 'outline'} className="gap-2" onClick={() => setDevOpen(true)}><Plus className="h-4 w-4" /> Desvio operacional</Button>}
+          {canWriteClients && <Button size="sm" className="gap-2" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> Nova ocorrência</Button>}
         </div>
       </div>
 
@@ -211,6 +223,11 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
         {sel(fSector, setFSector, 'Setor', SECTOR_LABELS)}
         {sel(fSeverity, setFSeverity, 'Gravidade', SEVERITY_LABELS)}
         {sel(fStatus, setFStatus, 'Status', DEMAND_STATUS_LABELS)}
+        {sel(fArea, setFArea, 'Registrado por', AREA_LABELS)}
+        {sel(fCat, setFCat, 'Categoria', CATEGORY_LABELS)}
+        {sel(fRes, setFRes, 'Tratativa', RESOLUTION_LABELS)}
+        {sel(fCs, setFCs, 'CS responsável', Object.fromEntries(csUsers.map(u => [u.id, u.name])))}
+        {sel(fInit, setFInit, 'Acompanhamento inicial', { sim: 'Durante acompanhamento inicial', nao: 'Fora do acompanhamento' })}
         <Input type="date" className="h-9 w-[140px] text-xs" value={start} onChange={e => setStart(e.target.value)} />
         <span className="text-xs text-muted-foreground">até</span>
         <Input type="date" className="h-9 w-[140px] text-xs" value={end} onChange={e => setEnd(e.target.value)} />
@@ -228,25 +245,29 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
               <TableHead>Gravidade</TableHead>
               <TableHead className="min-w-[220px]">Descrição</TableHead>
               <TableHead>Registrado por</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>CS</TableHead>
+              <TableHead>Tratativa</TableHead>
               <TableHead>Tarefa</TableHead>
               <TableHead className="w-[1%]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={11} className="py-8 text-center text-muted-foreground">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={12} className="py-8 text-center text-muted-foreground">Carregando...</TableCell></TableRow>
             ) : visible.length === 0 ? (
-              <TableRow><TableCell colSpan={11} className="py-8 text-center text-muted-foreground">Nenhuma ocorrência para estes filtros.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={12} className="py-8 text-center text-muted-foreground">Nenhuma ocorrência para estes filtros.</TableCell></TableRow>
             ) : visible.map(r => {
               const t = tasks[r.id];
               return (
-                <TableRow key={r.id} className={cn(highlightId === r.id && 'bg-primary/5')}>
+                <TableRow key={r.id} className={cn(highlightId === r.id && 'bg-primary/5', r.resolutionStatus === 'cancelada' && 'opacity-60')}>
                   <TableCell className="whitespace-nowrap text-xs">{formatDateTime(r.occurredAt)}</TableCell>
                   {!clientId && <TableCell className="text-sm font-medium"><Link className="hover:underline" to={`/client/${r.clientId}?tab=ocorrencias`}>{r.clientName}</Link></TableCell>}
-                  <TableCell className="text-xs">{INTERACTION_LABELS[r.type] ?? r.type}</TableCell>
+                  <TableCell className="text-xs">
+                    {r.category ? CATEGORY_LABELS[r.category] : (INTERACTION_LABELS[r.type] ?? r.type)}
+                    {r.initialFollowup && <span className="mt-1 block whitespace-nowrap text-[10px] font-medium text-primary">Acompanhamento inicial</span>}
+                  </TableCell>
                   <TableCell>
-                    {r.responsibilityOrigin ? <ClassificationBadge value={r.responsibilityOrigin} /> : (
+                    {r.responsibilityOrigin || !canWriteClients || r.resolutionStatus === 'cancelada' ? <ClassificationBadge value={r.responsibilityOrigin} /> : (
                       <Select onValueChange={v => classify(r, v as ResponsibilityOrigin)}>
                         <SelectTrigger className="h-7 w-[120px] text-xs"><SelectValue placeholder="Classificar" /></SelectTrigger>
                         <SelectContent>{Object.entries(RESPONSIBILITY_ORIGIN_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
@@ -257,18 +278,19 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
                   <TableCell className={cn('text-xs', r.severity && severityClass[r.severity])}>{r.severity ? SEVERITY_LABELS[r.severity] : '—'}</TableCell>
                   <TableCell className="max-w-[320px]"><p className="line-clamp-2 text-xs text-foreground" title={r.description}>{r.description}</p></TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{r.createdByName ?? 'Sistema'}</TableCell>
-                  <TableCell className="whitespace-nowrap text-xs">{DEMAND_STATUS_LABELS[r.demandStatus] ?? r.demandStatus}</TableCell>
+                  <TableCell className="whitespace-nowrap text-xs">{r.assignedCsName ?? '—'}</TableCell>
+                  <TableCell><span className={cn('whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium', RESOLUTION_CLASSES[r.resolutionStatus])} title={r.resolutionStatus === 'cancelada' ? `Cancelada por ${r.cancelledByName ?? '—'} — ${r.cancelReason ?? ''}` : undefined}>{RESOLUTION_LABELS[r.resolutionStatus]}</span></TableCell>
                   <TableCell>
                     {t ? (
                       <button onClick={() => navigate('/tarefas')} className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium hover:underline', t.status === 'completed' ? 'bg-health-healthy/10 text-health-healthy' : 'bg-primary/10 text-primary')}>
-                        <CheckSquare className="h-3 w-3" /> {t.status === 'completed' ? 'Concluída' : 'Pendente'}
+                        <CheckSquare className="h-3 w-3" /> {t.status === 'completed' ? 'Concluída' : t.status === 'cancelled' ? 'Cancelada' : 'Pendente'}
                       </button>
                     ) : (
-                      canWriteClients ? <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setGenTask(r)}><Plus className="h-3 w-3" /> Gerar</Button> : <span className="text-xs text-muted-foreground">—</span>
+                      canWriteClients && r.resolutionStatus !== 'cancelada' ? <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => setGenTask(r)}><Plus className="h-3 w-3" /> Gerar</Button> : <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Abrir detalhe" onClick={() => { setDetail(r); setEditText(r.description); }}><Eye className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Abrir detalhe" onClick={() => setDetail(r)}><Eye className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               );
@@ -282,33 +304,9 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
       <GenerateTaskFromEntryDialog entry={genTask ? toTimelineEntry(genTask) : null} clientName={genTask?.clientName || clientName}
         onOpenChange={v => { if (!v) setGenTask(null); }} onCreated={load} />
 
-      <Dialog open={!!detail} onOpenChange={v => { if (!v) setDetail(null); }}>
-        <DialogContent className="sm:max-w-lg">
-          {detail && (
-            <>
-              <DialogHeader><DialogTitle>{INTERACTION_LABELS[detail.type]} — {detail.clientName}</DialogTitle></DialogHeader>
-              <div className="space-y-3 text-sm">
-                <div className="flex flex-wrap gap-2">
-                  <ClassificationBadge value={detail.responsibilityOrigin} />
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{SECTOR_LABELS[detail.sector] ?? detail.sector}</span>
-                  {detail.severity && <span className={cn('rounded-full bg-secondary px-2 py-0.5 text-xs', severityClass[detail.severity])}>Gravidade {SEVERITY_LABELS[detail.severity]}</span>}
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{DEMAND_STATUS_LABELS[detail.demandStatus]}</span>
-                </div>
-                <Textarea rows={5} value={editText} readOnly={!canManage} onChange={e => setEditText(e.target.value)} />
-                <p className="text-xs text-muted-foreground">Registrado por {detail.createdByName ?? 'Sistema'} em {formatDateTime(detail.createdAt)}</p>
-                {Math.abs(new Date(detail.occurredAt).getTime() - new Date(detail.createdAt).getTime()) > 60000 && (
-                  <p className="text-xs text-muted-foreground">Data do fato: {formatDateTime(detail.occurredAt)}</p>
-                )}
-                {tasks[detail.id] && <p className="text-xs">Tarefa vinculada: <strong>{tasks[detail.id].title}</strong> ({tasks[detail.id].status === 'completed' ? 'Concluída' : 'Pendente'})</p>}
-              </div>
-              <DialogFooter>
-                {!clientId && <Button variant="outline" onClick={() => navigate(`/client/${detail.clientId}?tab=ocorrencias`)}>Abrir ficha</Button>}
-                {canManage && <Button onClick={saveEdit}>Salvar</Button>}
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <DeviationModal open={devOpen} onOpenChange={setDevOpen} clientId={clientId} clientName={clientName} onSaved={load} />
+      {detail && <OccurrenceDetailDialog occurrence={rows.find(r => r.id === detail.id) ?? detail} task={tasks[detail.id]} me={me}
+        canManage={canManage} canWrite={canWriteClients} showClientLink={!clientId} onClose={() => setDetail(null)} onChanged={load} />}
     </div>
   );
 }
