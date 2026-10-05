@@ -171,6 +171,8 @@ export type Database = {
           id: string
           locked: boolean
           notes: string | null
+          notes_updated_at: string | null
+          notes_updated_by: string | null
           status: string
           unlocked_at: string | null
         }
@@ -186,6 +188,8 @@ export type Database = {
           id?: string
           locked?: boolean
           notes?: string | null
+          notes_updated_at?: string | null
+          notes_updated_by?: string | null
           status?: string
           unlocked_at?: string | null
         }
@@ -201,6 +205,8 @@ export type Database = {
           id?: string
           locked?: boolean
           notes?: string | null
+          notes_updated_at?: string | null
+          notes_updated_by?: string | null
           status?: string
           unlocked_at?: string | null
         }
@@ -706,6 +712,27 @@ export type Database = {
         }
         Relationships: []
       }
+      holidays: {
+        Row: {
+          created_at: string
+          day: string
+          kind: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          kind?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          kind?: string
+          name?: string
+        }
+        Relationships: []
+      }
       internal_user_permissions: {
         Row: {
           granted_at: string
@@ -867,40 +894,76 @@ export type Database = {
       }
       onboarding_checklist_items: {
         Row: {
+          channel: string | null
           created_at: string
           description: string
+          execution_notes_md: string | null
+          guidance_md: string | null
           id: string
+          internal_standards_md: string | null
           is_required: boolean
+          links: Json
           order_index: number
           responsible_role: string
+          role: string | null
           sla_days: number | null
           sla_hours: number | null
+          sla_unit: string | null
+          sla_value: number | null
           stage: string
           title: string
+          trigger_note: string | null
+          trigger_type: string | null
+          updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
+          channel?: string | null
           created_at?: string
           description?: string
+          execution_notes_md?: string | null
+          guidance_md?: string | null
           id?: string
+          internal_standards_md?: string | null
           is_required?: boolean
+          links?: Json
           order_index: number
           responsible_role?: string
+          role?: string | null
           sla_days?: number | null
           sla_hours?: number | null
+          sla_unit?: string | null
+          sla_value?: number | null
           stage: string
           title: string
+          trigger_note?: string | null
+          trigger_type?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
+          channel?: string | null
           created_at?: string
           description?: string
+          execution_notes_md?: string | null
+          guidance_md?: string | null
           id?: string
+          internal_standards_md?: string | null
           is_required?: boolean
+          links?: Json
           order_index?: number
           responsible_role?: string
+          role?: string | null
           sla_days?: number | null
           sla_hours?: number | null
+          sla_unit?: string | null
+          sla_value?: number | null
           stage?: string
           title?: string
+          trigger_note?: string | null
+          trigger_type?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -976,6 +1039,108 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "internal_users"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_item_attachments: {
+        Row: {
+          client_onboarding_item_id: string
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string
+          size_bytes: number
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_onboarding_item_id: string
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type: string
+          size_bytes: number
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_onboarding_item_id?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string
+          size_bytes?: number
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_item_attachments_client_onboarding_item_id_fkey"
+            columns: ["client_onboarding_item_id"]
+            isOneToOne: false
+            referencedRelation: "client_onboarding_progress"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_item_attachments_client_onboarding_item_id_fkey"
+            columns: ["client_onboarding_item_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_sla_status"
+            referencedColumns: ["progress_id"]
+          },
+        ]
+      }
+      onboarding_item_templates: {
+        Row: {
+          body_md: string
+          channel: string
+          created_at: string
+          id: string
+          item_definition_id: string
+          sort_order: number
+          subject: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body_md?: string
+          channel?: string
+          created_at?: string
+          id?: string
+          item_definition_id: string
+          sort_order?: number
+          subject?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body_md?: string
+          channel?: string
+          created_at?: string
+          id?: string
+          item_definition_id?: string
+          sort_order?: number
+          subject?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_item_templates_item_definition_id_fkey"
+            columns: ["item_definition_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_item_templates_item_definition_id_fkey"
+            columns: ["item_definition_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_sla_status"
+            referencedColumns: ["checklist_item_id"]
           },
         ]
       }
@@ -1531,6 +1696,14 @@ export type Database = {
       }
     }
     Functions: {
+      add_business_days: {
+        Args: { p_days: number; p_start: string }
+        Returns: string
+      }
+      add_business_hours: {
+        Args: { p_hours: number; p_start: string }
+        Returns: string
+      }
       bootstrap_onboarding_locks: {
         Args: { p_client_id: string }
         Returns: undefined
@@ -1572,8 +1745,21 @@ export type Database = {
       is_viewer: { Args: never; Returns: boolean }
       is_writer: { Args: never; Returns: boolean }
       link_auth_user: { Args: never; Returns: undefined }
+      onboarding_item_due_at: {
+        Args: { p_progress_id: string }
+        Returns: string
+      }
       onboarding_next_stage: {
         Args: { p_stage: string; p_type: string }
+        Returns: string
+      }
+      onboarding_sla_due: {
+        Args: {
+          p_fallback_hours: number
+          p_start: string
+          p_unit: string
+          p_value: number
+        }
         Returns: string
       }
       onboarding_stage_sequence: { Args: { p_type: string }; Returns: string[] }
