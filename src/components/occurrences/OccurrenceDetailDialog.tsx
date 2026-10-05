@@ -37,7 +37,7 @@ export function OccurrenceDetailDialog({ occurrence: o, task, me, canManage, can
   const loadExtra = async (id: string) => {
     const [{ data: t }, { data: a }] = await Promise.all([
       supabase.from('occurrence_treatments' as any).select('*').eq('entry_id', id).order('created_at'),
-      supabase.from('audit_logs').select('*').eq('record_id' as any, id).order('created_at', { ascending: false }),
+      (supabase as any).from('audit_logs').select('*').eq('record_id', id).order('created_at', { ascending: false }),
     ]);
     setTreats((t as any) || []); setAudits((a as any) || []);
   };
