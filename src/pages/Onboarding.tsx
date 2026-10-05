@@ -6,6 +6,7 @@ import { OnboardingSlaPanel } from '@/components/OnboardingSlaPanel';
 import { OnboardingMonthlyReportDialog, ReportRow, STATUS_BADGE } from '@/components/OnboardingMonthlyReportDialog';
 import { ConvertToNewCompanyDialog } from '@/components/ConvertToNewCompanyDialog';
 import { AppLayout } from '@/components/AppLayout';
+import { TaskInfoPanel } from '@/components/execution/ExecutionPanels';
 import { ChecklistItemRow } from '@/components/onboarding/ChecklistItemRow';
 import { FeedbackSurveyDialog } from '@/components/onboarding/FeedbackSurveyDialog';
 import { FeedbackIndicators } from '@/components/onboarding/FeedbackIndicators';
@@ -89,7 +90,8 @@ function daysSince(iso?: string | null) {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 864e5));
 }
 
-export default function Onboarding() {
+export default function Onboarding({ embedded = false }: { embedded?: boolean } = {}) {
+  const Wrap: any = embedded ? Fragment : AppLayout;
   const { toast } = useToast();
   const navigate = useNavigate();
   const [clients, setClients] = useState<ClientRow[]>([]);
@@ -445,14 +447,14 @@ export default function Onboarding() {
   };
 
   return (
-    <AppLayout>
-      <div className="container mx-auto px-6 py-6">
+    <Wrap>
+      <div className={embedded ? '' : 'container mx-auto px-6 py-6'}>
         {/* Header */}
         <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            {!embedded && <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <Rocket className="h-6 w-6 text-primary" /> Onboarding de Clientes
-            </h1>
+            </h1>}
             <p className="text-sm text-muted-foreground mt-1">
               Pipeline visual do processo de entrada — acompanhe SLAs e itens pendentes por etapa.
             </p>
@@ -495,7 +497,7 @@ export default function Onboarding() {
               <TabsTrigger value="vmk_parceria">Parceria VMk</TabsTrigger>
             </TabsList>
           </Tabs>
-          {mainTab === 'operation' && (
+          {mainTab === 'operation' && !embedded && (
           <div className="inline-flex rounded-md border bg-muted p-1">
             <button
               onClick={() => changeViewMode('board')}
@@ -562,7 +564,7 @@ export default function Onboarding() {
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : viewMode === 'calendar' ? (
+        ) : viewMode === 'calendar' && !embedded ? (
           <CalendarView
             events={calendarEvents}
             storageKey="cshub:onboarding:calendarView"
@@ -727,7 +729,7 @@ export default function Onboarding() {
                       canWrite={canWriteClients}
                       canEditContent={canEditContent}
                       onDefinitionSaved={() => fetchAll(true)}
-                      extra={ruleAction(p)}
+                      extra={<>{ruleAction(p)}<TaskInfoPanel clientId={selectedData.client.id} checklistItemId={(p as any).checklist_item_id} /></>}
                     />
                   ))}
                   {selectedData.stageProg.length === 0 && (
@@ -1106,6 +1108,6 @@ export default function Onboarding() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    </Wrap>
   );
 }
