@@ -656,41 +656,31 @@ export default function Onboarding() {
 
               {/* Checklist */}
               <section className="mt-6">
-                <h3 className="text-sm font-semibold text-foreground mb-3">Checklist da etapa</h3>
-                <div className="space-y-2">
-                  {selectedData.stageProg.map(p => {
-                    const t = slaTone(p.unlocked_at, p.item.sla_hours, p.completed_at, p.locked);
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-foreground">Checklist da etapa</h3>
+                  {selectedData.stageProg.length > 0 && (() => {
+                    const allOpen = selectedData.stageProg.every(p => expandedItems.has(p.id));
                     return (
-                      <div key={p.id} className="border border-border rounded-lg p-3 bg-card">
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={p.status === 'concluido'}
-                            onCheckedChange={(v) => handleToggle(p, !!v)}
-                            className="mt-0.5"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <span className={cn('text-sm font-medium', p.status === 'concluido' && 'line-through text-muted-foreground')}>
-                                {p.item.title}
-                                {p.item.is_required && <span className="text-red-500 ml-0.5">*</span>}
-                              </span>
-                              <Badge variant="outline" className={cn('text-[10px] gap-1 shrink-0', SLA_BADGE[t.tone])}>
-                                <span className={cn('h-1.5 w-1.5 rounded-full', t.color)} />
-                                {t.label}
-                              </Badge>
-                            </div>
-                            <div className="text-[11px] text-muted-foreground mt-0.5">SLA: {p.item.sla_hours}h</div>
-                            <Textarea
-                              value={p.notes ?? ''}
-                              onChange={e => handleNotes(p, e.target.value)}
-                              placeholder="Observação opcional..."
-                              className="mt-2 min-h-[40px] text-xs"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setExpandedMany(selectedData.stageProg.map(p => p.id), !allOpen)}>
+                        {allOpen ? 'Recolher todos' : 'Expandir todos'}
+                      </Button>
                     );
-                  })}
+                  })()}
+                </div>
+                <div className="space-y-2">
+                  {selectedData.stageProg.map(p => (
+                    <ChecklistItemRow
+                      key={p.id}
+                      p={p as any}
+                      client={selectedData.client as any}
+                      open={expandedItems.has(p.id)}
+                      onOpenChange={v => setExpandedMany([p.id], v)}
+                      onToggle={checked => handleToggle(p, checked)}
+                      canWrite={canWriteClients}
+                      canEditContent={canEditContent}
+                      onDefinitionSaved={() => fetchAll(true)}
+                    />
+                  ))}
                   {selectedData.stageProg.length === 0 && (
                     <p className="text-xs text-muted-foreground">Nenhum item para esta etapa.</p>
                   )}
