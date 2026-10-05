@@ -1,0 +1,3 @@
+CREATE POLICY "Internos leem anexos onboarding" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'onboarding-anexos' AND public.is_internal_user());
+CREATE POLICY "Escritores enviam anexos onboarding" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'onboarding-anexos' AND public.can_write_clients());
+CREATE POLICY "Escritores removem anexos onboarding" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'onboarding-anexos' AND public.can_write_clients());
