@@ -27,9 +27,8 @@ interface NavigationItem {
 const mainItems: NavigationItem[] = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard, end: true },
   { title: 'Clientes', url: '/cadastro/clientes', icon: Building2 },
-  { title: 'Tarefas', url: '/tarefas', icon: CalendarClock },
+  { title: 'Execução', url: '/execucao', icon: CalendarClock },
   { title: 'Ocorrências', url: '/ocorrencias', icon: MessageSquareWarning },
-  { title: 'Onboarding', url: '/onboarding', icon: Rocket },
 ];
 
 const managementItems: NavigationItem[] = [
@@ -40,7 +39,7 @@ const managementItems: NavigationItem[] = [
 
 const pageLabels: Array<[string, string]> = [
   ['/cadastro/clientes', 'Clientes'], ['/cadastro/usuarios', 'Usuários internos'],
-  ['/tarefas', 'Central de tarefas'], ['/onboarding', 'Onboarding'], ['/ocorrencias', 'Ocorrências'],
+  ['/execucao', 'Execução'], ['/ocorrencias', 'Ocorrências'],
   ['/prazos', 'Prazos das demandas'],
   ['/procedimento-onboarding', 'Procedimento de onboarding'], ['/', 'Dashboard'],
 ];
@@ -104,7 +103,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const restrictedPaths: Record<string, string[]> = {
     viewer: ['/', '/cadastro/clientes', '/ocorrencias', '/client/'],
-    operacional: ['/', '/cadastro/clientes', '/ocorrencias', '/tarefas', '/client/'],
+    operacional: ['/', '/cadastro/clientes', '/ocorrencias', '/execucao', '/client/'],
   };
   const allowed = profile ? restrictedPaths[profile] : undefined;
   const filterItems = (items: NavigationItem[]) => allowed ? items.filter(i => allowed.includes(i.url)) : items;

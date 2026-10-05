@@ -282,7 +282,7 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
                   <TableCell><span className={cn('whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium', RESOLUTION_CLASSES[r.resolutionStatus])} title={r.resolutionStatus === 'cancelada' ? `Cancelada por ${r.cancelledByName ?? '—'} — ${r.cancelReason ?? ''}` : undefined}>{RESOLUTION_LABELS[r.resolutionStatus]}</span></TableCell>
                   <TableCell>
                     {t ? (
-                      <button onClick={() => navigate('/tarefas')} className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium hover:underline', t.status === 'completed' ? 'bg-health-healthy/10 text-health-healthy' : 'bg-primary/10 text-primary')}>
+                      <button onClick={() => navigate('/execucao?aba=tarefas')} className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium hover:underline', t.status === 'completed' ? 'bg-health-healthy/10 text-health-healthy' : 'bg-primary/10 text-primary')}>
                         <CheckSquare className="h-3 w-3" /> {t.status === 'completed' ? 'Concluída' : t.status === 'cancelled' ? 'Cancelada' : 'Pendente'}
                       </button>
                     ) : (

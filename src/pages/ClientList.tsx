@@ -255,7 +255,7 @@ export default function ClientList() {
             </div>
           </div>
 
-          <button type="button" onClick={() => navigate('/onboarding')} className="group rounded-lg border border-primary/20 bg-primary p-5 text-left text-primary-foreground shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
+          <button type="button" onClick={() => navigate('/execucao?aba=onboarding')} className="group rounded-lg border border-primary/20 bg-primary p-5 text-left text-primary-foreground shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
             <div className="flex h-full min-h-56 flex-col">
               <div className="flex items-center justify-between">
                 <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary-foreground/10 text-primary-foreground"><TrendingDown className="h-5 w-5" /></span>
