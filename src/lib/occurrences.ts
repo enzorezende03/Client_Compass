@@ -20,6 +20,20 @@ export interface Occurrence {
   createdAt: string;
   createdBy: string | null;
   createdByName: string | null;
+  category: string | null;
+  raisedByArea: string | null;
+  assignedCsId: string | null;
+  assignedCsName: string | null;
+  resolutionStatus: string;
+  cancelReason: string | null;
+  cancelledByName: string | null;
+  cancelledAt: string | null;
+  missingInfo: string | null;
+  clientCharged: boolean | null;
+  clientChargedAt: string | null;
+  initialFollowup: boolean;
+  resolvedAt: string | null;
+  resolutionOutcome: string | null;
 }
 
 export interface OccurrenceTask { id: string; title: string; status: string; responsibleId: string | null }
@@ -40,6 +54,12 @@ export function mapOccurrence(r: any, users: Record<string, string>): Occurrence
     responsible: r.responsible, responsibilityOrigin: r.responsibility_origin ?? null, severity: r.severity ?? null,
     occurredAt: r.occurred_at || r.date, createdAt: r.created_at, createdBy: r.created_by ?? null,
     createdByName: r.created_by ? users[r.created_by] ?? null : null,
+    category: r.occurrence_category ?? null, raisedByArea: r.raised_by_area ?? null,
+    assignedCsId: r.assigned_cs_id ?? null, assignedCsName: r.assigned_cs_id ? users[r.assigned_cs_id] ?? null : null,
+    resolutionStatus: r.resolution_status ?? 'aberta', cancelReason: r.cancel_reason ?? null,
+    cancelledByName: r.cancelled_by ? users[r.cancelled_by] ?? null : null, cancelledAt: r.cancelled_at ?? null,
+    missingInfo: r.missing_info ?? null, clientCharged: r.client_charged ?? null, clientChargedAt: r.client_charged_at ?? null,
+    initialFollowup: !!r.initial_followup, resolvedAt: r.resolved_at ?? null, resolutionOutcome: r.resolution_outcome ?? null,
   };
 }
 
@@ -68,3 +88,18 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
   a.click();
   URL.revokeObjectURL(a.href);
 }
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  desvio_operacional: 'Desvio operacional', atendimento: 'Atendimento', reclamacao: 'Reclamação', solicitacao: 'Solicitação',
+  problema_critico: 'Problema crítico', feedback: 'Feedback', oportunidade: 'Oportunidade', outro: 'Outro',
+};
+export const AREA_LABELS: Record<string, string> = {
+  cs: 'CS', operacional: 'Operacional', fiscal: 'Fiscal', contabil: 'Contábil', dp: 'DP', societario: 'Societário', comercial: 'Comercial',
+};
+export const RESOLUTION_LABELS: Record<string, string> = {
+  aberta: 'Aberta', em_tratativa: 'Em tratativa', resolvida: 'Resolvida', cancelada: 'Cancelada',
+};
+export const RESOLUTION_CLASSES: Record<string, string> = {
+  aberta: 'bg-health-attention/10 text-health-attention', em_tratativa: 'bg-primary/10 text-primary',
+  resolvida: 'bg-health-healthy/10 text-health-healthy', cancelada: 'bg-muted text-muted-foreground line-through',
+};
