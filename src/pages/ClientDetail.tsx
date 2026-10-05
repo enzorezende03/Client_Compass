@@ -385,7 +385,7 @@ export default function ClientDetail() {
                 tasksByEntry={tasksByEntry}
                 onClassify={handleClassify}
                 onGenerateTask={(e) => setGenTaskEntry(e)}
-                onOpenTask={() => navigate('/tarefas')}
+                onOpenTask={() => navigate('/execucao?aba=tarefas')}
               />
             ) : <div className="text-center py-12 text-muted-foreground">Nenhuma interação registrada.</div>}
 

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import Execution from "./pages/Execution";
 import SlaCatalogPage from "./pages/SlaCatalogPage";
 import OnboardingProcedure from "./pages/OnboardingProcedure";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -11,9 +12,7 @@ import ClientDetail from "./pages/ClientDetail";
 import ClientRegistration from "./pages/ClientRegistration";
 import ClientFormPage from "./pages/ClientFormPage";
 import InternalUsersRegistration from "./pages/InternalUsersRegistration";
-import TaskCenter from "./pages/TaskCenter";
 import Occurrences from "./pages/Occurrences";
-import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -35,9 +34,10 @@ const App = () => (
           <Route path="/cadastro/clientes/novo" element={<AuthGuard><ClientFormPage /></AuthGuard>} />
           <Route path="/cadastro/clientes/:id/editar" element={<AuthGuard><ClientFormPage /></AuthGuard>} />
           <Route path="/cadastro/usuarios" element={<AuthGuard><InternalUsersRegistration /></AuthGuard>} />
-          <Route path="/tarefas" element={<AuthGuard><TaskCenter /></AuthGuard>} />
+          <Route path="/execucao" element={<AuthGuard><Execution /></AuthGuard>} />
+          <Route path="/tarefas" element={<Navigate to="/execucao?aba=tarefas" replace />} />
           <Route path="/ocorrencias" element={<AuthGuard><Occurrences /></AuthGuard>} />
-          <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
+          <Route path="/onboarding" element={<Navigate to="/execucao?aba=onboarding" replace />} />
           <Route path="/prazos" element={<AuthGuard><SlaCatalogPage /></AuthGuard>} />
           <Route path="/procedimento-onboarding" element={<AuthGuard><OnboardingProcedure /></AuthGuard>} />
           <Route path="*" element={<NotFound />} />

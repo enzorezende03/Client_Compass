@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
+import { ExecutionTaskSheet, sinceLabel } from '@/components/execution/ExecutionPanels';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -93,7 +94,8 @@ const emptyForm = {
   reminder_minutes: '60',
 };
 
-export default function TaskCenter() {
+export default function TaskCenter({ embedded = false, mode = 'regular' }: { embedded?: boolean; mode?: 'regular' | 'calendar' } = {}) {
+  const Wrap: any = embedded ? Fragment : AppLayout;
   const navigate = useNavigate();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<TaskRow[]>([]);
@@ -109,16 +111,20 @@ export default function TaskCenter() {
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [deadlineView, setDeadlineView] = useState<'client' | 'internal'>('client');
   const [activeTab, setActiveTab] = useState<'regular' | 'onboarding'>('regular');
-  const [viewMode, setViewMode] = useState<'board' | 'calendar' | 'list'>(() => {
+  const viewKey = `cshub:execucao:viewMode:${(() => { try { return Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token')) ? JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'))!) || '{}')?.user?.id ?? 'anon' : 'anon'; } catch { return 'anon'; } })()}`;
+  const [viewModeRaw, setViewMode] = useState<'board' | 'calendar' | 'list'>(() => {
     try {
-      const saved = localStorage.getItem('cshub:tasks:viewMode');
+      const saved = localStorage.getItem(viewKey);
       return saved === 'calendar' || saved === 'list' ? saved : 'board';
     } catch { return 'board'; }
   });
-  const [viewAll, setViewAll] = useState(false);
+  const viewMode = mode === 'calendar' ? 'calendar' : (embedded && viewModeRaw === 'calendar' ? 'board' : viewModeRaw);
+  const [viewAll, setViewAll] = useState(mode === 'calendar');
+  const [openTask, setOpenTask] = useState<TaskRow | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Record<string, string>>({});
   const changeViewMode = (mode: 'board' | 'calendar' | 'list') => {
     setViewMode(mode);
-    try { localStorage.setItem('cshub:tasks:viewMode', mode); } catch { /* indisponível */ }
+    try { localStorage.setItem(viewKey, mode); } catch { /* indisponível */ }
   };
 
   // Reschedule
@@ -139,6 +145,8 @@ export default function TaskCenter() {
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
+    (supabase as any).from('task_updates').select('task_id, created_at').order('created_at', { ascending: false }).limit(5000)
+      .then(({ data }: any) => { const m: Record<string, string> = {}; (data || []).forEach((u: any) => { if (!m[u.task_id]) m[u.task_id] = u.created_at; }); setLastUpdate(m); });
     const [tasksRes, clientsRes, usersRes] = await Promise.all([
       supabase.from('tasks').select('*').order('due_date', { ascending: true }),
       supabase.from('clients').select('id, name').eq('archived', false),
@@ -176,6 +184,7 @@ export default function TaskCenter() {
         fetchData(true);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'client_onboarding_progress' }, () => fetchData(true))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_updates' }, () => fetchData(true))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
@@ -573,7 +582,11 @@ export default function TaskCenter() {
             Remanejada {task.reschedule_count}× — última: {task.last_reschedule_reason || '—'}
           </div>
         )}
+        {lastUpdate[task.id] && (
+          <p className="ml-6 mt-1 text-[11px] text-muted-foreground">Última atualização: {sinceLabel(lastUpdate[task.id])}</p>
+        )}
         <div className="flex items-center gap-1 mt-2 ml-6 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setOpenTask(task)} className="h-6 px-2 text-xs">Abrir</Button>
           <Button variant="ghost" size="sm" onClick={() => openEdit(task)} className="h-6 px-2 text-xs">Editar</Button>
           <Button variant="outline" size="sm" onClick={() => openReschedule(task)} className="h-6 px-2 text-xs gap-1 border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10">
             <CalendarPlus className="h-3 w-3" /> Remanejar
@@ -623,12 +636,12 @@ export default function TaskCenter() {
   };
 
   return (
-    <AppLayout>
-      <div className="container mx-auto px-6 py-6">
+    <Wrap>
+      <div className={embedded ? '' : 'container mx-auto px-6 py-6'}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">Central de Tarefas</h1>
-            <p className="text-sm text-muted-foreground">Arraste as tarefas entre as colunas para atualizar o status</p>
+            {!embedded && <h1 className="text-2xl font-bold text-foreground tracking-tight">Central de Tarefas</h1>}
+            <p className="text-sm text-muted-foreground">{mode === 'calendar' ? 'Tarefas do dia a dia e itens de onboarding na mesma grade. Arraste para remanejar.' : 'Arraste as tarefas entre as colunas para atualizar o status'}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={openHistory} className="gap-2">
@@ -645,7 +658,17 @@ export default function TaskCenter() {
         </div>
 
         <div className="flex items-center gap-3 mb-4 flex-wrap">
-          <div className="inline-flex rounded-md border bg-muted p-1">
+          {mode === 'calendar' && (
+            <Select value={viewAll ? 'all' : activeTab} onValueChange={v => { if (v === 'all') setViewAll(true); else { setViewAll(false); setActiveTab(v as any); } }}>
+              <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="regular">Tarefas do dia a dia</SelectItem>
+                <SelectItem value="onboarding">Itens de onboarding</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {!embedded && <div className="inline-flex rounded-md border bg-muted p-1">
             <button
               onClick={() => setActiveTab('regular')}
               className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-colors ${activeTab === 'regular' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
@@ -658,28 +681,28 @@ export default function TaskCenter() {
             >
               Tarefas de Onboarding
             </button>
-          </div>
-          <div className="inline-flex rounded-md border bg-muted p-1">
+          </div>}
+          {mode !== 'calendar' && <div className="inline-flex rounded-md border bg-muted p-1">
             <button
               onClick={() => changeViewMode('board')}
               className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5 ${viewMode === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <LayoutGrid className="h-3.5 w-3.5" /> Quadro
             </button>
-            <button
+            {!embedded && <button
               onClick={() => changeViewMode('calendar')}
               className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5 ${viewMode === 'calendar' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <CalendarDays className="h-3.5 w-3.5" /> Calendário
-            </button>
+            </button>}
             <button
               onClick={() => changeViewMode('list')}
               className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors inline-flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <ListIcon className="h-3.5 w-3.5" /> Lista
             </button>
-          </div>
-          {viewMode === 'calendar' && (
+          </div>}
+          {viewMode === 'calendar' && !embedded && (
             <div className="flex items-center gap-2">
               <Switch id="view-all" checked={viewAll} onCheckedChange={setViewAll} />
               <Label htmlFor="view-all" className="text-xs text-muted-foreground cursor-pointer">
@@ -759,7 +782,7 @@ export default function TaskCenter() {
             emptyLabel="Nenhuma tarefa"
             onEventClick={(ev) => {
               const task = tasks.find(t => t.id === ev.id);
-              if (task) openEdit(task);
+              if (task) setOpenTask(task);
             }}
             onEventDrop={handleCalendarDrop}
           />
@@ -1086,6 +1109,7 @@ export default function TaskCenter() {
           )}
         </DialogContent>
       </Dialog>
-    </AppLayout>
+      <ExecutionTaskSheet task={openTask} onClose={() => setOpenTask(null)} onEdit={() => { const t = openTask; setOpenTask(null); if (t) openEdit(t); }} />
+    </Wrap>
   );
 }

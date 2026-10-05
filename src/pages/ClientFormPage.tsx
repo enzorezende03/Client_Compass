@@ -423,7 +423,7 @@ export default function ClientFormPage() {
           clientId={id}
           clientName={form.name}
           defaultType={handoff.parceria === 'vmk' ? 'em_constituicao' : undefined}
-          onStarted={() => navigate('/onboarding')}
+          onStarted={() => navigate('/execucao?aba=onboarding')}
         />
       )}
     </AppLayout>
