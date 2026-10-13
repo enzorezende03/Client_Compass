@@ -399,7 +399,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
     });
     if (insErr) { toast({ title: 'Erro ao registrar histórico', description: insErr.message, variant: 'destructive' }); return; }
 
-    toast({ title: 'Tarefa remanejada', description: `Nova data: ${new Date(rescheduleNewDate + 'T12:00:00').toLocaleDateString('pt-BR')}` });
+    toast({ title: 'Tarefa remanejada', description: `Nova data: ${new Date((rescheduleNewDate || rescheduleNewInternalDate) + 'T12:00:00').toLocaleDateString('pt-BR')}` });
     setRescheduleTask(null);
     fetchData();
   };
