@@ -11,13 +11,32 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/AppLayout';
-import { useIsAdmin, type AppPermission } from '@/hooks/usePermission';
+import { useIsAdmin } from '@/hooks/usePermission';
 
-const SPECIAL_PERMISSIONS: { key: AppPermission; label: string }[] = [
-  { key: 'manage_occurrences', label: 'Gerenciar ocorrências (editar e cancelar)' },
-  { key: 'manage_sla_catalog', label: 'Gerenciar prazos de demandas' },
-  { key: 'manage_onboarding_procedures', label: 'Gerenciar procedimento de onboarding' },
+const PERMISSION_GROUPS: { module: string; items: { key: string; label: string }[] }[] = [
+  { module: 'Ocorrências', items: [
+    { key: 'occurrences.view', label: 'Visualizar' }, { key: 'occurrences.create', label: 'Registrar' },
+    { key: 'occurrences.edit', label: 'Editar' }, { key: 'occurrences.cancel', label: 'Cancelar' } ] },
+  { module: 'Clientes', items: [
+    { key: 'clients.view', label: 'Visualizar' }, { key: 'clients.create', label: 'Cadastrar' },
+    { key: 'clients.edit', label: 'Editar' }, { key: 'clients.archive', label: 'Arquivar / excluir' } ] },
+  { module: 'Tarefas / Execução', items: [
+    { key: 'tasks.view', label: 'Visualizar' }, { key: 'tasks.create', label: 'Criar' }, { key: 'tasks.edit', label: 'Editar' },
+    { key: 'tasks.reschedule', label: 'Remanejar' }, { key: 'tasks.delete', label: 'Remover' } ] },
+  { module: 'Onboarding', items: [
+    { key: 'onboarding.view', label: 'Visualizar' }, { key: 'onboarding.complete', label: 'Concluir itens' },
+    { key: 'onboarding.move_stage', label: 'Mover etapa' }, { key: 'onboarding.edit_procedure', label: 'Editar procedimento' } ] },
+  { module: 'Prazos', items: [ { key: 'manage_sla_catalog', label: 'Editar prazos de demandas' } ] },
 ];
+
+/** Espelho do padrão do banco (profile_default_permission). */
+function profileDefault(profile: string, perm: string) {
+  if (profile === 'admin') return true;
+  if (profile === 'cs') return !['occurrences.edit', 'occurrences.cancel', 'onboarding.edit_procedure', 'manage_sla_catalog'].includes(perm);
+  if (profile === 'operacional') return ['clients.view', 'occurrences.view', 'occurrences.create', 'tasks.view', 'onboarding.view'].includes(perm);
+  if (profile === 'viewer') return perm.endsWith('.view');
+  return false;
+}
 
 const ACCESS_PROFILE_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -55,7 +74,7 @@ export default function InternalUsersRegistration() {
   const [saving, setSaving] = useState(false);
   const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string }>({ open: false, email: '', password: '' });
   const [copied, setCopied] = useState(false);
-  const [permissions, setPermissions] = useState<string[]>([]);
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const [permSaving, setPermSaving] = useState<string | null>(null);
   const { toast } = useToast();
   const { isAdmin } = useIsAdmin();
@@ -70,35 +89,36 @@ export default function InternalUsersRegistration() {
   useEffect(() => { fetchUsers(); }, []);
 
   const fetchPermissions = async (userId: string) => {
-    const { data } = await supabase
-      .from('internal_user_permissions' as any)
-      .select('permission')
-      .eq('internal_user_id', userId);
-    setPermissions(((data as any[]) ?? []).map(r => r.permission));
+    const { data } = await supabase.from('internal_user_permissions' as any).select('permission, granted').eq('internal_user_id', userId);
+    const o: Record<string, boolean> = {};
+    ((data as any[]) ?? []).forEach(r => { if (!r.permission.startsWith('manage_') || r.permission === 'manage_sla_catalog') o[r.permission] = r.granted; });
+    setOverrides(o);
   };
+
+  const effective = (perm: string) => overrides[perm] ?? profileDefault(form.access_profile, perm);
 
   const togglePermission = async (permission: string, enabled: boolean) => {
     if (!selectedId) return;
     setPermSaving(permission);
-    let error: any = null;
-    if (enabled) {
-      ({ error } = await supabase
-        .from('internal_user_permissions' as any)
-        .insert({ internal_user_id: selectedId, permission } as any));
-    } else {
-      ({ error } = await supabase
-        .from('internal_user_permissions' as any)
-        .delete()
-        .eq('internal_user_id', selectedId)
-        .eq('permission', permission));
+    const isDefault = profileDefault(form.access_profile, permission) === enabled;
+    const t = supabase.from('internal_user_permissions' as any) as any;
+    const { error } = isDefault
+      ? await t.delete().eq('internal_user_id', selectedId).eq('permission', permission)
+      : await t.upsert({ internal_user_id: selectedId, permission, granted: enabled }, { onConflict: 'internal_user_id,permission' });
+    // aliases antigos deixam de valer quando a ocorrência/procedimento é ajustado aqui
+    if (!error && (permission.startsWith('occurrences.') || permission === 'onboarding.edit_procedure')) {
+      await t.delete().eq('internal_user_id', selectedId).in('permission', ['manage_occurrences', 'manage_onboarding_procedures']);
     }
     setPermSaving(null);
-    if (error) {
-      toast({ title: 'Erro ao atualizar permissão', description: error.message, variant: 'destructive' });
-      return;
-    }
-    setPermissions(prev => enabled ? [...prev, permission] : prev.filter(p => p !== permission));
-    toast({ title: enabled ? 'Permissão concedida!' : 'Permissão removida!' });
+    if (error) { toast({ title: 'Erro ao atualizar permissão', description: error.message, variant: 'destructive' }); return; }
+    setOverrides(prev => { const n = { ...prev }; if (isDefault) delete n[permission]; else n[permission] = enabled; return n; });
+  };
+
+  const resetPermissions = async () => {
+    if (!selectedId) return;
+    await (supabase.from('internal_user_permissions' as any) as any).delete().eq('internal_user_id', selectedId);
+    setOverrides({});
+    toast({ title: 'Permissões voltaram ao padrão do perfil' });
   };
 
   const filtered = users.filter(u =>
@@ -106,14 +126,14 @@ export default function InternalUsersRegistration() {
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const openNew = () => { setForm(emptyForm); setSelectedId(null); setPermissions([]); setDialogOpen(true); };
+  const openNew = () => { setForm(emptyForm); setSelectedId(null); setOverrides({}); setDialogOpen(true); };
   const openEdit = (user: any) => {
     setForm({
       name: user.name, email: user.email,
       access_profile: user.access_profile, active: user.active,
     });
     setSelectedId(user.id);
-    setPermissions([]);
+    setOverrides({});
     setDialogOpen(true);
     if (isAdmin) fetchPermissions(user.id);
   };
@@ -263,23 +283,35 @@ export default function InternalUsersRegistration() {
               <Label>Ativo</Label>
             </div>
 
-            {isAdmin && selectedId && (
+            {isAdmin && selectedId && form.access_profile !== 'admin' && (
               <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
-                <div>
-                  <Label className="text-sm font-semibold">Permissões especiais</Label>
-                  <p className="text-xs text-muted-foreground">Concedem acessos específicos sem tornar o usuário administrador.</p>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <Label className="text-sm font-semibold">Permissões</Label>
+                    <p className="text-xs text-muted-foreground">Já vêm marcadas pelo perfil. Ajustes valem só para esta pessoa e são salvos na hora.</p>
+                  </div>
+                  {Object.keys(overrides).length > 0 && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={resetPermissions}>Voltar ao padrão</Button>}
                 </div>
-                {SPECIAL_PERMISSIONS.map(p => (
-                  <div key={p.key} className="flex items-center justify-between gap-3">
-                    <Label className="font-normal">{p.label}</Label>
-                    <Switch
-                      checked={permissions.includes(p.key)}
-                      disabled={permSaving === p.key}
-                      onCheckedChange={v => togglePermission(p.key, v)}
-                    />
+                {PERMISSION_GROUPS.map(g => (
+                  <div key={g.module} className="space-y-1.5 border-t pt-2 first:border-t-0 first:pt-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g.module}</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                      {g.items.map(p => (
+                        <div key={p.key} className="flex items-center justify-between gap-2">
+                          <Label className="text-sm font-normal">
+                            {p.label}
+                            {p.key in overrides && <span className="ml-1 text-[10px] text-primary">(ajustado)</span>}
+                          </Label>
+                          <Switch checked={effective(p.key)} disabled={permSaving === p.key} onCheckedChange={v => togglePermission(p.key, v)} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
+            )}
+            {isAdmin && selectedId && form.access_profile === 'admin' && (
+              <p className="text-xs text-muted-foreground">Administrador tem todas as permissões.</p>
             )}
           </div>
 
