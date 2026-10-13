@@ -131,7 +131,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
   const [rescheduleTask, setRescheduleTask] = useState<TaskRow | null>(null);
   const [rescheduleReason, setRescheduleReason] = useState('');
   const [rescheduleNewDate, setRescheduleNewDate] = useState('');
-  const [rescheduleField, setRescheduleField] = useState<'client' | 'internal'>('client');
+  const [rescheduleNewInternalDate, setRescheduleNewInternalDate] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [reschedules, setReschedules] = useState<RescheduleRow[]>([]);
 
