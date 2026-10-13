@@ -392,7 +392,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
       task_id: rescheduleTask.id,
       client_id: rescheduleTask.client_id,
       previous_due_date: previous,
-      new_due_date: rescheduleNewDate,
+      new_due_date: rescheduleNewDate || rescheduleNewInternalDate,
       reason: rescheduleReason.trim(),
       rescheduled_by: me?.id || null,
       rescheduled_by_name: me?.name || authData.user?.email || 'Desconhecido',
