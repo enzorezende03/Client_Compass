@@ -1,21 +1,34 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export type AppPermission = 'manage_occurrences' | 'manage_sla_catalog' | 'manage_onboarding_procedures';
-export type AccessProfile = 'admin' | 'cs' | 'operacional' | 'viewer';
+export type GranularPermission =
+  | 'occurrences.view' | 'occurrences.create' | 'occurrences.edit' | 'occurrences.cancel'
+  | 'clients.view' | 'clients.create' | 'clients.edit' | 'clients.archive'
+  | 'tasks.view' | 'tasks.create' | 'tasks.edit' | 'tasks.reschedule' | 'tasks.delete'
+  | 'onboarding.view' | 'onboarding.complete' | 'onboarding.move_stage' | 'onboarding.edit_procedure';
+export type AppPermission = 'manage_occurrences' | 'manage_sla_catalog' | 'manage_onboarding_procedures' | GranularPermission;
 
-export function usePermission(permission: AppPermission) {
+const ALIAS: Record<string, string> = { manage_occurrences: 'occurrences.edit', manage_onboarding_procedures: 'onboarding.edit_procedure' };
+
+export function useMyPermissions() {
   const { data, isLoading } = useQuery({
-    queryKey: ['permission', permission],
+    queryKey: ['my-permissions'],
     staleTime: Infinity,
     gcTime: Infinity,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('has_permission' as any, { _permission: permission });
-      if (error) return false;
-      return Boolean(data);
+      const { data, error } = await supabase.rpc('my_permissions' as any);
+      if (error) return [] as string[];
+      return (data as string[]) ?? [];
     },
   });
-  return { allowed: Boolean(data), isLoading };
+  const set = new Set(data ?? []);
+  return { can: (p: AppPermission) => set.has(ALIAS[p] ?? p), isLoading };
+}
+export type AccessProfile = 'admin' | 'cs' | 'operacional' | 'viewer';
+
+export function usePermission(permission: AppPermission) {
+  const { can, isLoading } = useMyPermissions();
+  return { allowed: can(permission), isLoading };
 }
 
 export function useAccessProfile() {
