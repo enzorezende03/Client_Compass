@@ -77,7 +77,7 @@ export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone
         <DialogHeader>
           <DialogTitle>Registrar distrato</DialogTitle>
           <DialogDescription>
-            O cliente passa a Cancelado e o pedido entra no cálculo de churn do período.
+            O cliente passa a Cancelado. Só distratos com origem "Cliente" entram no cálculo de churn do período.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
