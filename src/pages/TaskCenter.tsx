@@ -131,7 +131,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
   const [rescheduleTask, setRescheduleTask] = useState<TaskRow | null>(null);
   const [rescheduleReason, setRescheduleReason] = useState('');
   const [rescheduleNewDate, setRescheduleNewDate] = useState('');
-  const [rescheduleField, setRescheduleField] = useState<'client' | 'internal'>('client');
+  const [rescheduleNewInternalDate, setRescheduleNewInternalDate] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [reschedules, setReschedules] = useState<RescheduleRow[]>([]);
 
@@ -353,13 +353,12 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
   const openReschedule = (task: TaskRow, presetDate?: string) => {
     setRescheduleTask(task);
     setRescheduleReason('');
-    const hasClient = !!task.client_due_date;
-    const hasInternal = !!task.internal_due_date;
-    setRescheduleField(presetDate ? deadlineView : hasClient ? 'client' : hasInternal ? 'internal' : 'client');
-    if (presetDate) { setRescheduleNewDate(presetDate); return; }
+    if (presetDate) { setRescheduleNewDate(presetDate); setRescheduleNewInternalDate(presetDate); return; }
     const today = new Date();
     today.setDate(today.getDate() + 1);
-    setRescheduleNewDate(today.toISOString().split('T')[0]);
+    const tomorrow = today.toISOString().split('T')[0];
+    setRescheduleNewDate(tomorrow);
+    setRescheduleNewInternalDate(tomorrow);
   };
 
   const submitReschedule = async () => {
@@ -368,8 +367,8 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
       toast({ title: 'Informe a justificativa', variant: 'destructive' });
       return;
     }
-    if (!rescheduleNewDate) {
-      toast({ title: 'Selecione a nova data', variant: 'destructive' });
+    if (!rescheduleNewDate && !rescheduleNewInternalDate) {
+      toast({ title: 'Selecione ao menos uma nova data', variant: 'destructive' });
       return;
     }
     const previous = getDeadline(rescheduleTask);
@@ -381,13 +380,10 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
       last_reschedule_reason: rescheduleReason.trim(),
       last_rescheduled_at: new Date().toISOString(),
     };
-    if (rescheduleField === 'client') {
-      updates.client_due_date = rescheduleNewDate;
-    } else {
-      updates.internal_due_date = rescheduleNewDate;
-    }
-    // Always sync due_date to the chosen new date as well so kanban reflects
-    updates.due_date = rescheduleNewDate;
+    if (rescheduleNewDate) updates.client_due_date = rescheduleNewDate;
+    if (rescheduleNewInternalDate) updates.internal_due_date = rescheduleNewInternalDate;
+    // Always sync due_date to the client date (fallback: internal) so kanban reflects
+    updates.due_date = rescheduleNewDate || rescheduleNewInternalDate;
 
     const { error: upErr } = await supabase.from('tasks').update(updates).eq('id', rescheduleTask.id);
     if (upErr) { toast({ title: 'Erro ao remanejar', description: upErr.message, variant: 'destructive' }); return; }
@@ -396,14 +392,14 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
       task_id: rescheduleTask.id,
       client_id: rescheduleTask.client_id,
       previous_due_date: previous,
-      new_due_date: rescheduleNewDate,
+      new_due_date: rescheduleNewDate || rescheduleNewInternalDate,
       reason: rescheduleReason.trim(),
       rescheduled_by: me?.id || null,
       rescheduled_by_name: me?.name || authData.user?.email || 'Desconhecido',
     });
     if (insErr) { toast({ title: 'Erro ao registrar histórico', description: insErr.message, variant: 'destructive' }); return; }
 
-    toast({ title: 'Tarefa remanejada', description: `Nova data: ${new Date(rescheduleNewDate + 'T12:00:00').toLocaleDateString('pt-BR')}` });
+    toast({ title: 'Tarefa remanejada', description: `Nova data: ${new Date((rescheduleNewDate || rescheduleNewInternalDate) + 'T12:00:00').toLocaleDateString('pt-BR')}` });
     setRescheduleTask(null);
     fetchData();
   };
@@ -1033,19 +1029,15 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
                 </div>
               )}
             </div>
-            <div>
-              <Label>Aplicar em</Label>
-              <Select value={rescheduleField} onValueChange={(v: 'client' | 'internal') => setRescheduleField(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="client">Prazo com o Cliente</SelectItem>
-                  <SelectItem value="internal">Prazo Interno</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Nova data de acompanhamento *</Label>
-              <Input type="date" value={rescheduleNewDate} onChange={e => setRescheduleNewDate(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Novo prazo interno</Label>
+                <Input type="date" value={rescheduleNewInternalDate} onChange={e => setRescheduleNewInternalDate(e.target.value)} />
+              </div>
+              <div>
+                <Label>Novo prazo com o cliente</Label>
+                <Input type="date" value={rescheduleNewDate} onChange={e => setRescheduleNewDate(e.target.value)} />
+              </div>
             </div>
             <div>
               <Label>Justificativa *</Label>
