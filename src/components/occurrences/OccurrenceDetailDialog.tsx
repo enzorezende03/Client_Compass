@@ -16,7 +16,7 @@ import { SECTOR_LABELS, SEVERITY_LABELS, RESPONSIBILITY_ORIGIN_LABELS, INTERACTI
 
 interface Props {
   occurrence: Occurrence | null; task?: OccurrenceTask; me: string | null;
-  canManage: boolean; canWrite: boolean; showClientLink: boolean;
+  canManage: boolean; canCancel?: boolean; canWrite: boolean; showClientLink: boolean;
   onClose: () => void; onChanged: () => void;
 }
 interface Treat { id: string; kind: string; content: string; author_name: string; created_at: string }
@@ -24,7 +24,7 @@ interface Audit { id: string; field_name: string; old_value: string; new_value: 
 
 const KIND_LABELS: Record<string, string> = { registro: 'Registro', assumir: 'Assumiu', tratativa: 'Tratativa', resolucao: 'Resolvida', cancelamento: 'Cancelada' };
 
-export function OccurrenceDetailDialog({ occurrence: o, task, me, canManage, canWrite, showClientLink, onClose, onChanged }: Props) {
+export function OccurrenceDetailDialog({ occurrence: o, task, me, canManage, canCancel = canManage, canWrite, showClientLink, onClose, onChanged }: Props) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [treats, setTreats] = useState<Treat[]>([]);
@@ -171,7 +171,7 @@ export function OccurrenceDetailDialog({ occurrence: o, task, me, canManage, can
             {canTreat && <Button variant="outline" size="sm" onClick={() => setMode('tratativa')}>Registrar tratativa</Button>}
             {canTreat && <Button size="sm" onClick={() => setMode('resolver')}>Resolver</Button>}
             {canManage && o.resolutionStatus !== 'cancelada' && <Button variant="outline" size="sm" onClick={() => setMode('editar')}>Editar</Button>}
-            {canManage && o.resolutionStatus !== 'cancelada' && <Button variant="destructive" size="sm" onClick={() => setMode('cancelar')}>Cancelar ocorrência</Button>}
+            {canCancel && o.resolutionStatus !== 'cancelada' && <Button variant="destructive" size="sm" onClick={() => setMode('cancelar')}>Cancelar ocorrência</Button>}
           </div>
         )}
       </DialogContent>
