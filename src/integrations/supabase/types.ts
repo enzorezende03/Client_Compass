@@ -792,6 +792,7 @@ export type Database = {
       }
       internal_user_permissions: {
         Row: {
+          granted: boolean
           granted_at: string
           granted_by: string | null
           id: string
@@ -799,6 +800,7 @@ export type Database = {
           permission: string
         }
         Insert: {
+          granted?: boolean
           granted_at?: string
           granted_by?: string | null
           id?: string
@@ -806,6 +808,7 @@ export type Database = {
           permission: string
         }
         Update: {
+          granted?: boolean
           granted_at?: string
           granted_by?: string | null
           id?: string
@@ -2010,6 +2013,7 @@ export type Database = {
       is_viewer: { Args: never; Returns: boolean }
       is_writer: { Args: never; Returns: boolean }
       link_auth_user: { Args: never; Returns: undefined }
+      my_permissions: { Args: never; Returns: string[] }
       occ_me: {
         Args: never
         Returns: {
@@ -2044,6 +2048,10 @@ export type Database = {
         Returns: string
       }
       onboarding_stage_sequence: { Args: { p_type: string }; Returns: string[] }
+      profile_default_permission: {
+        Args: { _perm: string; _profile: string }
+        Returns: boolean
+      }
       register_operational_deviation: {
         Args: {
           p_client_charged: boolean
