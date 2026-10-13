@@ -26,7 +26,7 @@ export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone
   const [effectiveDate, setEffectiveDate] = useState('');
   const [category, setCategory] = useState<TerminationReason | ''>('');
   const [detail, setDetail] = useState('');
-  const [initiatedBy, setInitiatedBy] = useState<'cliente' | 'escritorio'>('cliente');
+  const [initiatedBy, setInitiatedBy] = useState<'cliente' | 'escritorio' | 'baixa'>('cliente');
   const [wasError, setWasError] = useState(false);
   const [errorSector, setErrorSector] = useState('');
   const [improvement, setImprovement] = useState('');
@@ -115,6 +115,7 @@ export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone
                 <SelectContent>
                   <SelectItem value="cliente">Cliente</SelectItem>
                   <SelectItem value="escritorio">Contabilidade (escritório)</SelectItem>
+                  <SelectItem value="baixa">Baixa (encerramento da empresa)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
