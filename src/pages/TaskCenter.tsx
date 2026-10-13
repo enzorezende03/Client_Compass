@@ -1029,19 +1029,15 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
                 </div>
               )}
             </div>
-            <div>
-              <Label>Aplicar em</Label>
-              <Select value={rescheduleField} onValueChange={(v: 'client' | 'internal') => setRescheduleField(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="client">Prazo com o Cliente</SelectItem>
-                  <SelectItem value="internal">Prazo Interno</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Nova data de acompanhamento *</Label>
-              <Input type="date" value={rescheduleNewDate} onChange={e => setRescheduleNewDate(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Novo prazo interno</Label>
+                <Input type="date" value={rescheduleNewInternalDate} onChange={e => setRescheduleNewInternalDate(e.target.value)} />
+              </div>
+              <div>
+                <Label>Novo prazo com o cliente</Label>
+                <Input type="date" value={rescheduleNewDate} onChange={e => setRescheduleNewDate(e.target.value)} />
+              </div>
             </div>
             <div>
               <Label>Justificativa *</Label>
