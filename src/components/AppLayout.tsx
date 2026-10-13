@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate, NavLink as RouterNavLink } from 'react-router-dom';
-import { useAccessProfile } from '@/hooks/usePermission';
+import { useAccessProfile , useMyPermissions } from '@/hooks/usePermission';
 import {
   BookOpen, Building2, CalendarClock, Clock3, LayoutDashboard, LogOut,
   Rocket, Users, MessageSquareWarning,
@@ -105,9 +105,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     viewer: ['/', '/cadastro/clientes', '/ocorrencias', '/client/'],
     operacional: ['/', '/cadastro/clientes', '/ocorrencias', '/execucao', '/client/'],
   };
+  const { can, isLoading: permsLoading } = useMyPermissions();
   const allowed = profile ? restrictedPaths[profile] : undefined;
   const filterItems = (items: NavigationItem[]) => allowed ? items.filter(i => allowed.includes(i.url)) : items;
-  const visibleMain = filterItems(mainItems);
+  const VIEW_PERM: Record<string, string[]> = { '/cadastro/clientes': ['clients.view'], '/ocorrencias': ['occurrences.view'], '/execucao': ['tasks.view', 'onboarding.view'] };
+  const visibleMain = filterItems(mainItems).filter(i => !VIEW_PERM[i.url] || permsLoading || VIEW_PERM[i.url].some(p => can(p as any)));
   const visibleManagement = filterItems(managementItems);
   const pathAllowed = !allowed || allowed.some(p => p === '/' ? pathname === '/' : pathname.startsWith(p));
 

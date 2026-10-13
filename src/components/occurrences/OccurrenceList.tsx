@@ -55,7 +55,9 @@ interface Props { clientId?: string; clientName?: string; highlightId?: string |
 export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
   const { toast } = useToast();
   const { isViewer, isOperacional, canWriteClients } = useAccessProfile();
-  const { allowed: canManage } = usePermission('manage_occurrences');
+  const { allowed: canManage } = usePermission('occurrences.edit');
+  const { allowed: canCancel } = usePermission('occurrences.cancel');
+  const { allowed: canCreate } = usePermission('occurrences.create');
   const navigate = useNavigate();
   const [rows, setRows] = useState<Occurrence[]>([]);
   const [tasks, setTasks] = useState<Record<string, OccurrenceTask>>({});
@@ -207,8 +209,8 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-2" onClick={exportCsv} disabled={!visible.length}><Download className="h-4 w-4" /> Exportar CSV</Button>
-          {(isOperacional || canWriteClients) && <Button size="sm" variant={isOperacional ? 'default' : 'outline'} className="gap-2" onClick={() => setDevOpen(true)}><Plus className="h-4 w-4" /> Desvio operacional</Button>}
-          {canWriteClients && <Button size="sm" className="gap-2" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> Nova ocorrência</Button>}
+          {canCreate && <Button size="sm" variant={isOperacional ? 'default' : 'outline'} className="gap-2" onClick={() => setDevOpen(true)}><Plus className="h-4 w-4" /> Desvio operacional</Button>}
+          {canCreate && !isOperacional && <Button size="sm" className="gap-2" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" /> Nova ocorrência</Button>}
         </div>
       </div>
 
@@ -306,7 +308,7 @@ export function OccurrenceList({ clientId, clientName, highlightId }: Props) {
 
       <DeviationModal open={devOpen} onOpenChange={setDevOpen} clientId={clientId} clientName={clientName} onSaved={load} />
       {detail && <OccurrenceDetailDialog occurrence={rows.find(r => r.id === detail.id) ?? detail} task={tasks[detail.id]} me={me}
-        canManage={canManage} canWrite={canWriteClients} showClientLink={!clientId} onClose={() => setDetail(null)} onChanged={load} />}
+        canManage={canManage} canCancel={canCancel} canWrite={canWriteClients} showClientLink={!clientId} onClose={() => setDetail(null)} onChanged={load} />}
     </div>
   );
 }
