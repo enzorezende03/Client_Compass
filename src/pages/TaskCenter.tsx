@@ -367,8 +367,8 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
       toast({ title: 'Informe a justificativa', variant: 'destructive' });
       return;
     }
-    if (!rescheduleNewDate) {
-      toast({ title: 'Selecione a nova data', variant: 'destructive' });
+    if (!rescheduleNewDate && !rescheduleNewInternalDate) {
+      toast({ title: 'Selecione ao menos uma nova data', variant: 'destructive' });
       return;
     }
     const previous = getDeadline(rescheduleTask);
