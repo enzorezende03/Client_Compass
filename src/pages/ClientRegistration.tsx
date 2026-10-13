@@ -290,7 +290,7 @@ function TerminationsReport({ terms, search }: { terms: any[]; search: string })
     const data = rows.map(t => ({
       Cliente: t.clients?.name, Documento: formatDocument(t.clients?.document || ''),
       'Data do pedido': t.request_date, Motivo: label(t.reason_category), Detalhe: t.reason_detail,
-      Origem: t.initiated_by === 'escritorio' ? 'Contabilidade' : 'Cliente',
+      Origem: t.initiated_by === 'escritorio' ? 'Contabilidade' : t.initiated_by === 'baixa' ? 'Baixa' : 'Cliente',
       'Erro nosso': t.was_error ? 'Sim' : 'Não', 'Área do erro': t.error_sector || '',
       Melhoria: t.improvement_notes, Mensalidade: t.monthly_fee_at_termination ?? '',
       Situação: t.reverted_at ? 'Revertido' : 'Ativo',
@@ -343,7 +343,7 @@ function TerminationsReport({ terms, search }: { terms: any[]; search: string })
                 <TableCell className="font-medium">{t.clients?.name}</TableCell>
                 <TableCell className="whitespace-nowrap">{new Date(t.request_date + 'T12:00').toLocaleDateString('pt-BR')}</TableCell>
                 <TableCell className="max-w-[220px]"><p>{label(t.reason_category)}</p><p className="truncate text-xs text-muted-foreground" title={t.reason_detail}>{t.reason_detail}</p></TableCell>
-                <TableCell>{t.initiated_by === 'escritorio' ? 'Contabilidade' : 'Cliente'}</TableCell>
+                <TableCell>{t.initiated_by === 'escritorio' ? 'Contabilidade' : t.initiated_by === 'baixa' ? 'Baixa' : 'Cliente'}</TableCell>
                 <TableCell>{t.was_error ? <span className="text-destructive">Sim{t.error_sector ? ` · ${t.error_sector}` : ''}</span> : 'Não'}</TableCell>
                 <TableCell className="max-w-[240px] truncate text-xs text-muted-foreground" title={t.improvement_notes}>{t.improvement_notes || '—'}</TableCell>
                 <TableCell>{t.reverted_at ? 'Revertido' : 'Ativo'}</TableCell>

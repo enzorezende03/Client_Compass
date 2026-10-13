@@ -26,7 +26,7 @@ export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone
   const [effectiveDate, setEffectiveDate] = useState('');
   const [category, setCategory] = useState<TerminationReason | ''>('');
   const [detail, setDetail] = useState('');
-  const [initiatedBy, setInitiatedBy] = useState<'cliente' | 'escritorio'>('cliente');
+  const [initiatedBy, setInitiatedBy] = useState<'cliente' | 'escritorio' | 'baixa'>('cliente');
   const [wasError, setWasError] = useState(false);
   const [errorSector, setErrorSector] = useState('');
   const [improvement, setImprovement] = useState('');
@@ -77,7 +77,7 @@ export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone
         <DialogHeader>
           <DialogTitle>Registrar distrato</DialogTitle>
           <DialogDescription>
-            O cliente passa a Cancelado e o pedido entra no cálculo de churn do período.
+            O cliente passa a Cancelado. Só distratos com origem "Cliente" entram no cálculo de churn do período.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -115,6 +115,7 @@ export function RegisterTerminationDialog({ open, onOpenChange, clientId, onDone
                 <SelectContent>
                   <SelectItem value="cliente">Cliente</SelectItem>
                   <SelectItem value="escritorio">Contabilidade (escritório)</SelectItem>
+                  <SelectItem value="baixa">Baixa (encerramento da empresa)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
