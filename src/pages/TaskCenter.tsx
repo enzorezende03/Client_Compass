@@ -380,13 +380,10 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
       last_reschedule_reason: rescheduleReason.trim(),
       last_rescheduled_at: new Date().toISOString(),
     };
-    if (rescheduleField === 'client') {
-      updates.client_due_date = rescheduleNewDate;
-    } else {
-      updates.internal_due_date = rescheduleNewDate;
-    }
-    // Always sync due_date to the chosen new date as well so kanban reflects
-    updates.due_date = rescheduleNewDate;
+    if (rescheduleNewDate) updates.client_due_date = rescheduleNewDate;
+    if (rescheduleNewInternalDate) updates.internal_due_date = rescheduleNewInternalDate;
+    // Always sync due_date to the client date (fallback: internal) so kanban reflects
+    updates.due_date = rescheduleNewDate || rescheduleNewInternalDate;
 
     const { error: upErr } = await supabase.from('tasks').update(updates).eq('id', rescheduleTask.id);
     if (upErr) { toast({ title: 'Erro ao remanejar', description: upErr.message, variant: 'destructive' }); return; }
