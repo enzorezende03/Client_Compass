@@ -356,7 +356,9 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
     if (presetDate) { setRescheduleNewDate(presetDate); setRescheduleNewInternalDate(presetDate); return; }
     const today = new Date();
     today.setDate(today.getDate() + 1);
-    setRescheduleNewDate(today.toISOString().split('T')[0]);
+    const tomorrow = today.toISOString().split('T')[0];
+    setRescheduleNewDate(tomorrow);
+    setRescheduleNewInternalDate(tomorrow);
   };
 
   const submitReschedule = async () => {
