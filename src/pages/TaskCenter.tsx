@@ -671,6 +671,28 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
               </SelectContent>
             </Select>
           )}
+          {mode === 'calendar' && (
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Status: todos</SelectItem>
+                <SelectItem value="overdue">Atrasada</SelectItem>
+                <SelectItem value="today">Vence hoje</SelectItem>
+                <SelectItem value="upcoming">No prazo</SelectItem>
+                <SelectItem value="done">Concluída</SelectItem>
+                <SelectItem value="blocked">Bloqueada</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {mode === 'calendar' && (
+            <Select value={filterClient} onValueChange={setFilterClient}>
+              <SelectTrigger className="w-56"><SelectValue placeholder="Cliente" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Cliente: todos</SelectItem>
+                {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           {!embedded && <div className="inline-flex rounded-md border bg-muted p-1">
             <button
               onClick={() => setActiveTab('regular')}
@@ -719,7 +741,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar tarefa ou cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Buscar por tarefa, cliente ou responsável..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
           </div>
           <Select value={filterResponsible} onValueChange={setFilterResponsible}>
             <SelectTrigger className="w-48">
