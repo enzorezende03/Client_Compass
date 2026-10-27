@@ -197,7 +197,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
     return tasks.filter(t => {
       const cat = (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'regular';
       if (cat !== activeTab) return false;
-      const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
+      const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase()) || (t.responsible || '').toLowerCase().includes(search.toLowerCase());
       const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
       return matchSearch && matchResp;
     });
@@ -229,7 +229,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
   const calendarTasks = useMemo(() => tasks.filter(t => {
     const cat = (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'regular';
     if (!viewAll && cat !== activeTab) return false;
-    const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase()) || (t.responsible || '').toLowerCase().includes(search.toLowerCase());
     const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
     if (!matchSearch || !matchResp) return false;
     if (filterClient !== 'all' && t.client_id !== filterClient) return false;
