@@ -284,7 +284,7 @@ export default function ClientFormPage() {
                   Preencha o passo "Repasse Comercial" para liberar o onboarding
                 </span>
               )}
-              {isEdit && (onboardingStatus === 'pending_handoff' || onboardingStatus === 'pending_onboarding') && (
+              {isEdit && (onboardingStatus === 'pending_handoff' || onboardingStatus === 'pending_onboarding' || onboardingStatus === 'cancelled') && (
                 <span title={!hasHandoff ? 'Preencha a Ficha de Repasse Comercial antes de iniciar o onboarding.' : undefined}>
                   <Button
                     variant="default"
