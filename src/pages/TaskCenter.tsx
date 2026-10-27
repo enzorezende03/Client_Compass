@@ -693,6 +693,16 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
               </SelectContent>
             </Select>
           )}
+          {mode === 'calendar' && (search || filterResponsible !== 'all' || filterStatus !== 'all' || filterClient !== 'all' || !viewAll) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => { setSearch(''); setFilterResponsible('all'); setFilterStatus('all'); setFilterClient('all'); setViewAll(true); }}
+            >
+              Limpar filtros
+            </Button>
+          )}
           {!embedded && <div className="inline-flex rounded-md border bg-muted p-1">
             <button
               onClick={() => setActiveTab('regular')}
