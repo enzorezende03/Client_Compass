@@ -285,6 +285,19 @@ export async function startOnboarding(
     onboarding_type: effectiveType,
     onboarding_started_at: now,
   } as any).eq('id', clientId);
+  // Restarting after a previous onboarding was closed: reset the cancelled
+  // progress rows and reopen the cancelled auto-tasks so the flow runs again
+  // (rows are reused, preserving the history of the previous attempt).
+  await supabase.from('client_onboarding_progress')
+    .update({ status: 'pendente', completed_at: null, completed_by: null } as any)
+    .eq('client_id', clientId)
+    .eq('status', 'cancelado');
+  await supabase.from('tasks')
+    .update({ status: 'pending' } as any)
+    .eq('client_id', clientId)
+    .eq('category', 'onboarding')
+    .eq('status', 'cancelled');
+
   // Seed every stage of the flow: first stage unlocked (SLA running), the rest locked.
   await supabase.rpc('bootstrap_onboarding_locks' as any, { p_client_id: clientId });
   await supabase.from('timeline_entries').insert({
