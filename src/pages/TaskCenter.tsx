@@ -104,6 +104,8 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterResponsible, setFilterResponsible] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterClient, setFilterClient] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -230,9 +232,14 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
     const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
     const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
     if (!matchSearch || !matchResp) return false;
+    if (filterClient !== 'all' && t.client_id !== filterClient) return false;
+    if (filterStatus !== 'all') {
+      const st = eventStatusForDate(getDeadline(t), t.status === 'completed', !!t.locked);
+      if (st !== filterStatus) return false;
+    }
     if (t.locked && !showBlocked) return false;
     return true;
-  }), [tasks, search, filterResponsible, activeTab, viewAll, showBlocked]);
+  }), [tasks, search, filterResponsible, filterStatus, filterClient, activeTab, viewAll, showBlocked, deadlineView]);
 
   const calendarEvents: CalendarEvent[] = useMemo(() => calendarTasks.map(t => {
     const date = getDeadline(t);
