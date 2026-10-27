@@ -301,29 +301,35 @@ export async function startOnboarding(
 }
 
 /**
- * Cancels/deletes an in-progress onboarding so it can be recreated correctly
- * (e.g. created with the wrong type). Clears onboarding fields on the client,
- * removes the checklist progress rows and the auto-generated onboarding tasks.
- * The client is set back to "pending_onboarding" so a new onboarding can be started.
+ * Closes/archives an in-progress onboarding (e.g. created with the wrong type)
+ * WITHOUT deleting anything: checklist progress rows are kept and marked
+ * 'cancelado', pending onboarding tasks are cancelled (not removed) and the
+ * client keeps its stage/type for history, with onboarding_status='cancelled'.
+ * A new onboarding can be started afterwards; startOnboarding resets the
+ * cancelled rows/tasks so the flow runs again with the history preserved.
  */
 export async function cancelOnboarding(clientId: string, clientName: string) {
-  // remove checklist progress rows
-  await supabase.from('client_onboarding_progress').delete().eq('client_id', clientId);
-  // remove auto-generated onboarding tasks
-  await supabase.from('tasks').delete().eq('client_id', clientId).eq('category', 'onboarding');
-  // reset client onboarding state
+  const now = new Date().toISOString();
+  // keep checklist progress rows: mark pending ones as cancelled (completed stay)
+  await supabase.from('client_onboarding_progress')
+    .update({ status: 'cancelado' } as any)
+    .eq('client_id', clientId)
+    .neq('status', 'concluido');
+  // cancel pending onboarding tasks instead of deleting them
+  await supabase.from('tasks')
+    .update({ status: 'cancelled' } as any)
+    .eq('client_id', clientId)
+    .eq('category', 'onboarding')
+    .not('status', 'in', '("completed","cancelled")');
+  // mark the onboarding as closed, keeping stage/type/dates for history
   await supabase.from('clients').update({
-    onboarding_status: 'pending_onboarding',
-    onboarding_stage: null,
-    onboarding_type: null,
-    onboarding_started_at: null,
-    onboarding_completed_at: null,
+    onboarding_status: 'cancelled',
   } as any).eq('id', clientId);
 
   await supabase.from('timeline_entries').insert({
     client_id: clientId,
     type: 'service',
-    description: `[Onboarding] Onboarding excluído — fluxo cancelado para recriação`,
+    description: `[Onboarding] Onboarding encerrado — histórico preservado. Um novo onboarding pode ser iniciado com o tipo correto.`,
     responsible: 'CS',
     sector: 'commercial',
     origin: 'internal',
