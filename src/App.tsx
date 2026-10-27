@@ -35,7 +35,7 @@ const App = () => (
           <Route path="/cadastro/clientes/:id/editar" element={<AuthGuard><ClientFormPage /></AuthGuard>} />
           <Route path="/cadastro/usuarios" element={<AuthGuard><InternalUsersRegistration /></AuthGuard>} />
           <Route path="/execucao" element={<AuthGuard><Execution /></AuthGuard>} />
-          <Route path="/tarefas" element={<Navigate to="/execucao?aba=tarefas" replace />} />
+          <Route path="/tarefas" element={<Navigate to="/execucao?aba=diadia" replace />} />
           <Route path="/ocorrencias" element={<AuthGuard><Occurrences /></AuthGuard>} />
           <Route path="/onboarding" element={<Navigate to="/execucao?aba=onboarding" replace />} />
           <Route path="/prazos" element={<AuthGuard><SlaCatalogPage /></AuthGuard>} />
