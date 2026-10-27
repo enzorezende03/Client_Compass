@@ -36,6 +36,13 @@
       "when": 1791904083293,
       "tag": "0004_termination_origin_baixa_churn_client_only",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793129199031,
+      "tag": "0005_onboarding_cancelled_status",
+      "breakpoints": true
     }
   ]
 }

@@ -67,7 +67,7 @@ export function UrgentTaskAlert() {
   const [current, setCurrent] = useState<UrgentNotification | null>(null);
 
   const goToTask = (taskId: string | null) => {
-    navigate('/execucao?aba=tarefas');
+    navigate('/execucao?aba=diadia');
     if (taskId) {
       // store target so TaskCenter can highlight if implemented later
       sessionStorage.setItem('focus_task_id', taskId);

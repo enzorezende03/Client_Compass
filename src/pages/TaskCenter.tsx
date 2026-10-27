@@ -104,6 +104,8 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterResponsible, setFilterResponsible] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterClient, setFilterClient] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
@@ -195,7 +197,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
     return tasks.filter(t => {
       const cat = (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'regular';
       if (cat !== activeTab) return false;
-      const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
+      const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase()) || (t.responsible || '').toLowerCase().includes(search.toLowerCase());
       const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
       return matchSearch && matchResp;
     });
@@ -227,12 +229,17 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
   const calendarTasks = useMemo(() => tasks.filter(t => {
     const cat = (t.category || 'regular') === 'onboarding' ? 'onboarding' : 'regular';
     if (!viewAll && cat !== activeTab) return false;
-    const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.client_name || '').toLowerCase().includes(search.toLowerCase()) || (t.responsible || '').toLowerCase().includes(search.toLowerCase());
     const matchResp = filterResponsible === 'all' || t.responsible_id === filterResponsible || t.responsible === filterResponsible;
     if (!matchSearch || !matchResp) return false;
+    if (filterClient !== 'all' && t.client_id !== filterClient) return false;
+    if (filterStatus !== 'all') {
+      const st = eventStatusForDate(getDeadline(t), t.status === 'completed', !!t.locked);
+      if (st !== filterStatus) return false;
+    }
     if (t.locked && !showBlocked) return false;
     return true;
-  }), [tasks, search, filterResponsible, activeTab, viewAll, showBlocked]);
+  }), [tasks, search, filterResponsible, filterStatus, filterClient, activeTab, viewAll, showBlocked, deadlineView]);
 
   const calendarEvents: CalendarEvent[] = useMemo(() => calendarTasks.map(t => {
     const date = getDeadline(t);
@@ -664,6 +671,38 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
               </SelectContent>
             </Select>
           )}
+          {mode === 'calendar' && (
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Status: todos</SelectItem>
+                <SelectItem value="overdue">Atrasada</SelectItem>
+                <SelectItem value="today">Vence hoje</SelectItem>
+                <SelectItem value="upcoming">No prazo</SelectItem>
+                <SelectItem value="done">Concluída</SelectItem>
+                <SelectItem value="blocked">Bloqueada</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {mode === 'calendar' && (
+            <Select value={filterClient} onValueChange={setFilterClient}>
+              <SelectTrigger className="w-56"><SelectValue placeholder="Cliente" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Cliente: todos</SelectItem>
+                {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          {mode === 'calendar' && (search || filterResponsible !== 'all' || filterStatus !== 'all' || filterClient !== 'all' || !viewAll) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => { setSearch(''); setFilterResponsible('all'); setFilterStatus('all'); setFilterClient('all'); setViewAll(true); }}
+            >
+              Limpar filtros
+            </Button>
+          )}
           {!embedded && <div className="inline-flex rounded-md border bg-muted p-1">
             <button
               onClick={() => setActiveTab('regular')}
@@ -712,7 +751,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar tarefa ou cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Buscar por tarefa, cliente ou responsável..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
           </div>
           <Select value={filterResponsible} onValueChange={setFilterResponsible}>
             <SelectTrigger className="w-48">

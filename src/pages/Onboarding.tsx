@@ -428,8 +428,8 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
     try {
       await cancelOnboarding(selectedData.client.id, selectedData.client.name);
       toast({
-        title: 'Onboarding excluído',
-        description: `O onboarding de ${selectedData.client.name} foi removido. Você pode iniciá-lo novamente com o tipo correto.`,
+        title: 'Onboarding encerrado',
+        description: `O onboarding de ${selectedData.client.name} foi encerrado e o histórico foi preservado. Você pode iniciá-lo novamente com o tipo correto.`,
       });
       setCancelOpen(false);
       setSelectedClient(null);
@@ -980,7 +980,7 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
                     onClick={() => setCancelOpen(true)}
                     className="w-full gap-2 mt-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
-                    <Trash2 className="h-4 w-4" /> Excluir onboarding
+                    <Trash2 className="h-4 w-4" /> Encerrar onboarding
                   </Button>
                 )}
               </div>
@@ -992,12 +992,13 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir onboarding?</AlertDialogTitle>
+            <AlertDialogTitle>Encerrar onboarding?</AlertDialogTitle>
             <AlertDialogDescription>
-              Isso vai remover o checklist, as tarefas geradas e zerar o onboarding de{' '}
-              <span className="font-medium text-foreground">{selectedData?.client.name}</span>.
-              O cliente volta a ficar disponível para iniciar um novo onboarding (ex.: Parceria VMk).
-              Esta ação não pode ser desfeita.
+              O onboarding de{' '}
+              <span className="font-medium text-foreground">{selectedData?.client.name}</span>{' '}
+              será encerrado: as tarefas pendentes são canceladas e o checklist fica registrado
+              como histórico — nada é apagado. O cliente volta a ficar disponível para iniciar
+              um novo onboarding (ex.: Parceria VMk).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1008,7 +1009,7 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2"
             >
               {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
-              Excluir onboarding
+              Encerrar onboarding
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
