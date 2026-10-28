@@ -684,10 +684,10 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
 
       {/* Lateral panel */}
       <Sheet open={!!selectedClient} onOpenChange={o => !o && setSelectedClient(null)}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
           {selectedData && (
             <>
-              <SheetHeader>
+              <SheetHeader className="text-center sm:text-center">
                 <SheetTitle className="text-xl">{selectedData.client.name}</SheetTitle>
                 <SheetDescription>
                   {STAGE_LABELS[selectedData.stage]} • {selectedData.completed} de {selectedData.total} itens concluídos
@@ -697,7 +697,7 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
               <Button
                 size="sm"
                 variant="outline"
-                className="mt-3 gap-1.5"
+                className="mx-auto mt-3 flex gap-1.5"
                 onClick={() => setProcedureOpen(true)}
               >
                 <BookOpen className="h-3.5 w-3.5" />

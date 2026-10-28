@@ -1,7 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronDown, Copy, Download, FileText, Link2, Paperclip, Pencil, Plus, Trash2, Upload,
+  ChevronDown, Copy, Download, FileText, Link2, Paperclip, Pencil, Plus, Trash2, Upload, Info, ListChecks, MessageCircle, BookOpen,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,7 @@ export interface ItemDefinition {
   sla_hours: number;
   responsible_role?: string | null;
   role?: string | null;
+  channel?: string | null;
   sla_value?: number | null;
   sla_unit?: string | null;
   trigger_note?: string | null;
@@ -70,6 +72,7 @@ interface Template { id: string; item_definition_id: string; title: string; chan
 interface Attachment { id: string; file_path: string; file_name: string; mime_type: string; size_bytes: number; uploaded_by: string | null; uploaded_at: string }
 
 const SLA_UNIT_LABEL: Record<string, string> = { horas: 'h úteis', dias_uteis: 'dias úteis', dias_corridos: 'dias corridos' };
+const CHANNEL_LABEL: Record<string, string> = { whatsapp: 'WhatsApp', email: 'E-mail', interno: 'Interno', cs_hub: 'CS HUB', videoconferencia: 'Videoconferência', orgao: 'Órgão' };
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ });
@@ -159,7 +162,8 @@ export function ChecklistItemRow({
   const done = p.status === 'concluido';
   const role = p.item.role || p.item.responsible_role || '';
   const links = Array.isArray(p.item.links) ? p.item.links.filter(l => l?.url) : [];
-  const hasContent = !!(p.item.guidance_md || p.item.execution_notes_md || p.item.internal_standards_md || links.length || templates.length);
+  const standardsAreMaterials = /^\s*(?:\*\*|#{1,3}\s*)?Materiais de apoio/i.test(p.item.internal_standards_md || '');
+  const materials = standardsAreMaterials ? (p.item.internal_standards_md || '').replace(/^\s*(?:\*\*|#{1,3}\s*)?Materiais de apoio(?:\*\*)?\s*\n?/i, '') : '';
 
   let dueText = 'Aguardando etapa anterior';
   let dueTone = 'text-muted-foreground';
@@ -170,6 +174,9 @@ export function ChecklistItemRow({
     dueTone = diff >= 0 ? (diff < 8 * 36e5 ? 'text-health-attention' : 'text-muted-foreground') : 'text-destructive';
   }
   const statusLabel = done ? 'Concluído' : p.locked ? 'Bloqueado' : 'Em andamento';
+  const overdue = !done && !p.locked && !!dueAt && new Date(dueAt).getTime() < Date.now();
+  const badgeLabel = done || p.locked ? statusLabel : overdue ? 'Atrasado' : dueAt ? 'No prazo' : 'Em andamento';
+  const slaLabel = p.item.sla_value && p.item.sla_unit ? `${p.item.sla_value} ${SLA_UNIT_LABEL[p.item.sla_unit]}` : `${p.item.sla_hours}h`;
 
   const vars: Record<string, string> = {
     cliente_nome: client.name || '',
@@ -239,73 +246,62 @@ export function ChecklistItemRow({
 
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} className="rounded-lg border border-border bg-card">
-      <div className="flex items-center gap-3 px-3 py-2.5">
+      <div className="flex items-start gap-3 px-3 py-3">
         <Checkbox checked={done} disabled={!canWrite || (!!p.item.completion_rule && !done)} title={p.item.completion_rule && !done ? 'Concluído automaticamente pelo formulário/pesquisa/relatório' : undefined} onCheckedChange={v => onToggle(!!v)} />
-        <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        <CollapsibleTrigger asChild>
+        <Button variant="ghost" className="h-auto min-w-0 flex-1 items-start justify-start gap-2 whitespace-normal p-0 text-left hover:bg-transparent" aria-label={`${open ? 'Recolher' : 'Expandir'} ${p.item.title}`}>
           <div className="min-w-0 flex-1">
-            <p className={cn('truncate text-sm font-medium', done && 'text-muted-foreground line-through')}>
+            <p className={cn('break-words text-sm font-semibold text-foreground', done && 'text-muted-foreground line-through')}>
               {p.item.title}{p.item.is_required && <span className="ml-0.5 text-destructive">*</span>}
             </p>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
-              {role && <span>{role}</span>}
-              <span className={dueTone}>{dueText}</span>
+              <span>SLA: {p.item.trigger_note || slaLabel}</span>
+              {role && <span className="border-l border-border pl-2">Responsável: {role}</span>}
+              {p.item.channel && <span className="border-l border-border pl-2">Canal: {CHANNEL_LABEL[p.item.channel] || p.item.channel}</span>}
             </p>
           </div>
-          <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
-            {hasContent && <FileText className="h-3.5 w-3.5" aria-label="Possui orientações" />}
+          <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 text-muted-foreground">
             {attachments.length > 0 && <span className="flex items-center gap-0.5 text-[11px]"><Paperclip className="h-3.5 w-3.5" />{attachments.length}</span>}
             {p.item.active === false && <Badge variant="secondary" className="text-[10px]" title="Item retirado do fluxo. Mantido apenas como histórico; não trava a etapa.">Inativo</Badge>}
-            <Badge variant="outline" className="text-[10px]">{statusLabel}</Badge>
-            <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
+            <Badge variant="outline" title={dueText} className={cn('gap-1.5 whitespace-nowrap text-[10px]', done || (!p.locked && dueAt && !overdue) ? 'border-health-healthy/20 bg-health-healthy/10 text-health-healthy' : overdue ? 'border-destructive/20 bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground')}><span className="h-1.5 w-1.5 rounded-full bg-current" />{badgeLabel}</Badge>
+            <span className="rounded-md bg-muted p-1.5"><ChevronDown className={cn('h-4 w-4 text-primary transition-transform', open && 'rotate-180')} /></span>
           </span>
+        </Button>
         </CollapsibleTrigger>
       </div>
 
-      <CollapsibleContent className="space-y-2 border-t px-3 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
-          <span>
-            Prazo: {p.item.sla_value && p.item.sla_unit ? `${p.item.sla_value} ${SLA_UNIT_LABEL[p.item.sla_unit]}` : `${p.item.sla_hours}h`}
-            {p.item.trigger_note ? ` · ${p.item.trigger_note}` : ''}
-            {dueAt ? ` · vence ${fmtDate(dueAt)}` : ''}
-          </span>
-          {canEditContent && (
-            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={() => setEditOpen(true)}>
-              <Pencil className="h-3 w-3" /> Editar conteúdo
-            </Button>
-          )}
-        </div>
-
-        {extra}
-        {p.item.guidance_md && <Section title="Orientações e procedimentos"><Markdown>{fillPlaceholders(p.item.guidance_md, vars)}</Markdown></Section>}
-        {p.item.execution_notes_md && <Section title="Informações importantes"><Markdown>{fillPlaceholders(p.item.execution_notes_md, vars)}</Markdown></Section>}
+      <CollapsibleContent className="space-y-2 px-3 pb-3">
+        {p.item.guidance_md && <SupportSection title="Descrição" icon={<Info className="h-5 w-5" />}><Markdown>{fillPlaceholders(p.item.guidance_md, vars)}</Markdown></SupportSection>}
+        {p.item.execution_notes_md && <SupportSection title="Passo a passo" icon={<ListChecks className="h-5 w-5" />}>
+          <div className="text-sm leading-relaxed [&_p]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:space-y-2"><ReactMarkdown components={{
+            ol: ({ children }) => <ol className="[counter-reset:step] [&>li]:relative [&>li]:min-h-6 [&>li]:pl-8 [&>li]:[counter-increment:step] [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-0 [&>li]:before:flex [&>li]:before:h-6 [&>li]:before:w-6 [&>li]:before:items-center [&>li]:before:justify-center [&>li]:before:rounded-full [&>li]:before:bg-rework-client/70 [&>li]:before:text-primary-foreground [&>li]:before:text-xs [&>li]:before:content-[counter(step)]">{children}</ol>,
+          }}>{fillPlaceholders(p.item.execution_notes_md, vars)}</ReactMarkdown></div>
+        </SupportSection>}
+        {(materials || links.length > 0) && <SupportSection title="Materiais de apoio" icon={<FileText className="h-5 w-5" />}>
+          {materials && <div className="text-sm [&_ul]:space-y-2 [&_li]:flex [&_li]:items-center [&_li]:gap-2 [&_li]:rounded-md [&_li]:border [&_li]:border-border [&_li]:bg-card [&_li]:px-3 [&_li]:py-2"><ReactMarkdown components={{ li: ({ children }) => <li><FileText className="h-4 w-4 shrink-0 text-rework-client" /><span>{children}</span></li> }}>{fillPlaceholders(materials, vars)}</ReactMarkdown></div>}
+          {links.length > 0 && <ul className="mt-2 space-y-2">{links.map((l, i) => <li key={i}><a href={l.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-primary hover:underline"><FileText className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 break-words">{l.label || l.url}</span><Link2 className="h-4 w-4 shrink-0" /></a></li>)}</ul>}
+        </SupportSection>}
         {templates.length > 0 && (
-          <Section title={`Modelos de mensagem (${templates.length})`}>
+          <SupportSection title="Modelo de mensagem" icon={<MessageCircle className="h-5 w-5" />}>
             <div className="space-y-2">
               {templates.map(t => (
-                <div key={t.id} className="rounded-md border bg-muted/30 p-2.5">
+                <div key={t.id} className="rounded-md border border-border bg-card p-3">
                   <div className="mb-1.5 flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold">{t.title} <span className="font-normal text-muted-foreground">· {t.channel === 'email' ? 'E-mail' : 'WhatsApp'}</span></span>
-                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => copy(t)}><Copy className="h-3 w-3" /> Copiar</Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-rework-client" title="Copiar mensagem" aria-label={`Copiar ${t.title}`} onClick={() => copy(t)}><Copy className="h-4 w-4" /></Button>
                   </div>
                   {t.channel === 'email' && t.subject && <p className="mb-1 text-xs"><strong>Assunto:</strong> {fillPlaceholders(t.subject, vars)}</p>}
                   <div className="text-xs"><Markdown>{fillPlaceholders(t.body_md, vars)}</Markdown></div>
                 </div>
               ))}
             </div>
-          </Section>
+          </SupportSection>
         )}
-        {links.length > 0 && (
-          <Section title="Links e materiais">
-            <ul className="space-y-1">
-              {links.map((l, i) => (
-                <li key={i}><a href={l.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Link2 className="h-3 w-3" />{l.label || l.url}</a></li>
-              ))}
-            </ul>
-          </Section>
-        )}
-        {p.item.internal_standards_md && <Section title="Padrões internos"><Markdown>{p.item.internal_standards_md}</Markdown></Section>}
+        {p.item.internal_standards_md && !standardsAreMaterials && <SupportSection title="Padrões internos" icon={<BookOpen className="h-5 w-5" />}><Markdown>{p.item.internal_standards_md}</Markdown></SupportSection>}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-muted-foreground"><span className={dueTone} title={dueAt ? fmtDate(dueAt) : undefined}>{dueText}{dueAt ? ` · ${fmtDate(dueAt)}` : ''}</span>{canEditContent && <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={() => setEditOpen(true)}><Pencil className="h-3 w-3" />Editar conteúdo</Button>}</div>
+        {extra && <Section title="Informações da tarefa e atualizações">{extra}</Section>}
 
-        <Section title="Observações" defaultOpen>
+        <Section title="Observações">
           <Textarea value={notes} onChange={e => handleNotes(e.target.value)} readOnly={!canWrite} placeholder="Observação livre — salva automaticamente" className="min-h-[60px] text-xs" />
           {notesMeta.at && <p className="mt-1 text-[10px] text-muted-foreground">Atualizado por {(notesMeta.by && users[notesMeta.by]) || 'usuário'} em {fmtDate(notesMeta.at)}</p>}
         </Section>
@@ -345,6 +341,10 @@ export function ChecklistItemRow({
       )}
     </Collapsible>
   );
+}
+
+function SupportSection({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
+  return <section className="rounded-md bg-muted/70 px-3 py-3"><div className="flex items-start gap-3"><span className="shrink-0 text-rework-client">{icon}</span><div className="min-w-0 flex-1"><h4 className="mb-2 text-sm font-semibold text-foreground">{title}</h4>{children}</div></div></section>;
 }
 
 function Section({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
