@@ -277,7 +277,7 @@ export function ChecklistItemRow({
             ol: ({ children }) => <ol className="[counter-reset:step] [&>li]:relative [&>li]:min-h-6 [&>li]:pl-8 [&>li]:[counter-increment:step] [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-0 [&>li]:before:flex [&>li]:before:h-6 [&>li]:before:w-6 [&>li]:before:items-center [&>li]:before:justify-center [&>li]:before:rounded-full [&>li]:before:bg-rework-client/70 [&>li]:before:text-primary-foreground [&>li]:before:text-xs [&>li]:before:content-[counter(step)]">{children}</ol>,
           }}>{fillPlaceholders(p.item.execution_notes_md, vars)}</ReactMarkdown>
         </SupportSection>}
-        {(materials || links.length > 0) && <SupportSection title="Matériaux" icon={<FileText className="h-5 w-5" />}>
+        {(materials || links.length > 0) && <SupportSection title="Materiais de apoio" icon={<FileText className="h-5 w-5" />}>
           {materials && <ReactMarkdown className="text-sm [&_ul]:space-y-2 [&_li]:flex [&_li]:items-center [&_li]:gap-2 [&_li]:rounded-md [&_li]:border [&_li]:border-border [&_li]:bg-card [&_li]:px-3 [&_li]:py-2" components={{ li: ({ children }) => <li><FileText className="h-4 w-4 shrink-0 text-rework-client" /><span>{children}</span></li> }}>{fillPlaceholders(materials, vars)}</ReactMarkdown>}
           {links.length > 0 && <ul className="mt-2 space-y-2">{links.map((l, i) => <li key={i}><a href={l.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-primary hover:underline"><FileText className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 break-words">{l.label || l.url}</span><Link2 className="h-4 w-4 shrink-0" /></a></li>)}</ul>}
         </SupportSection>}
@@ -344,7 +344,7 @@ export function ChecklistItemRow({
 }
 
 function SupportSection({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
-  return <section className="rounded-md bg-muted/70 px-3 py-3"><div className="flex items-start gap-3"><span className="shrink-0 text-rework-client">{icon}</span><div className="min-w-0 flex-1"><h4 className="mb-2 text-sm font-semibold text-foreground">{title === 'Matériaux' ? 'Materiais de apoio' : title}</h4>{children}</div></div></section>;
+  return <section className="rounded-md bg-muted/70 px-3 py-3"><div className="flex items-start gap-3"><span className="shrink-0 text-rework-client">{icon}</span><div className="min-w-0 flex-1"><h4 className="mb-2 text-sm font-semibold text-foreground">{title}</h4>{children}</div></div></section>;
 }
 
 function Section({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
