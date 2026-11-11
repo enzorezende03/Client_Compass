@@ -1,3 +1,4 @@
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { useEffect, useMemo, useState, useCallback, Fragment } from 'react';
 import { motion } from 'framer-motion';
 import { Rocket, Search, Filter, Copy, ArrowRight, CheckCircle2, Clock, AlertTriangle, User, Loader2, FileText, FileBarChart, Eye, FileBadge2, ArrowRightCircle, Mail, Trash2, LayoutGrid, CalendarDays, BookOpen, Gauge } from 'lucide-react';
@@ -159,7 +160,7 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
     const [clientsRes, itemsRes, progRes] = await Promise.all([
       supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,parceria').eq('onboarding_status', 'active'),
       supabase.from('onboarding_checklist_items').select('*').order('order_index'),
-      supabase.from('client_onboarding_progress').select('*'),
+      fetchAllRows<any>((from, to) => supabase.from('client_onboarding_progress').select('*').order('id').range(from, to)),
     ]);
     const cls = (clientsRes.data || []) as ClientRow[];
     const its = (itemsRes.data || []) as ChecklistItem[];

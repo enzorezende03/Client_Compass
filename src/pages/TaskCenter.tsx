@@ -1,3 +1,4 @@
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { ExecutionTaskSheet, sinceLabel } from '@/components/execution/ExecutionPanels';
 import { useNavigate } from 'react-router-dom';
@@ -150,7 +151,7 @@ export default function TaskCenter({ embedded = false, mode = 'regular' }: { emb
     (supabase as any).from('task_updates').select('task_id, created_at').order('created_at', { ascending: false }).limit(5000)
       .then(({ data }: any) => { const m: Record<string, string> = {}; (data || []).forEach((u: any) => { if (!m[u.task_id]) m[u.task_id] = u.created_at; }); setLastUpdate(m); });
     const [tasksRes, clientsRes, usersRes] = await Promise.all([
-      supabase.from('tasks').select('*').order('due_date', { ascending: true }),
+      fetchAllRows<any>((from, to) => supabase.from('tasks').select('*').order('due_date', { ascending: true }).order('id').range(from, to)),
       supabase.from('clients').select('id, name').eq('archived', false),
       supabase.from('internal_users').select('id, name, email, active').eq('active', true).order('name'),
     ]);

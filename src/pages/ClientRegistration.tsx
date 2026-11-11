@@ -1,3 +1,4 @@
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Search, Download, ArchiveRestore, UserX } from 'lucide-react';
@@ -41,7 +42,7 @@ export default function ClientRegistration() {
       setClients(data);
       const ids = data.map(c => c.id);
       if (ids.length) {
-        const { data: contacts } = await supabase.from('client_contacts').select('client_id').in('client_id', ids);
+        const { data: contacts } = await fetchAllRows<any>((from, to) => supabase.from('client_contacts').select('id, client_id').in('client_id', ids).order('id').range(from, to));
         if (contacts) {
           const counts: Record<string, number> = {};
           contacts.forEach((c: any) => { counts[c.client_id] = (counts[c.client_id] || 0) + 1; });
