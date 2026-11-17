@@ -20,7 +20,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { currentMonthKey, fetchChurnMetrics, formatBRL } from '@/lib/churn';
+import { currentMonthKey, fetchChurnMetrics, fetchChurnYearToDate, formatBRL } from '@/lib/churn';
 import { useToast } from '@/hooks/use-toast';
 import {
   Client, ClientStatus, ComplexityLevel, HealthScore, STATUS_LABELS,
@@ -126,6 +126,10 @@ export default function ClientList() {
   const { data: churn } = useQuery({
     queryKey: ['churn-current-month'],
     queryFn: () => fetchChurnMetrics(currentMonthKey()),
+  });
+  const { data: churnYtd } = useQuery({
+    queryKey: ['churn-year-to-date'],
+    queryFn: fetchChurnYearToDate,
   });
 
   const loadClients = useCallback(() => {
@@ -365,14 +369,15 @@ export default function ClientList() {
                 <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary-foreground/10 text-primary-foreground"><TrendingDown className="h-5 w-5" /></span>
                 <ArrowRight className="h-4 w-4 text-primary-foreground/60 transition-transform group-hover:translate-x-1" />
               </div>
-              <p className="mt-7 text-sm font-medium text-primary-foreground/70">Churn do mês</p>
+              <p className="mt-7 text-sm font-medium text-primary-foreground/70">Churn acumulado do ano</p>
               <div className="mt-2 flex items-end gap-2">
-                <strong className={cn('text-4xl font-bold', (churn?.distratos_periodo ?? 0) > 0 ? 'text-destructive-foreground' : 'text-primary-foreground')}>
-                  {(churn?.taxa_churn ?? 0).toString().replace('.', ',')}%
+                <strong className={cn('text-4xl font-bold', (churnYtd?.distratos_periodo ?? 0) > 0 ? 'text-destructive-foreground' : 'text-primary-foreground')}>
+                  {(churnYtd?.taxa_churn ?? 0).toString().replace('.', ',')}%
                 </strong>
-                <span className="pb-1 text-xs text-primary-foreground/60">{churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'}</span>
+                <span className="pb-1 text-xs text-primary-foreground/60">{churnYtd?.distratos_periodo ?? 0} distrato{(churnYtd?.distratos_periodo ?? 0) === 1 ? '' : 's'}</span>
               </div>
-              <p className="mt-auto pt-5 text-xs text-primary-foreground/60">{formatBRL(churn?.receita_mensal_perdida)} de mensalidade perdida</p>
+              <p className="mt-1 text-xs text-primary-foreground/60">{formatBRL(churnYtd?.receita_mensal_perdida)} de mensalidade perdida no ano</p>
+              <p className="mt-auto pt-5 text-xs text-primary-foreground/60">Mês atual: {(churn?.taxa_churn ?? 0).toString().replace('.', ',')}% · {churn?.distratos_periodo ?? 0} distrato{(churn?.distratos_periodo ?? 0) === 1 ? '' : 's'}</p>
             </div>
           </button>
         </section>

@@ -67,3 +67,13 @@ export async function fetchChurnMetrics(month: string): Promise<ChurnMetrics | n
 export function formatBRL(v: number | null | undefined) {
   return (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
+
+/** Churn acumulado de 1º de janeiro do ano atual até hoje. */
+export async function fetchChurnYearToDate(): Promise<ChurnMetrics | null> {
+  const d = new Date();
+  const y = d.getFullYear();
+  const end = `${y}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const { data, error } = await supabase.rpc('churn_metrics' as any, { p_start: `${y}-01-01`, p_end: end } as any);
+  if (error || !data) return null;
+  return data as unknown as ChurnMetrics;
+}
