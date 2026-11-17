@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +19,9 @@ import { TERMINATION_REASON_LABELS } from '@/lib/churn';
 import {
   STATUS_LABELS, STATUS_EMOJIS, ClientStatus,
   PROFILE_LABELS, PROFILE_ICONS, PROFILE_COLORS, ClientProfile,
+  TAXATION_LABELS, TAXATION_EMOJIS, TaxationType,
 } from '@/types/client';
+import { getTaxationLabel, normalizeTaxation, TAXATION_BADGE_CLASSES } from '@/lib/taxation';
 
 export default function ClientRegistration() {
   const navigate = useNavigate();
@@ -26,6 +29,7 @@ export default function ClientRegistration() {
   const [contactCounts, setContactCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [taxationFilter, setTaxationFilter] = useState<'all' | 'none' | TaxationType>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<'ativos' | 'arquivados' | 'distratos'>('ativos');
@@ -60,11 +64,15 @@ export default function ClientRegistration() {
 
   const searchDigits = search.replace(/\D/g, '');
   const archivedCount = clients.filter(c => c.archived).length;
-  const filtered = clients.filter(c =>
-    (tab === 'arquivados' ? !!c.archived : !c.archived) &&
-    (c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (searchDigits.length > 0 && c.document.replace(/\D/g, '').includes(searchDigits)))
-  );
+  const filtered = clients.filter(c => {
+    const taxation = normalizeTaxation(c.taxation);
+    const matchesTaxation = taxationFilter === 'all'
+      || (taxationFilter === 'none' ? !c.taxation?.trim() : taxation === taxationFilter);
+    return (tab === 'arquivados' ? !!c.archived : !c.archived)
+      && matchesTaxation
+      && (c.name.toLowerCase().includes(search.toLowerCase())
+        || (searchDigits.length > 0 && c.document.replace(/\D/g, '').includes(searchDigits)));
+  });
 
   const handleUnarchive = async () => {
     if (!unarchiveTarget) return;
@@ -88,6 +96,7 @@ export default function ClientRegistration() {
         Segmento: c.segment,
         Status: `${STATUS_EMOJIS[c.status as ClientStatus] ?? ''} ${STATUS_LABELS[c.status as ClientStatus] || c.status}`.trim(),
         Tier: `${PROFILE_ICONS[c.profile as ClientProfile] ?? ''} ${PROFILE_LABELS[c.profile as ClientProfile] || c.profile || ''}`.trim(),
+        Tributação: getTaxationLabel(c.taxation) || 'Não definida',
         'Contatos cadastrados': contactCounts[c.id] || 0,
         'Início do contrato': c.contract_start_date,
       };
@@ -96,7 +105,7 @@ export default function ClientRegistration() {
     const worksheet = XLSX.utils.json_to_sheet(rows);
     worksheet['!cols'] = [
       { wch: 34 }, { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 24 },
-      { wch: 20 }, { wch: 16 }, { wch: 20 }, { wch: 18 },
+      { wch: 42 }, { wch: 20 }, { wch: 18 },
     ];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
@@ -155,15 +164,29 @@ export default function ClientRegistration() {
               Distratos ({terms.length})
             </button>
           </div>
-          <div className="relative max-w-sm flex-1 sm:flex-none sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar por nome ou documento..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
+            <Select value={taxationFilter} onValueChange={value => setTaxationFilter(value as typeof taxationFilter)}>
+              <SelectTrigger className="w-full sm:w-[280px]" aria-label="Filtrar por tributação">
+                <SelectValue placeholder="Todas as tributações" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as tributações</SelectItem>
+                {Object.entries(TAXATION_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{TAXATION_EMOJIS[value as TaxationType]} {label}</SelectItem>
+                ))}
+                <SelectItem value="none">Sem tributação</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative max-w-sm flex-1 sm:flex-none sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por nome ou documento..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+            </div>
           </div>
         </div>
 
         {tab === 'distratos' ? <TerminationsReport terms={terms} search={search} /> : (
-        <div className="rounded-lg border bg-card shadow-card overflow-hidden">
-          <Table>
+        <div className="rounded-lg border bg-card shadow-card overflow-x-auto">
+          <Table className="min-w-[1080px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
@@ -171,19 +194,21 @@ export default function ClientRegistration() {
                 <TableHead>Segmento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[140px]">Tier</TableHead>
+                <TableHead className="min-w-[250px]">Tributação</TableHead>
                 {tab === 'arquivados' && <TableHead>Motivo do arquivamento</TableHead>}
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={tab === 'arquivados' ? 7 : 6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={tab === 'arquivados' ? 8 : 7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={tab === 'arquivados' ? 7 : 6} className="text-center py-8 text-muted-foreground">{tab === 'arquivados' ? 'Nenhum cliente arquivado.' : 'Nenhum cliente encontrado.'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={tab === 'arquivados' ? 8 : 7} className="text-center py-8 text-muted-foreground">{tab === 'arquivados' ? 'Nenhum cliente arquivado.' : 'Nenhum cliente encontrado.'}</TableCell></TableRow>
               ) : (
                 filtered.map(c => {
                   const profile = c.profile as ClientProfile;
                   const profileTone = PROFILE_COLORS[profile];
+                  const taxation = normalizeTaxation(c.taxation);
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.name}</TableCell>
@@ -203,6 +228,16 @@ export default function ClientRegistration() {
                           </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {taxation ? (
+                          <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded border px-2 py-0.5 text-xs font-semibold', TAXATION_BADGE_CLASSES[taxation])}>
+                            <span aria-hidden>{TAXATION_EMOJIS[taxation]}</span>
+                            {TAXATION_LABELS[taxation]}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{getTaxationLabel(c.taxation) || '—'}</span>
                         )}
                       </TableCell>
                       {tab === 'arquivados' && (

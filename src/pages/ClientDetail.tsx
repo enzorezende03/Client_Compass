@@ -31,9 +31,10 @@ import { useToast } from '@/hooks/use-toast';
 import { AuditLog } from '@/components/AuditLog';
 import { ActionPlanTab } from '@/components/ActionPlanTab';
 import {
-  COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS, TAXATION_LABELS,
-  TimelineEntry, Task, ClientProfile, TaxationType, Client
+  COMPLEXITY_LABELS, PROFILE_LABELS, PROFILE_COLORS, PROFILE_ICONS, RISK_TYPE_LABELS,
+  TimelineEntry, Task, ClientProfile, Client
 } from '@/types/client';
+import { getTaxationLabel } from '@/lib/taxation';
 
 const STRATEGIC_FIELD_MAP: Record<string, string> = {
   painPoints: 'pain_points',
@@ -289,7 +290,7 @@ export default function ClientDetail() {
                 <ProfileInfoCard label="Complexidade" value={COMPLEXITY_LABELS[client.complexity]} />
                 <ProfileInfoCard label="CS Responsável" value={client.csResponsible} highlight />
                 <ProfileInfoCard label="Cliente desde" value={new Date(client.contractStartDate).toLocaleDateString('pt-BR')} />
-                <ProfileInfoCard label="Tributação" value={client.taxation ? TAXATION_LABELS[client.taxation as TaxationType] || client.taxation : 'Não definida'} />
+                <ProfileInfoCard label="Tributação" value={getTaxationLabel(client.taxation) || 'Não definida'} />
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">

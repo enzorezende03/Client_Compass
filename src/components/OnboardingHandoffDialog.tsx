@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { formatDocument } from '@/lib/document';
+import { getTaxationLabel } from '@/lib/taxation';
 
 const db = supabase as any;
 export const TAX_REGIMES = ['Simples Nacional', 'Lucro Presumido', 'Lucro Real'];
@@ -101,7 +102,7 @@ export function OnboardingHandoffDialog({ open, onOpenChange, clientId, onSaved,
         setForm({
           ...empty,
           legal_name: cl.name || '', cnpj: cl.document ? formatDocument(cl.document) : '',
-          activity: cl.segment || '', tax_regime: TAX_REGIMES.find(r => r === cl.taxation) || '',
+          activity: cl.segment || '', tax_regime: TAX_REGIMES.find(r => r === getTaxationLabel(cl.taxation)) || '',
           contact_name: main?.name || '', contact_phone: main?.phone || '', contact_email: main?.email || '',
           financial_contact: fin && fin !== main ? `${fin.name} — ${fin.phone || fin.email || ''}` : '',
         });

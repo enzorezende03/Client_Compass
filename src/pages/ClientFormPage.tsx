@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { computeCompleteness, completenessTone } from '@/lib/clientCompleteness';
+import { normalizeTaxation } from '@/lib/taxation';
 import { AppLayout } from '@/components/AppLayout';
 import { StepIdentification } from '@/components/ClientWizardSteps/StepIdentification';
 import { StepContacts, ContactDraft } from '@/components/ClientWizardSteps/StepContacts';
@@ -65,7 +66,7 @@ export default function ClientFormPage() {
           pain_points: client.pain_points ?? '', expectations: client.expectations ?? '',
           attention_points: client.attention_points ?? '', recurring_issues: client.recurring_issues ?? '',
           behavioral_profile: client.behavioral_profile ?? '', strategic_notes: client.strategic_notes ?? '',
-          taxation: client.taxation ?? '',
+          taxation: normalizeTaxation(client.taxation),
         });
         setOnboardingStatus((client as any).onboarding_status || 'pending_handoff');
         const { data: h } = await supabase.from('commercial_handoff' as any).select('*').eq('client_id', id).maybeSingle();

@@ -9,7 +9,7 @@ export type Sector = 'fiscal' | 'accounting' | 'hr' | 'corporate' | 'commercial'
 export type DemandOrigin = 'client' | 'internal' | 'error' | 'preventive';
 export type DemandStatus = 'open' | 'in_progress' | 'waiting_client' | 'resolved';
 export type RiskType = 'operational' | 'financial' | 'relationship';
-export type TaxationType = 'simples_nacional' | 'simples_nacional_fator_r' | 'lucro_presumido' | 'lucro_presumido_equiparacao_hospitalar';
+export type TaxationType = 'simples_nacional' | 'simples_nacional_fator_r' | 'lucro_presumido' | 'lucro_presumido_equiparacao_hospitalar' | 'lucro_real';
 export type TaskStatus = 'pending' | 'completed';
 
 export type ActionPlanStatus = 'pending' | 'in_progress' | 'waiting_client' | 'completed' | 'cancelled';
@@ -237,6 +237,7 @@ export const TAXATION_LABELS: Record<TaxationType, string> = {
   simples_nacional_fator_r: 'Simples Nacional Fator R',
   lucro_presumido: 'Lucro Presumido',
   lucro_presumido_equiparacao_hospitalar: 'Lucro Presumido Equiparação Hospitalar',
+  lucro_real: 'Lucro Real',
 };
 
 export const TAXATION_EMOJIS: Record<TaxationType, string> = {
@@ -244,4 +245,5 @@ export const TAXATION_EMOJIS: Record<TaxationType, string> = {
   simples_nacional_fator_r: '🟡',
   lucro_presumido: '🔵',
   lucro_presumido_equiparacao_hospitalar: '🏥',
+  lucro_real: '💎',
 };

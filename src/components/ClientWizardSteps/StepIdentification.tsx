@@ -73,12 +73,15 @@ const TAXATION_EMOJI: Record<string, string> = {
   simples_nacional_fator_r: '🟡',
   lucro_presumido: '🔵',
   lucro_presumido_equiparacao_hospitalar: '🏥',
+  lucro_real: '💎',
 };
 
 const TAXATION_OPTS = Object.entries(TAXATION_LABELS).map(([value, label]) => ({
   value,
   label,
-  activeClass: 'bg-primary/10 text-primary ring-primary/40',
+  activeClass: value === 'lucro_real'
+    ? 'bg-ring/10 text-ring ring-ring/50'
+    : 'bg-primary/10 text-primary ring-primary/40',
   icon: <Emoji char={TAXATION_EMOJI[value] ?? '📄'} />,
 }));
 
@@ -153,7 +156,7 @@ export function StepIdentification({ form, updateField, cnpjLoading, onDocumentC
 
         <div className="space-y-2">
           <FieldLabel icon={Receipt}>Tributação</FieldLabel>
-          <OptionButtons value={form.taxation || ''} onChange={v => updateField('taxation', v)} options={TAXATION_OPTS} columns={4} clearable size="sm" />
+          <OptionButtons value={form.taxation || ''} onChange={v => updateField('taxation', v)} options={TAXATION_OPTS} columns={5} clearable size="sm" />
           <p className="text-xs text-muted-foreground">Clique novamente para limpar a seleção.</p>
         </div>
       </div>

@@ -27,6 +27,7 @@ import {
 } from '@/types/client';
 import { cn } from '@/lib/utils';
 import { formatDocument } from '@/lib/document';
+import { getTaxationLabel } from '@/lib/taxation';
 
 interface ClientWithArchive extends Client {
   archived?: boolean;
@@ -172,6 +173,7 @@ export default function ClientList() {
       Complexidade: COMPLEXITY_LABELS[client.complexity as ComplexityLevel] || client.complexity,
       Tier: PROFILE_LABELS[client.profile] || client.profile,
       'Health Score': HEALTH_LABELS[client.healthScore as HealthScore] || client.healthScore,
+      Tributação: getTaxationLabel(client.taxation) || 'Não definida',
       'Início do contrato': client.contractStartDate,
     }));
     const worksheet = XLSX.utils.json_to_sheet(rows);
