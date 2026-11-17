@@ -1,3 +1,5 @@
+import type { Company } from '@/lib/company';
+
 export type ClientStatus = 'active' | 'at_risk' | 'recovery' | 'cancelled';
 export type ComplexityLevel = 'A' | 'B' | 'C' | 'D';
 export type ClientProfile = 'vip' | 'premium' | 'standard' | 'basic';
@@ -60,6 +62,7 @@ export interface Client {
   riskIdentifiedDate?: string;
   actionPlan?: string;
   taxation?: TaxationType;
+  company: Company;
 }
 
 export type ResponsibilityOrigin = 'escritorio' | 'cliente' | 'neutro';

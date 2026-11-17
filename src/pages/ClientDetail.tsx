@@ -35,6 +35,7 @@ import {
   TimelineEntry, Task, ClientProfile, Client
 } from '@/types/client';
 import { getTaxationLabel } from '@/lib/taxation';
+import { normalizeCompany } from '@/lib/company';
 
 const STRATEGIC_FIELD_MAP: Record<string, string> = {
   painPoints: 'pain_points',
@@ -57,6 +58,7 @@ function mapClient(r: any): Client {
     riskReason: r.risk_reason ?? undefined, riskType: r.risk_type ?? undefined,
     riskIdentifiedDate: r.risk_identified_date ?? undefined,
     actionPlan: r.action_plan ?? undefined, taxation: r.taxation ?? undefined,
+    company: normalizeCompany(r.company),
   };
 }
 

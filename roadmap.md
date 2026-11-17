@@ -1,10 +1,6 @@
-# Roadmap — Lucro Real e importação de clientes
+# Roadmap — Filtros do dashboard e carteiras 2M
 
-- [x] Adicionar Lucro Real ao cadastro, filtros, listagem e exportação Excel
-- [x] Validar regras de tributação com testes automatizados e typecheck
-- [x] Conferir cadastro, filtro e Excel no preview com a conta da Ana
-- [x] Validar 181 clientes da planilha e comparar seus CNPJs com toda a base: nenhum já existia
-- [x] Aplicar a razão social oficial da BrasilAPI em 82 linhas marcadas com “Sim”; preservar o nome da planilha em 99 linhas
-- [x] Importar 181 clientes ativos, sem duplicidades, com Segmento, Complexidade e Health Score em branco
-- [x] Confirmar que a aba Contatos estava vazia: nenhum contato criado; aba Pendências mantida fora da carga
-- [x] Verificar os dados na base, os 19 clientes de Lucro Real no filtro e no Excel exportado
+- [x] Adicionar a empresa do grupo ao cadastro e identificar os 181 novos clientes como 2M Contabilidade
+- [x] Filtrar indicadores, gráfico e lista do dashboard por empresa, tier, saúde, status, financeiro e tributação
+- [x] Exibir empresa na listagem e nas exportações de clientes
+- [x] Adicionar testes das regras de filtro e validar o fluxo no preview

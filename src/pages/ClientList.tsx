@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Archive, ArrowRight, Building2, Download, HeartPulse,
-  Search, ShieldAlert, Stethoscope, TrendingDown, TrendingUp, Users,
+  Archive, ArrowRight, Building2, Download, FilterX, HeartPulse,
+  Search, ShieldAlert, SlidersHorizontal, Stethoscope, TrendingDown, TrendingUp, Users,
   AlertTriangle,
 } from 'lucide-react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -18,16 +18,22 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { currentMonthKey, fetchChurnMetrics, formatBRL } from '@/lib/churn';
 import { useToast } from '@/hooks/use-toast';
 import {
   Client, ClientStatus, ComplexityLevel, HealthScore, STATUS_LABELS,
-  COMPLEXITY_LABELS, HEALTH_LABELS, PROFILE_COLORS, PROFILE_ICONS, PROFILE_LABELS,
+  COMPLEXITY_LABELS, HEALTH_LABELS, PROFILE_COLORS, PROFILE_ICONS, PROFILE_LABELS, TAXATION_LABELS,
 } from '@/types/client';
 import { cn } from '@/lib/utils';
 import { formatDocument } from '@/lib/document';
 import { getTaxationLabel } from '@/lib/taxation';
+import { COMPANY_LABELS, Company, getCompanyLabel, normalizeCompany } from '@/lib/company';
+import {
+  DashboardFilters, DEFAULT_DASHBOARD_FILTERS, DashboardHealthFilter,
+  DashboardStatusFilter, DashboardTaxationFilter, matchesDashboardFilters,
+} from '@/lib/dashboardFilters';
 
 interface ClientWithArchive extends Client {
   archived?: boolean;
@@ -88,6 +94,7 @@ function mapRow(row: any): ClientWithArchive {
     riskIdentifiedDate: row.risk_identified_date ?? undefined,
     actionPlan: row.action_plan ?? undefined,
     taxation: row.taxation ?? undefined,
+    company: normalizeCompany(row.company),
     archived: row.archived ?? false,
     archivedAt: row.archived_at ?? undefined,
     archivedReason: row.archived_reason ?? '',
@@ -106,6 +113,7 @@ export default function ClientList() {
   const [archiveTarget, setArchiveTarget] = useState<ClientWithArchive | null>(null);
   const [archiveReason, setArchiveReason] = useState('');
   const [archiving, setArchiving] = useState(false);
+  const [filters, setFilters] = useState<DashboardFilters>({ ...DEFAULT_DASHBOARD_FILTERS });
 
   const { data: counts } = useQuery({
     queryKey: ['dashboard-health-counts'],
@@ -131,7 +139,26 @@ export default function ClientList() {
   useEffect(() => { loadClients(); }, [loadClients]);
 
   const treatmentIds = useMemo(() => new Set(counts?.treatment_ids ?? []), [counts?.treatment_ids]);
-  const percent = (value: number) => counts?.total ? `${Math.round((value / counts.total) * 100)}%` : '0%';
+  const filteredClients = useMemo(
+    () => clients.filter(client => matchesDashboardFilters(client, filters)),
+    [clients, filters],
+  );
+  const dashboardCounts = useMemo(() => ({
+    total: filteredClients.length,
+    healthy: filteredClients.filter(client => client.healthScore === 'healthy').length,
+    attention: filteredClients.filter(client => client.healthScore === 'attention').length,
+    critical: filteredClients.filter(client => client.healthScore === 'critical').length,
+    unclassified: filteredClients.filter(client => !['healthy', 'attention', 'critical'].includes(client.healthScore)).length,
+    suspended: filteredClients.filter(client => client.financialStatus === 'suspended').length,
+    treatment: filteredClients.filter(client => treatmentIds.has(client.id) || client.status === 'recovery').length,
+  }), [filteredClients, treatmentIds]);
+  const activeFilterCount = Object.keys(filters).filter(key => (
+    filters[key as keyof DashboardFilters] !== DEFAULT_DASHBOARD_FILTERS[key as keyof DashboardFilters]
+  )).length;
+  const updateFilter = <K extends keyof DashboardFilters,>(key: K, value: DashboardFilters[K]) => {
+    setFilters(previous => ({ ...previous, [key]: value }));
+  };
+  const percent = (value: number) => dashboardCounts.total ? `${Math.round((value / dashboardCounts.total) * 100)}%` : '0%';
 
   const matchesView = useCallback((client: ClientWithArchive, view: PortfolioView) => {
     if (client.archived || client.status === 'cancelled') return false;
@@ -146,15 +173,15 @@ export default function ClientList() {
   const visibleClients = useMemo(() => {
     if (!selectedView) return [];
     const normalized = search.trim().toLocaleLowerCase('pt-BR');
-    return clients.filter(client => matchesView(client, selectedView)).filter(client => (
+    return filteredClients.filter(client => matchesView(client, selectedView)).filter(client => (
       !normalized || client.name.toLocaleLowerCase('pt-BR').includes(normalized) || client.document.includes(normalized)
     ));
-  }, [clients, matchesView, search, selectedView]);
+  }, [filteredClients, matchesView, search, selectedView]);
 
   const chartData = [
-    { key: 'healthy', name: 'Saudáveis', value: counts?.healthy ?? 0 },
-    { key: 'attention', name: 'Em atenção', value: counts?.attention ?? 0 },
-    { key: 'critical', name: 'Críticos', value: counts?.critical ?? 0 },
+    { key: 'healthy', name: 'Saudáveis', value: dashboardCounts.healthy },
+    { key: 'attention', name: 'Em atenção', value: dashboardCounts.attention },
+    { key: 'critical', name: 'Críticos', value: dashboardCounts.critical },
   ];
 
   const openView = (view: PortfolioView) => {
@@ -168,6 +195,7 @@ export default function ClientList() {
       Nome: client.name,
       Documento: formatDocument(client.document),
       Segmento: client.segment,
+      Empresa: getCompanyLabel(client.company),
       Status: STATUS_LABELS[client.status as ClientStatus] || client.status,
       'CS Responsável': client.csResponsible,
       Complexidade: COMPLEXITY_LABELS[client.complexity as ComplexityLevel] || client.complexity,
@@ -221,13 +249,87 @@ export default function ClientList() {
           </div>
         </div>
 
+        <section aria-label="Filtros do dashboard" className="mb-4 rounded-lg border bg-card p-4 shadow-card">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-primary" />
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Filtrar carteira</h2>
+                <p className="text-xs text-muted-foreground">{dashboardCounts.total} cliente{dashboardCounts.total === 1 ? '' : 's'} na seleção</p>
+              </div>
+            </div>
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" className="gap-2" onClick={() => setFilters({ ...DEFAULT_DASHBOARD_FILTERS })}>
+                <FilterX className="h-4 w-4" /> Limpar filtros ({activeFilterCount})
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+            <DashboardFilterSelect
+              label="Empresa"
+              value={filters.company}
+              onChange={value => updateFilter('company', value as 'all' | Company)}
+              options={[{ value: 'all', label: 'Todas as empresas' }, ...Object.entries(COMPANY_LABELS).map(([value, label]) => ({ value, label }))]}
+            />
+            <DashboardFilterSelect
+              label="Tier"
+              value={filters.profile}
+              onChange={value => updateFilter('profile', value as DashboardFilters['profile'])}
+              options={[{ value: 'all', label: 'Todos os tiers' }, ...Object.entries(PROFILE_LABELS).map(([value, label]) => ({ value, label }))]}
+            />
+            <DashboardFilterSelect
+              label="Saúde"
+              value={filters.health}
+              onChange={value => updateFilter('health', value as DashboardHealthFilter)}
+              options={[
+                { value: 'all', label: 'Todas as saúdes' },
+                { value: 'healthy', label: 'Saudável' },
+                { value: 'attention', label: 'Atenção' },
+                { value: 'critical', label: 'Crítico' },
+                { value: 'unclassified', label: 'Sem classificação' },
+              ]}
+            />
+            <DashboardFilterSelect
+              label="Status"
+              value={filters.status}
+              onChange={value => updateFilter('status', value as DashboardStatusFilter)}
+              options={[
+                { value: 'all', label: 'Todos os status' },
+                { value: 'active', label: 'Ativo' },
+                { value: 'at_risk', label: 'Em Risco' },
+                { value: 'recovery', label: 'Em Recuperação' },
+              ]}
+            />
+            <DashboardFilterSelect
+              label="Financeiro"
+              value={filters.financial}
+              onChange={value => updateFilter('financial', value as DashboardFilters['financial'])}
+              options={[
+                { value: 'all', label: 'Todas as situações' },
+                { value: 'active_financial', label: 'Ativo' },
+                { value: 'suspended', label: 'Suspenso' },
+              ]}
+            />
+            <DashboardFilterSelect
+              label="Tributação"
+              value={filters.taxation}
+              onChange={value => updateFilter('taxation', value as DashboardTaxationFilter)}
+              options={[
+                { value: 'all', label: 'Todas as tributações' },
+                ...Object.entries(TAXATION_LABELS).map(([value, label]) => ({ value, label })),
+                { value: 'none', label: 'Sem tributação' },
+              ]}
+            />
+          </div>
+        </section>
+
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-12">
-          <StatCard className="xl:col-span-4" icon={Building2} label="Total de clientes" value={counts?.total ?? 0} onClick={() => openView('total')} footer={counts?.unclassified ? `${counts.unclassified} sem classificação` : 'Carteira ativa'} />
-          <StatCard className="xl:col-span-4" icon={HeartPulse} label="Saudáveis" value={counts?.healthy ?? 0} percent={percent(counts?.healthy ?? 0)} tone="healthy" onClick={() => openView('healthy')} footer="Carteira estável" />
-          <StatCard className="xl:col-span-4" icon={ShieldAlert} label="Críticos" value={counts?.critical ?? 0} percent={percent(counts?.critical ?? 0)} tone="critical" emphasis onClick={() => openView('critical')} footer="Exigem atenção imediata" />
-          <StatCard className="xl:col-span-4" icon={AlertTriangle} label="Em atenção" value={counts?.attention ?? 0} percent={percent(counts?.attention ?? 0)} tone="attention" onClick={() => openView('attention')} />
-          <StatCard className="xl:col-span-4" icon={Stethoscope} label="Em tratamento" value={counts?.treatment ?? 0} percent={percent(counts?.treatment ?? 0)} onClick={() => openView('treatment')} footer="Com plano de ação ou acompanhamento" />
-          <StatCard className="xl:col-span-4" icon={TrendingUp} label="Financeiro suspenso" value={counts?.suspended ?? 0} percent={percent(counts?.suspended ?? 0)} tone="attention" onClick={() => openView('suspended')} />
+          <StatCard className="xl:col-span-4" icon={Building2} label="Total de clientes" value={dashboardCounts.total} onClick={() => openView('total')} footer={dashboardCounts.unclassified ? `${dashboardCounts.unclassified} sem classificação` : 'Carteira ativa'} />
+          <StatCard className="xl:col-span-4" icon={HeartPulse} label="Saudáveis" value={dashboardCounts.healthy} percent={percent(dashboardCounts.healthy)} tone="healthy" onClick={() => openView('healthy')} footer="Carteira estável" />
+          <StatCard className="xl:col-span-4" icon={ShieldAlert} label="Críticos" value={dashboardCounts.critical} percent={percent(dashboardCounts.critical)} tone="critical" emphasis onClick={() => openView('critical')} footer="Exigem atenção imediata" />
+          <StatCard className="xl:col-span-4" icon={AlertTriangle} label="Em atenção" value={dashboardCounts.attention} percent={percent(dashboardCounts.attention)} tone="attention" onClick={() => openView('attention')} />
+          <StatCard className="xl:col-span-4" icon={Stethoscope} label="Em tratamento" value={dashboardCounts.treatment} percent={percent(dashboardCounts.treatment)} onClick={() => openView('treatment')} footer="Com plano de ação ou acompanhamento" />
+          <StatCard className="xl:col-span-4" icon={TrendingUp} label="Financeiro suspenso" value={dashboardCounts.suspended} percent={percent(dashboardCounts.suspended)} tone="attention" onClick={() => openView('suspended')} />
         </section>
 
         <section className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
@@ -311,6 +413,7 @@ export default function ClientList() {
                     <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
                   </div>
                   <p className="mt-3 text-xs text-muted-foreground">CS responsável: {client.csResponsible || 'Não definido'}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{getCompanyLabel(client.company)}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                      <span className={cn(
                        'inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold',
@@ -347,6 +450,27 @@ export default function ClientList() {
       </Dialog>
 
     </AppLayout>
+  );
+}
+
+function DashboardFilterSelect({ label, value, onChange, options }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-9 w-full bg-background" aria-label={`Filtrar por ${label.toLocaleLowerCase('pt-BR')}`}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 

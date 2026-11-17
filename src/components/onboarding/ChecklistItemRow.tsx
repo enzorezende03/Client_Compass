@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { formatDocument } from '@/lib/document';
+import { getCompanyLabel } from '@/lib/company';
 
 const db = supabase as any;
 const TZ = 'America/Sao_Paulo';
@@ -66,6 +67,7 @@ export interface ChecklistClient {
   document?: string | null;
   cs_responsible?: string | null;
   segment?: string | null;
+  company?: string | null;
 }
 
 interface Template { id: string; item_definition_id: string; title: string; channel: 'whatsapp' | 'email'; subject: string | null; body_md: string; sort_order: number }
@@ -183,7 +185,7 @@ export function ChecklistItemRow({
     cnpj: client.document ? formatDocument(client.document) : '',
     contato_nome: contactName || '',
     responsavel_cs: client.cs_responsible || '',
-    escritorio: /sa[uú]de|cl[íi]nic|m[ée]dic|odont|hospital/i.test(`${client.segment || ''} ${client.name}`) ? '2M Saúde' : '2M Contabilidade',
+    escritorio: getCompanyLabel(client.company),
     prazo_estimado: dueAt ? new Date(dueAt).toLocaleDateString('pt-BR', { timeZone: TZ }) : '',
     mes_ano: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: TZ }),
   };

@@ -29,6 +29,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { getCompanyLabel, normalizeCompany } from '@/lib/company';
 import { CalendarView, CalendarEvent, eventStatusForDate, isoDay } from '@/components/calendar/CalendarView';
 import {
   STAGES_EXISTING, STAGES_NOVA, STAGES_VMK, STAGE_LABELS, STAGE_SHORT, OnboardingStage, OnboardingType,
@@ -47,6 +48,7 @@ interface ClientRow {
   onboarding_type: OnboardingType | null;
   document?: string | null;
   segment?: string | null;
+  company?: string | null;
   parceria?: string | null;
 }
 
@@ -158,7 +160,7 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
   const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     const [clientsRes, itemsRes, progRes] = await Promise.all([
-      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,parceria').eq('onboarding_status', 'active'),
+      supabase.from('clients').select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,company,parceria').eq('onboarding_status', 'active'),
       supabase.from('onboarding_checklist_items').select('*').order('order_index'),
       fetchAllRows<any>((from, to) => supabase.from('client_onboarding_progress').select('*').order('id').range(from, to)),
     ]);
@@ -172,7 +174,7 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
     // also fetch concluded (last 30 days) for the "Concluído" column
     const { data: doneRes } = await supabase
       .from('clients')
-      .select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,parceria')
+      .select('id,name,cs_responsible,onboarding_status,onboarding_stage,onboarding_started_at,onboarding_type,document,segment,company,parceria')
       .eq('onboarding_status', 'completed');
     setClients([...cls, ...((doneRes || []) as ClientRow[])]);
     setItems(its);
@@ -902,13 +904,10 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
                   && !(cType === 'vmk_parceria' && t.stage === 'vmk_ativacao'));
                 if (stageTpls.length === 0) return null;
 
-                // Determine "2M Saúde" or "2M Contabilidade" from segment hints (fallback Saúde)
-                const isSaude = /sa[uú]de|cl[íi]nic|m[ée]dic|odont|hospital|farm[áa]c/i
-                  .test(`${(selectedData.client as any).segment || ''} ${selectedData.client.name}`);
                 const vars: Record<string, string> = {
                   NOME_CLIENTE: selectedData.client.name,
                   NOME_CS: selectedData.client.cs_responsible || '',
-                  'SAUDE/CONTABILIDADE': isSaude ? 'Saúde' : 'Contabilidade',
+                  'SAUDE/CONTABILIDADE': normalizeCompany(selectedData.client.company) === '2m_saude' ? 'Saúde' : 'Contabilidade',
                   CNPJ_EMPRESA: '',
                   STATUS_CONSTITUICAO: '',
                   DESCRICAO_STATUS: '',
@@ -1052,7 +1051,7 @@ export default function Onboarding({ embedded = false }: { embedded?: boolean } 
           open={surveyOpen}
           onOpenChange={setSurveyOpen}
           clientId={selectedClient.id}
-          office={/sa[uú]de|cl[íi]nic|m[ée]dic|odont|hospital/i.test(`${selectedClient.segment || ''} ${selectedClient.name}`) ? 'a 2M Saúde' : 'a 2M Contabilidade'}
+          office={`a ${getCompanyLabel(selectedClient.company)}`}
           onSaved={() => fetchAll(true)}
           onSuggestActionPlan={() => navigate(`/client/${selectedClient.id}?tab=action-plan`)}
         />

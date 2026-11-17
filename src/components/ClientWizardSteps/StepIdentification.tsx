@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { HelpCircle } from 'lucide-react';
 import { OptionButtons } from '@/components/ui/option-buttons';
 import { TAXATION_LABELS } from '@/types/client';
+import { COMPANY_LABELS } from '@/lib/company';
 
 interface Props {
   form: any;
@@ -35,6 +36,14 @@ function FieldLabel({ icon: Icon, children, hint }: { icon: any; children: React
 const Emoji = ({ char }: { char: string }) => (
   <span className="text-lg leading-none" aria-hidden>{char}</span>
 );
+
+const COMPANY_OPTS = Object.entries(COMPANY_LABELS).map(([value, label]) => ({
+  value,
+  label,
+  description: value === '2m_saude' ? 'Carteira 2M Saúde' : 'Carteira 2M Contabilidade',
+  activeClass: 'bg-primary/10 text-primary ring-primary/40',
+  icon: <Building2 className="h-4 w-4" />,
+}));
 
 const COMPLEXITY_OPTS = [
   { value: 'A', label: 'A — Alta', description: 'Operação muito complexa', activeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/40', icon: <Emoji char="🔥" /> },
@@ -96,6 +105,10 @@ export function StepIdentification({ form, updateField, cnpjLoading, onDocumentC
           <Building2 className="h-4 w-4 text-primary" /> Identificação
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2 md:col-span-2">
+            <FieldLabel icon={Building2} hint="Define a qual carteira o cliente pertence nos filtros e relatórios.">Empresa do grupo</FieldLabel>
+            <OptionButtons value={form.company} onChange={v => updateField('company', v)} options={COMPANY_OPTS} columns={2} />
+          </div>
           <div className="space-y-2 md:col-span-2">
             <FieldLabel icon={Building2}>Nome / Razão Social *</FieldLabel>
             <Input value={form.name} onChange={e => updateField('name', e.target.value)} placeholder="Ex: Empresa ABC Ltda" />

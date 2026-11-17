@@ -399,6 +399,7 @@ export type Database = {
           archived_reason: string
           attention_points: string
           behavioral_profile: string
+          company: string
           complexity: string
           contract_start_date: string
           created_at: string
@@ -437,6 +438,7 @@ export type Database = {
           archived_reason?: string
           attention_points?: string
           behavioral_profile?: string
+          company?: string
           complexity?: string
           contract_start_date?: string
           created_at?: string
@@ -475,6 +477,7 @@ export type Database = {
           archived_reason?: string
           attention_points?: string
           behavioral_profile?: string
+          company?: string
           complexity?: string
           contract_start_date?: string
           created_at?: string

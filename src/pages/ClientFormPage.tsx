@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { computeCompleteness, completenessTone } from '@/lib/clientCompleteness';
 import { normalizeTaxation } from '@/lib/taxation';
+import { normalizeCompany } from '@/lib/company';
 import { AppLayout } from '@/components/AppLayout';
 import { StepIdentification } from '@/components/ClientWizardSteps/StepIdentification';
 import { StepContacts, ContactDraft } from '@/components/ClientWizardSteps/StepContacts';
@@ -23,6 +24,7 @@ const emptyForm = {
   pain_points: '', expectations: '', attention_points: '', recurring_issues: '',
   behavioral_profile: '', strategic_notes: '',
   taxation: '',
+  company: '2m_saude',
 };
 
 const STEPS = [
@@ -67,6 +69,7 @@ export default function ClientFormPage() {
           attention_points: client.attention_points ?? '', recurring_issues: client.recurring_issues ?? '',
           behavioral_profile: client.behavioral_profile ?? '', strategic_notes: client.strategic_notes ?? '',
           taxation: normalizeTaxation(client.taxation),
+          company: normalizeCompany(client.company),
         });
         setOnboardingStatus((client as any).onboarding_status || 'pending_handoff');
         const { data: h } = await supabase.from('commercial_handoff' as any).select('*').eq('client_id', id).maybeSingle();

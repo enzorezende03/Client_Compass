@@ -22,6 +22,7 @@ import {
   TAXATION_LABELS, TAXATION_EMOJIS, TaxationType,
 } from '@/types/client';
 import { getTaxationLabel, normalizeTaxation, TAXATION_BADGE_CLASSES } from '@/lib/taxation';
+import { COMPANY_LABELS, Company, getCompanyLabel } from '@/lib/company';
 
 export default function ClientRegistration() {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ export default function ClientRegistration() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [taxationFilter, setTaxationFilter] = useState<'all' | 'none' | TaxationType>('all');
+  const [companyFilter, setCompanyFilter] = useState<'all' | Company>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<'ativos' | 'arquivados' | 'distratos'>('ativos');
@@ -69,6 +71,7 @@ export default function ClientRegistration() {
     const matchesTaxation = taxationFilter === 'all'
       || (taxationFilter === 'none' ? !c.taxation?.trim() : taxation === taxationFilter);
     return (tab === 'arquivados' ? !!c.archived : !c.archived)
+      && (companyFilter === 'all' || c.company === companyFilter)
       && matchesTaxation
       && (c.name.toLowerCase().includes(search.toLowerCase())
         || (searchDigits.length > 0 && c.document.replace(/\D/g, '').includes(searchDigits)));
@@ -94,6 +97,7 @@ export default function ClientRegistration() {
         Nome: c.name,
         Documento: formatDocument(c.document),
         Segmento: c.segment,
+        Empresa: getCompanyLabel(c.company),
         Status: `${STATUS_EMOJIS[c.status as ClientStatus] ?? ''} ${STATUS_LABELS[c.status as ClientStatus] || c.status}`.trim(),
         Tier: `${PROFILE_ICONS[c.profile as ClientProfile] ?? ''} ${PROFILE_LABELS[c.profile as ClientProfile] || c.profile || ''}`.trim(),
         Tributação: getTaxationLabel(c.taxation) || 'Não definida',
@@ -104,8 +108,8 @@ export default function ClientRegistration() {
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     worksheet['!cols'] = [
-      { wch: 34 }, { wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 24 },
-      { wch: 42 }, { wch: 20 }, { wch: 18 },
+      { wch: 34 }, { wch: 18 }, { wch: 22 }, { wch: 20 }, { wch: 18 },
+      { wch: 24 }, { wch: 42 }, { wch: 20 }, { wch: 18 },
     ];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
@@ -164,7 +168,18 @@ export default function ClientRegistration() {
               Distratos ({terms.length})
             </button>
           </div>
-          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:justify-end">
+          <div className="flex flex-1 flex-col gap-2 lg:flex-row lg:justify-end">
+            <Select value={companyFilter} onValueChange={value => setCompanyFilter(value as typeof companyFilter)}>
+              <SelectTrigger className="w-full lg:w-[210px]" aria-label="Filtrar por empresa">
+                <SelectValue placeholder="Todas as empresas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as empresas</SelectItem>
+                {Object.entries(COMPANY_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={taxationFilter} onValueChange={value => setTaxationFilter(value as typeof taxationFilter)}>
               <SelectTrigger className="w-full sm:w-[280px]" aria-label="Filtrar por tributação">
                 <SelectValue placeholder="Todas as tributações" />
@@ -186,12 +201,13 @@ export default function ClientRegistration() {
 
         {tab === 'distratos' ? <TerminationsReport terms={terms} search={search} /> : (
         <div className="rounded-lg border bg-card shadow-card overflow-x-auto">
-          <Table className="min-w-[1080px]">
+          <Table className="min-w-[1230px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead className="w-[180px] whitespace-nowrap">Documento</TableHead>
                 <TableHead>Segmento</TableHead>
+                <TableHead className="w-[170px]">Empresa</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[140px]">Tier</TableHead>
                 <TableHead className="min-w-[250px]">Tributação</TableHead>
@@ -201,9 +217,9 @@ export default function ClientRegistration() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={tab === 'arquivados' ? 8 : 7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={tab === 'arquivados' ? 9 : 8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={tab === 'arquivados' ? 8 : 7} className="text-center py-8 text-muted-foreground">{tab === 'arquivados' ? 'Nenhum cliente arquivado.' : 'Nenhum cliente encontrado.'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={tab === 'arquivados' ? 9 : 8} className="text-center py-8 text-muted-foreground">{tab === 'arquivados' ? 'Nenhum cliente arquivado.' : 'Nenhum cliente encontrado.'}</TableCell></TableRow>
               ) : (
                 filtered.map(c => {
                   const profile = c.profile as ClientProfile;
@@ -214,6 +230,7 @@ export default function ClientRegistration() {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell className="font-mono text-xs whitespace-nowrap">{formatDocument(c.document)}</TableCell>
                       <TableCell>{c.segment}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">{getCompanyLabel(c.company)}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5">
                           <span aria-hidden>{STATUS_EMOJIS[c.status as ClientStatus] ?? ''}</span>
