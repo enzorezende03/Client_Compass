@@ -20,7 +20,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { currentMonthKey, fetchChurnMetrics, fetchChurnYearToDate, formatBRL } from '@/lib/churn';
+import { currentMonthKey, fetchChurnMetrics, fetchChurnYearToDate, formatBRL, TERMINATION_REASON_LABELS, TerminationReason } from '@/lib/churn';
 import { useToast } from '@/hooks/use-toast';
 import {
   Client, ClientStatus, ComplexityLevel, HealthScore, STATUS_LABELS,
@@ -130,6 +130,19 @@ export default function ClientList() {
   const { data: churnYtd } = useQuery({
     queryKey: ['churn-year-to-date'],
     queryFn: fetchChurnYearToDate,
+  });
+  const [churnOpen, setChurnOpen] = useState(false);
+  const { data: churnYtdList = [] } = useQuery({
+    queryKey: ['churn-year-to-date-list'],
+    enabled: churnOpen,
+    queryFn: async () => {
+      const y = new Date().getFullYear();
+      const { data } = await supabase.from('client_terminations' as any)
+        .select('id, request_date, effective_date, reason_category, monthly_fee_at_termination, initiated_by, during_onboarding, clients(name)')
+        .gte('request_date', `${y}-01-01`).is('reverted_at', null)
+        .order('request_date', { ascending: false });
+      return ((data as any[]) || []);
+    },
   });
 
   const loadClients = useCallback(() => {
@@ -363,7 +376,7 @@ export default function ClientList() {
             </div>
           </div>
 
-          <button type="button" onClick={() => navigate('/execucao?aba=onboarding')} className="group rounded-lg border border-primary/20 bg-primary p-5 text-left text-primary-foreground shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
+          <button type="button" onClick={() => setChurnOpen(true)} className="group rounded-lg border border-primary/20 bg-primary p-5 text-left text-primary-foreground shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover">
             <div className="flex h-full min-h-56 flex-col">
               <div className="flex items-center justify-between">
                 <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary-foreground/10 text-primary-foreground"><TrendingDown className="h-5 w-5" /></span>
@@ -454,7 +467,33 @@ export default function ClientList() {
         </DialogContent>
       </Dialog>
 
-    </AppLayout>
+    
+      <Dialog open={churnOpen} onOpenChange={setChurnOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Distratos do ano</DialogTitle>
+            <DialogDescription>Entram na taxa de churn apenas os distratos com origem "Cliente".</DialogDescription>
+          </DialogHeader>
+          {churnYtdList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum distrato no ano.</p>
+          ) : (
+            <div className="max-h-[420px] divide-y divide-border overflow-auto">
+              {churnYtdList.map((t: any) => (
+                <div key={t.id} className="flex flex-wrap items-center gap-3 py-2.5 text-xs">
+                  <span className="min-w-[200px] flex-1 truncate text-sm font-medium text-foreground">{t.clients?.name || '—'}</span>
+                  <span className="text-muted-foreground">Pedido {new Date(t.request_date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                  <span className="rounded border border-border px-1.5 py-0.5">{TERMINATION_REASON_LABELS[t.reason_category as TerminationReason] || t.reason_category}</span>
+                  <span className={cn('rounded border px-1.5 py-0.5', t.initiated_by === 'cliente' ? 'border-destructive/50 text-destructive' : 'border-border text-muted-foreground')}>
+                    {t.initiated_by === 'cliente' ? 'Cliente · conta no churn' : t.initiated_by === 'baixa' ? 'Baixa · fora do churn' : 'Escritório · fora do churn'}
+                  </span>
+                  <span className="text-muted-foreground">{formatBRL(t.monthly_fee_at_termination)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+</AppLayout>
   );
 }
 
